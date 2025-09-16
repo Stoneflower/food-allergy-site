@@ -46,7 +46,8 @@ export class PDFOCRProcessor {
       maxPages = 10,
       targetPages = null,
       scale = 2.0,
-      onProgress = null
+      onProgress = null,
+      preferEngine = 'auto' // 'auto' | 'paddle' | 'tesseract'
     } = options;
 
     try {
@@ -72,20 +73,52 @@ export class PDFOCRProcessor {
         }
 
         try {
-          // ページを画像に変換（WebContainer対応）
-          const canvas = await this.renderPageToCanvas(pdf, pageNum, scale);
+          // 1) 文字PDF判定: pdf.jsのテキスト抽出で十分ならOCRをスキップ
+          const page = await pdf.getPage(pageNum);
+          const textContent = await page.getTextContent();
+          const textFromPdf = (textContent.items || []).map(i => i.str).join('\n');
+          const normalized = textFromPdf.replace(/\s+/g, '');
+          const isTextual = normalized.length >= 80; // 閾値は適宜調整
 
-          // OCRでテキストを抽出
-          const ocrResult = await this.worker.recognize(canvas);
+          let finalText = '';
+          let usedEngine = 'text';
+          let confidence = 95;
+
+          if (isTextual) {
+            finalText = textFromPdf;
+          } else {
+            // 2) OCR必要: まずPaddleOCR(WASM)を試行（将来の拡張用フック）
+            const canvas = await this.renderPageToCanvas(pdf, pageNum, scale);
+            const tryPaddle = preferEngine !== 'tesseract' && typeof window !== 'undefined' && window.__paddleOcrRecognize;
+            if (tryPaddle) {
+              try {
+                const paddleRes = await window.__paddleOcrRecognize(canvas);
+                if (paddleRes && paddleRes.text) {
+                  finalText = paddleRes.text;
+                  usedEngine = 'paddle';
+                  confidence = Math.round((paddleRes.confidence || 0.85) * 100);
+                }
+              } catch (_) {
+                // フォールバックしてTesseractへ
+              }
+            }
+            if (!finalText) {
+              const ocrResult = await this.worker.recognize(canvas);
+              finalText = ocrResult.data.text;
+              usedEngine = 'tesseract';
+              confidence = ocrResult.data.confidence || 0;
+            }
+          }
 
           // アレルギー情報を解析
-          const allergyInfo = this.extractAllergyInfo(ocrResult.data.text, pageNum);
+          const allergyInfo = this.extractAllergyInfo(finalText, pageNum);
 
           results.push({
             page: pageNum,
-            text: ocrResult.data.text,
+            text: finalText,
+            engine: usedEngine,
             allergyInfo,
-            confidence: ocrResult.data.confidence || 0
+            confidence
           });
         } catch (pageError) {
           console.error(`ページ ${pageNum} の処理エラー:`, pageError);
@@ -198,6 +231,8 @@ export class PDFOCRProcessor {
 
     // メニュー項目の検出
     const menuItems = this.extractMenuItems(text);
+    // メニューごとのアレルギー推定（近接行と記号で推定）
+    const menuAllergies = this.extractMenuAllergies(text);
 
     // 注意事項の検出
     const warnings = this.extractWarnings(text);
@@ -206,6 +241,7 @@ export class PDFOCRProcessor {
       foundAllergies: [...new Set(foundAllergies)],
       allergyDetails,
       menuItems,
+      menuAllergies,
       warnings,
       rawText: text
     };
@@ -241,6 +277,59 @@ export class PDFOCRProcessor {
     return [...new Set(items)];
   }
 
+  // 近接行と記号（●, △, ※, －）からメニューごとのアレルギーを推定
+  extractMenuAllergies(text) {
+    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+    const menus = [];
+    const jpNames = {
+      egg:'卵', milk:'乳', wheat:'小麦', buckwheat:'そば', peanut:'落花生', shrimp:'えび', crab:'かに', walnut:'くるみ',
+      almond:'アーモンド', abalone:'あわび', squid:'いか', salmon_roe:'いくら', orange:'オレンジ', cashew:'カシューナッツ', kiwi:'キウイ', beef:'牛肉', gelatin:'ゼラチン', sesame:'ごま', salmon:'さけ', mackerel:'さば', soy:'大豆', chicken:'鶏肉', banana:'バナナ', pork:'豚肉', matsutake:'まつたけ', peach:'もも', yam:'やまいも', apple:'りんご'
+    };
+    const symbolRegex = {
+      direct: /[●◉○]/, // ○も一部で含有表記に使われる場合があるため暫定
+      trace: /[△※]/,
+      none: /[－\-]/
+    };
+    const isLikelyMenuName = (line) => {
+      if (line.length < 2 || line.length > 30) return false;
+      if (/^(アレルギー|注意|ご注意|注|原材料|成分|特定原材料|栄養|本日の|価格|税込)/.test(line)) return false;
+      if (/^[A-Za-z0-9\s\-_.()]+$/.test(line)) return false; // 英数字のみは除外
+      return /[\u3040-\u30ff\u4e00-\u9faf]/.test(line); // かな漢字を含む
+    };
+
+    let current = null;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (isLikelyMenuName(line)) {
+        current = { name: line, allergies: {} };
+        menus.push(current);
+        continue;
+      }
+      if (current) {
+        // 直近数行に記号と品目名の組合せがあれば拾う
+        Object.entries(jpNames).forEach(([id, jp]) => {
+          if (line.includes(jp)) {
+            if (symbolRegex.trace.test(line)) {
+              current.allergies[id] = current.allergies[id] || 'trace';
+            }
+            if (symbolRegex.direct.test(line)) {
+              current.allergies[id] = 'direct';
+            }
+            if (symbolRegex.none.test(line)) {
+              current.allergies[id] = current.allergies[id] || 'none';
+            }
+          }
+        });
+        // メニューのまとまりをゆるく区切る
+        if (/^[-=＊*◼️]+$/.test(line) || line.length === 0) {
+          current = null;
+        }
+      }
+    }
+    // 後処理: 何も拾えていないメニューは除外
+    return menus.filter(m => Object.keys(m.allergies).length > 0);
+  }
+
   extractWarnings(text) {
     const warningPatterns = [
       /注意|ご注意|注|WARNING|CAUTION/gi,
@@ -269,6 +358,7 @@ export class PDFOCRProcessor {
     const allMenuItems = new Set();
     const allWarnings = new Set();
     const allergyDetails = {};
+    const menuAllergyMap = new Map(); // name -> {name, allergies: {id: presence}}
 
     results.forEach(result => {
       if (result.allergyInfo) {
@@ -303,6 +393,17 @@ export class PDFOCRProcessor {
           allergyDetails[detail.allergyId].contexts.push(...detail.context);
           allergyDetails[detail.allergyId].pages.push(detail.page);
         });
+        // メニューごとのアレルギーを統合
+        (result.allergyInfo.menuAllergies || []).forEach(m => {
+          const key = m.name;
+          const existing = menuAllergyMap.get(key) || { name: key, allergies: {} };
+          Object.entries(m.allergies).forEach(([id, presence]) => {
+            const prev = existing.allergies[id];
+            const rank = { direct: 3, heated: 2, trace: 1, none: 0 };
+            if (!prev || rank[presence] > rank[prev]) existing.allergies[id] = presence;
+          });
+          menuAllergyMap.set(key, existing);
+        });
       }
     });
 
@@ -318,6 +419,7 @@ export class PDFOCRProcessor {
       menuItems: Array.from(allMenuItems),
       warnings: Array.from(allWarnings),
       allergyDetails,
+      menuAllergies: Array.from(menuAllergyMap.values()),
       confidence: this.calculateOverallConfidence(results)
     };
   }

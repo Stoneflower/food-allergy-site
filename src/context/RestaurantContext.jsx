@@ -423,21 +423,31 @@ export const RestaurantProvider = ({ children }) => {
           .order('id', { ascending: false })
           .limit(24);
         if (error) throw error;
-        const mapped = (data || []).map((p) => ({
-          id: `db_${p.id}`,
-          name: p.name,
-          image: 'https://images.unsplash.com/photo-1511690656952-34342bb7c2f2?w=600',
-          price: '',
-          brand: p.brand || '',
-          category: 'products',
-          type: p.category || '共有商品',
-          description: 'みんなが共有した商品',
-          rating: 4.5,
-          reviewCount: 0,
-          availability: { online: [] },
-          allergyFree: [],
-          source: { type: 'community', contributor: '共有', lastUpdated: new Date().toISOString(), confidence: 80, verified: false },
-        }));
+        const mapped = (data || []).map((p) => {
+          const catRaw = (p.category || '').toString().toLowerCase();
+          const normalizedCategory = catRaw.includes('レストラン') || catRaw.includes('restaurant')
+            ? 'restaurants'
+            : (catRaw.includes('super') || catRaw.includes('スーパー'))
+              ? 'supermarkets'
+              : (catRaw.includes('online') || catRaw.includes('ネット'))
+                ? 'online'
+                : 'restaurants';
+          return {
+            id: `db_${p.id}`,
+            name: p.name,
+            image: 'https://images.unsplash.com/photo-1511690656952-34342bb7c2f2?w=600',
+            price: '',
+            brand: p.brand || '',
+            category: normalizedCategory,
+            type: p.category || '共有商品',
+            description: 'みんなが共有した商品',
+            rating: 4.5,
+            reviewCount: 0,
+            availability: { online: [] },
+            allergyFree: [],
+            source: { type: 'community', contributor: '共有', lastUpdated: new Date().toISOString(), confidence: 80, verified: false },
+          };
+        });
         setDbProducts(mapped);
       } catch (e) {
         console.warn('Supabase products fetch failed:', e.message);

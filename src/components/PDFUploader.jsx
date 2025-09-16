@@ -544,7 +544,7 @@ const PDFUploader = ({ onResult, onClose }) => {
                     別のPDFを処理
                   </button>
                   <button
-                    onClick={() => setShowReview(true)}
+                    onClick={() => { console.log('open review modal from results button'); setShowReview(true) }}
                     className="flex-1 py-3 px-6 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-semibold"
                   >
                     保存内容を確認
@@ -575,6 +575,19 @@ const PDFUploader = ({ onResult, onClose }) => {
           onSaved={onClose}
           result={result}
         />
+      )}
+
+      {/* 右下固定の保存確認ボタン（結果表示中のみ） */}
+      {result && !showReview && (
+        <div className="fixed right-4 bottom-4 z-[60]">
+          <button
+            aria-label="保存内容を確認"
+            onClick={() => { console.log('open review modal from floating button'); setShowReview(true) }}
+            className="px-4 py-3 bg-orange-500 text-white rounded-full shadow-lg hover:bg-orange-600 transition-colors"
+          >
+            保存内容を確認
+          </button>
+        </div>
       )}
     </>
   );

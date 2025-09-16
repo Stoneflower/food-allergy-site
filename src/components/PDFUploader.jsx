@@ -5,6 +5,22 @@ import * as FiIcons from 'react-icons/fi';
 import { pdfOCRProcessor } from '../utils/pdfOCR';
 import { useRestaurant } from '../context/RestaurantContext';
 import PDFLinkManager from './PDFLinkManager';
+// ヘルパー: ソースから保存名を推定
+const inferProductName = (src) => {
+  if (!src) return `PDF解析結果 ${new Date().toISOString().slice(0,10)}`;
+  const { source, fileName } = src;
+  if (fileName) return (fileName.replace(/\.pdf$/i, '') || 'ファイル');
+  if (typeof source === 'string') {
+    try {
+      const u = new URL(source);
+      const seg = u.pathname.split('/').filter(Boolean).pop() || '';
+      return seg.replace(/\.pdf$/i, '') || `PDF解析結果 ${new Date().toISOString().slice(0,10)}`;
+    } catch {
+      return `PDF解析結果 ${new Date().toISOString().slice(0,10)}`;
+    }
+  }
+  return `PDF解析結果 ${new Date().toISOString().slice(0,10)}`;
+};
 
 const { FiUpload, FiLink, FiX, FiFileText, FiAlertCircle, FiCheck, FiRefreshCw, FiEye, FiDatabase } = FiIcons;
 

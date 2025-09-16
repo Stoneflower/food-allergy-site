@@ -211,14 +211,30 @@ const Upload = () => {
           return;
         }
 
-        const allergies = Array.isArray(editedInfo.allergens)
-          ? editedInfo.allergens.map(id => ({
-              allergy_item_id: id,
-              presence_type: 'direct',
-              amount_level: 'unknown',
-              notes: 'shared from upload page'
-            }))
-          : [];
+        // presence/amount 自動推定
+        const textBlob = [
+          ...(extractedInfo?.warnings || []),
+          ...(Array.isArray(editedInfo.ingredients) ? editedInfo.ingredients : [])
+        ].join(' ');
+        const hasFragrance = /香料/.test(textBlob);
+        const processedHeatedRegex = /(加工品|加熱|加熱済|加熱処理|焼成|ボイル|揚げ|フライ|炒め|蒸し|レトルト|殺菌)/;
+        const isProcessedHeated = processedHeatedRegex.test(textBlob);
+
+        // 28品目すべてを保存（未検出は presence_type='none'）
+        const allIds = (Array.isArray(allergyOptions) ? allergyOptions : []).map(a => a.id);
+        const selected = new Set(Array.isArray(editedInfo.allergens) ? editedInfo.allergens : []);
+        const allergies = allIds.map(id => {
+          const detected = selected.has(id);
+          const presence = detected ? (hasFragrance ? 'trace' : (isProcessedHeated ? 'heated' : 'direct')) : 'none';
+          const amount = detected ? (hasFragrance ? 'trace' : 'unknown') : 'none';
+          const note = detected ? (hasFragrance ? '香料表記を検出' : (isProcessedHeated ? '加工/加熱表記を検出' : 'shared from upload page')) : '';
+          return {
+            allergy_item_id: id,
+            presence_type: presence,
+            amount_level: amount,
+            notes: note
+          };
+        });
 
         console.log('POST /.netlify/functions/save-product', { product, allergies });
         const resp = await fetch('/.netlify/functions/save-product', {

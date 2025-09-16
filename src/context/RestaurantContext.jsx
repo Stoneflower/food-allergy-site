@@ -51,7 +51,7 @@ export const RestaurantProvider = ({ children }) => {
     { id: 'sesame', name: 'ごま', icon: '🌱' },
     { id: 'salmon', name: 'さけ', icon: '🐟' },
     { id: 'mackerel', name: 'さば', icon: '🐟' },
-    { id: 'soy', name: '大豆', icon: '🫘' },
+    { id: 'soy', name: '大豆', icon: '🟤' },
     { id: 'chicken', name: '鶏肉', icon: '🐔' },
     { id: 'banana', name: 'バナナ', icon: '🍌' },
     { id: 'pork', name: '豚肉', icon: '🥓' },

@@ -54,7 +54,7 @@ const FoodSearchFilters = ({ filters, onFiltersChange, userSettings, onShowSetti
     { id: 'sesame', name: 'ごま', emoji: '🌱' },
     { id: 'salmon', name: 'さけ', emoji: '🐟' },
     { id: 'mackerel', name: 'さば', emoji: '🐟' },
-    { id: 'soy', name: '大豆', emoji: '🫘' },
+    { id: 'soy', name: '大豆', emoji: '🟤' },
     { id: 'chicken', name: '鶏肉', emoji: '🐔' },
     { id: 'banana', name: 'バナナ', emoji: '🍌' },
     { id: 'pork', name: '豚肉', emoji: '🥓' },

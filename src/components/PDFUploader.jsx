@@ -16,6 +16,11 @@ const PDFUploader = ({ onResult, onClose }) => {
   const [pdfUrl, setPdfUrl] = useState('');
   const [uploadMethod, setUploadMethod] = useState('url'); // 'url', 'file', or 'registered'
   const [showLinkManager, setShowLinkManager] = useState(false);
+  const [lastSource, setLastSource] = useState(null);
+  const [autoSaved, setAutoSaved] = useState(false);
+  const [showReview, setShowReview] = useState(false);
+  const [productForm, setProductForm] = useState({ name: '', brand: '', category: '' });
+  const [reviewRows, setReviewRows] = useState([]); // {allergy_item_id, presence_type, amount_level, notes}
   
   const fileInputRef = useRef(null);
   const { allergyOptions } = useRestaurant();
@@ -55,6 +60,8 @@ const PDFUploader = ({ onResult, onClose }) => {
     setError(null);
     setResult(null);
     setProgress({ current: 0, total: 1, status: 'initializing' });
+    setAutoSaved(false);
+    setLastSource({ source, fileName });
 
     try {
       const options = {
@@ -87,6 +94,43 @@ const PDFUploader = ({ onResult, onClose }) => {
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  // 解析完了時: 初期値を用意してレビュー用モーダルを開く
+  React.useEffect(() => {
+    if (!result) return;
+    const inferredName = inferProductName(lastSource);
+    setProductForm((prev) => ({ ...prev, name: prev.name || inferredName }));
+    const allergens = result.consolidatedInfo?.foundAllergies || [];
+    const textBlob = (result.consolidatedInfo?.warnings?.join(' ') + ' ' + (result.pages?.map(p=>p.text).join(' ') || '')).trim();
+    const hasFragrance = /香料/.test(textBlob);
+    const processedHeatedRegex = /(加工品|加熱|加熱済|加熱処理|焼成|ボイル|揚げ|フライ|炒め|蒸し|レトルト|殺菌)/;
+    const isProcessedHeated = processedHeatedRegex.test(textBlob);
+    const initialRows = allergens.map(a => ({
+      allergy_item_id: a,
+      presence_type: hasFragrance ? 'trace' : (isProcessedHeated ? 'heated' : 'direct'),
+      amount_level: hasFragrance ? 'trace' : 'unknown',
+      notes: hasFragrance ? '香料表記を検出' : (isProcessedHeated ? '加工/加熱表記を検出' : '')
+    }));
+    setReviewRows(initialRows);
+    setShowReview(true);
+    setAutoSaved(false);
+  }, [result, lastSource]);
+
+  const inferProductName = (src) => {
+    if (!src) return `PDF解析結果 ${new Date().toISOString().slice(0,10)}`;
+    const { source, fileName } = src;
+    if (fileName) return (fileName.replace(/\.pdf$/i, '') || 'ファイル');
+    if (typeof source === 'string') {
+      try {
+        const u = new URL(source);
+        const seg = u.pathname.split('/').filter(Boolean).pop() || '';
+        return seg.replace(/\.pdf$/i, '') || `PDF解析結果 ${new Date().toISOString().slice(0,10)}`;
+      } catch {
+        return `PDF解析結果 ${new Date().toISOString().slice(0,10)}`;
+      }
+    }
+    return `PDF解析結果 ${new Date().toISOString().slice(0,10)}`;
   };
 
   const getProgressMessage = () => {
@@ -477,15 +521,10 @@ const PDFUploader = ({ onResult, onClose }) => {
                     別のPDFを処理
                   </button>
                   <button
-                    onClick={() => {
-                      if (onResult) {
-                        onResult(result);
-                      }
-                      onClose();
-                    }}
+                    onClick={() => setShowReview(true)}
                     className="flex-1 py-3 px-6 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-semibold"
                   >
-                    結果を使用
+                    保存内容を確認
                   </button>
                 </div>
               </div>
@@ -501,8 +540,267 @@ const PDFUploader = ({ onResult, onClose }) => {
           onClose={() => setShowLinkManager(false)}
         />
       )}
+
+      {/* 保存前確認モーダル */}
+      {showReview && (
+        <ReviewSaveModal
+          productForm={productForm}
+          setProductForm={setProductForm}
+          reviewRows={reviewRows}
+          setReviewRows={setReviewRows}
+          onClose={() => setShowReview(false)}
+          onSaved={onClose}
+          result={result}
+        />
+      )}
     </>
   );
 };
 
 export default PDFUploader;
+
+// 解析結果をSupabaseに保存するボタン
+import { supabase } from '../lib/supabase'
+
+const SaveToSupabaseButton = ({ result, onSaved, autoSaved = false }) => {
+  const [saving, setSaving] = React.useState(false)
+  const [message, setMessage] = React.useState('')
+
+  const handleSave = async () => {
+    if (!result) return
+    setSaving(true)
+    setMessage('')
+
+    try {
+      // 自動保存と同じフローを使い、名前だけプロンプトで上書き可能
+      const inferred = inferProductName({ source: '', fileName: '' })
+      const nameInput = window.prompt('商品名（保存名）', inferred)
+      const name = nameInput || inferred
+      const brand = null
+      const category = null
+
+      const { data: prod, error: prodErr } = await supabase
+        .from('products')
+        .insert([{ name, brand, category }])
+        .select()
+
+      if (prodErr) throw prodErr
+
+      const productId = prod[0].id
+
+      // 検出されたアレルギーを product_allergies へ保存
+      const allergens = result.consolidatedInfo?.foundAllergies || []
+      const allergyRows = allergens.map(a => ({
+        product_id: productId,
+        allergy_item_id: a,
+        // 既定ルール: テキストに「香料」が含まれていたらtrace、そうでなければdirect（暫定）
+        presence_type: (result.consolidatedInfo?.warnings?.join(' ') + ' ' + (result.pages?.map(p=>p.text).join(' ') || ''))
+          .includes('香料') ? 'trace' : 'direct',
+        amount_level: 'unknown',
+        notes: 'OCR imported'
+      }))
+
+      if (allergyRows.length > 0) {
+        const { error: paErr } = await supabase
+          .from('product_allergies')
+          .insert(allergyRows)
+        if (paErr) throw paErr
+      }
+
+      setMessage('✅ 保存しました')
+      if (onSaved) onSaved()
+    } catch (e) {
+      console.error('保存エラー:', e)
+      setMessage(`❌ 保存エラー: ${e.message}`)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (autoSaved) {
+    return (
+      <div className="flex-1">
+        <div className="w-full py-3 px-6 bg-green-100 text-green-800 rounded-lg text-center font-semibold">
+          自動保存しました
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex-1">
+      <button
+        onClick={handleSave}
+        disabled={saving}
+        className="w-full py-3 px-6 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-semibold disabled:opacity-50"
+      >
+        {saving ? '保存中...' : '保存する'}
+      </button>
+      {message && (
+        <div className={`mt-2 text-sm ${message.startsWith('✅') ? 'text-green-700' : 'text-red-700'}`}>
+          {message}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// 保存前確認モーダル
+const ReviewSaveModal = ({ productForm, setProductForm, reviewRows, setReviewRows, onClose, onSaved, result }) => {
+  const [saving, setSaving] = React.useState(false)
+  const [message, setMessage] = React.useState('')
+
+  const updateRow = (idx, patch) => {
+    setReviewRows(rows => rows.map((r, i) => (i === idx ? { ...r, ...patch } : r)))
+  }
+
+  const handleSave = async () => {
+    try {
+      setSaving(true)
+      setMessage('')
+      if (!productForm.name?.trim()) {
+        setMessage('商品名を入力してください')
+        setSaving(false)
+        return
+      }
+
+      const { data: prod, error: prodErr } = await supabase
+        .from('products')
+        .insert([{ name: productForm.name.trim(), brand: productForm.brand || null, category: productForm.category || null }])
+        .select()
+      if (prodErr) throw prodErr
+      const productId = prod[0].id
+
+      const rows = reviewRows
+        .filter(r => r.allergy_item_id)
+        .map(r => ({
+          product_id: productId,
+          allergy_item_id: r.allergy_item_id,
+          presence_type: r.presence_type || 'direct',
+          amount_level: r.amount_level || 'unknown',
+          notes: r.notes || ''
+        }))
+      if (rows.length > 0) {
+        const { error: paErr } = await supabase.from('product_allergies').insert(rows)
+        if (paErr) throw paErr
+      }
+
+      setMessage('✅ 保存しました')
+      onClose()
+      if (onSaved) onSaved()
+    } catch (e) {
+      console.error('保存エラー:', e)
+      setMessage(`❌ 保存エラー: ${e.message}`)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4">
+      <div className="bg-white w-full max-w-3xl rounded-xl shadow-xl overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b">
+          <h3 className="text-lg font-bold">保存内容の確認</h3>
+          <button onClick={onClose} className="text-gray-600 hover:text-gray-900">×</button>
+        </div>
+        <div className="p-6 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <input
+              type="text"
+              placeholder="商品名（必須）"
+              value={productForm.name}
+              onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
+              className="p-2 border rounded"
+            />
+            <input
+              type="text"
+              placeholder="ブランド（任意）"
+              value={productForm.brand}
+              onChange={(e) => setProductForm({ ...productForm, brand: e.target.value })}
+              className="p-2 border rounded"
+            />
+            <input
+              type="text"
+              placeholder="カテゴリ（任意）"
+              value={productForm.category}
+              onChange={(e) => setProductForm({ ...productForm, category: e.target.value })}
+              className="p-2 border rounded"
+            />
+          </div>
+
+          <div className="border rounded-lg overflow-hidden">
+            <div className="bg-gray-50 px-3 py-2 text-sm font-medium">アレルギー品目（編集可）</div>
+            <div className="max-h-72 overflow-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="text-left px-3 py-2">品目ID</th>
+                    <th className="text-left px-3 py-2">存在種別</th>
+                    <th className="text-left px-3 py-2">量レベル</th>
+                    <th className="text-left px-3 py-2">メモ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reviewRows.map((r, idx) => (
+                    <tr key={idx} className="border-t">
+                      <td className="px-3 py-2">
+                        <input
+                          value={r.allergy_item_id}
+                          onChange={(e) => updateRow(idx, { allergy_item_id: e.target.value })}
+                          className="p-1 border rounded w-32"
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <select
+                          value={r.presence_type}
+                          onChange={(e) => updateRow(idx, { presence_type: e.target.value })}
+                          className="p-1 border rounded"
+                        >
+                          <option value="direct">直接含有</option>
+                          <option value="trace">香料程度（微量）</option>
+                          <option value="heated">加熱済み</option>
+                        </select>
+                      </td>
+                      <td className="px-3 py-2">
+                        <select
+                          value={r.amount_level}
+                          onChange={(e) => updateRow(idx, { amount_level: e.target.value })}
+                          className="p-1 border rounded"
+                        >
+                          <option value="unknown">不明</option>
+                          <option value="high">多量</option>
+                          <option value="medium">中量</option>
+                          <option value="low">少量</option>
+                          <option value="trace">微量</option>
+                        </select>
+                      </td>
+                      <td className="px-3 py-2">
+                        <input
+                          value={r.notes}
+                          onChange={(e) => updateRow(idx, { notes: e.target.value })}
+                          className="p-1 border rounded w-full"
+                          placeholder="備考"
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {message && (
+            <div className={`text-sm ${message.startsWith('✅') ? 'text-green-700' : 'text-red-700'}`}>{message}</div>
+          )}
+
+          <div className="flex gap-3 justify-end">
+            <button onClick={onClose} className="px-4 py-2 border rounded">キャンセル</button>
+            <button onClick={handleSave} disabled={saving} className="px-4 py-2 bg-orange-500 text-white rounded disabled:opacity-50">
+              {saving ? '保存中...' : '保存する'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}

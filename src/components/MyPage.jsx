@@ -18,7 +18,7 @@ const MyPage = ({ userId }) => {
     try {
       // ユーザー情報取得
       const { data: userData, error: userError } = await supabase
-        .from('users')
+        .from('family_members')
         .select('*')
         .eq('id', userId)
         .single()
@@ -27,7 +27,7 @@ const MyPage = ({ userId }) => {
 
       // 家族メンバー取得
       const { data: familyData, error: familyError } = await supabase
-        .from('users')
+        .from('family_members')
         .select('*')
         .eq('parent_user_id', userId)
 
@@ -119,7 +119,7 @@ const MyPage = ({ userId }) => {
   const addFamilyMember = async (memberData) => {
     try {
       const { data, error } = await supabase
-        .from('users')
+        .from('family_members')
         .insert([{
           name: memberData.name,
           birth_year: memberData.birthYear,

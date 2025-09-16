@@ -46,7 +46,7 @@ const UserRegistration = ({ onRegistrationComplete }) => {
     setIsLoading(true)
     try {
       const { data, error } = await supabase
-        .from('users')
+        .from('family_members')
         .insert([{
           name: formData.name,
           email: formData.email || null,
@@ -122,7 +122,7 @@ const UserRegistration = ({ onRegistrationComplete }) => {
 
         // 家族メンバーを作成
         const { data: memberData, error: memberError } = await supabase
-          .from('users')
+          .from('family_members')
           .insert([{
             name: member.name,
             birth_year: member.birthYear,

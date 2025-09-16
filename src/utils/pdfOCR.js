@@ -288,7 +288,7 @@ export class PDFOCRProcessor {
     const symbolRegex = {
       direct: /[●◉○]/, // ○も一部で含有表記に使われる場合があるため暫定
       trace: /[△※]/,
-      none: /[－\-]/
+      none: /[－-]/
     };
     const isLikelyMenuName = (line) => {
       if (line.length < 2 || line.length > 30) return false;
@@ -321,7 +321,7 @@ export class PDFOCRProcessor {
           }
         });
         // メニューのまとまりをゆるく区切る
-        if (/^[-=＊*◼️]+$/.test(line) || line.length === 0) {
+        if (/^[\-=＊*\u25FC]+$/u.test(line) || line.length === 0) {
           current = null;
         }
       }

@@ -168,3 +168,41 @@ CREATE TRIGGER update_product_allergies_updated_at
     BEFORE UPDATE ON product_allergies 
     FOR EACH ROW 
     EXECUTE FUNCTION update_updated_at_column();
+
+-- メニュー項目テーブル
+CREATE TABLE IF NOT EXISTS menu_items (
+  id SERIAL PRIMARY KEY,
+  product_id INTEGER REFERENCES products(id) ON DELETE CASCADE,
+  name VARCHAR(200) NOT NULL,
+  price VARCHAR(50),
+  notes TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- メニュー項目のアレルギー情報
+CREATE TABLE IF NOT EXISTS menu_item_allergies (
+  id SERIAL PRIMARY KEY,
+  menu_item_id INTEGER REFERENCES menu_items(id) ON DELETE CASCADE,
+  allergy_item_id VARCHAR(50) NOT NULL,
+  presence_type VARCHAR(20) NOT NULL,
+  amount_level VARCHAR(20) DEFAULT 'unknown',
+  notes TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- インデックス
+CREATE INDEX IF NOT EXISTS idx_menu_items_product_id ON menu_items(product_id);
+CREATE INDEX IF NOT EXISTS idx_menu_item_allergies_menu_item_id ON menu_item_allergies(menu_item_id);
+CREATE INDEX IF NOT EXISTS idx_menu_item_allergies_allergy_item_id ON menu_item_allergies(allergy_item_id);
+CREATE INDEX IF NOT EXISTS idx_menu_item_allergies_presence_type ON menu_item_allergies(presence_type);
+
+-- 更新日時トリガー
+CREATE TRIGGER update_menu_items_updated_at
+BEFORE UPDATE ON menu_items
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_menu_item_allergies_updated_at
+BEFORE UPDATE ON menu_item_allergies
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

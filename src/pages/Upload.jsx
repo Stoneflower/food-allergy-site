@@ -28,7 +28,7 @@ const Upload = () => {
   
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
-  const { allergyOptions } = useRestaurant();
+  const { allergyOptions, userSettings } = useRestaurant();
 
   // カメラで撮影
   const handleCameraCapture = (event) => {
@@ -200,6 +200,9 @@ const Upload = () => {
       setIsProcessing(true);
       // PDF由来の場合は保存APIを発火
       if (extractedInfo?.pdfSource) {
+        // ID正規化（DBのitem_idに合わせる）
+        const normalizeId = (id) => (id === 'soy' ? 'soybean' : id);
+
         const product = {
           name: (editedInfo.productName || '').trim(),
           brand: editedInfo.brand || null,
@@ -221,8 +224,12 @@ const Upload = () => {
         const isProcessedHeated = processedHeatedRegex.test(textBlob);
 
         // 28品目すべてを保存（未検出は presence_type='none'）
-        const allIds = (Array.isArray(allergyOptions) ? allergyOptions : []).map(a => a.id);
-        const selected = new Set(Array.isArray(editedInfo.allergens) ? editedInfo.allergens : []);
+        const allIds = (Array.isArray(allergyOptions) ? allergyOptions : []).map(a => normalizeId(a.id));
+        // OCR由来の検出があるのにUIで未操作の場合のフォールバック
+        const baseSelected = Array.isArray(editedInfo.allergens) && editedInfo.allergens.length > 0
+          ? editedInfo.allergens
+          : (Array.isArray(extractedInfo?.allergens) ? extractedInfo.allergens : []);
+        const selected = new Set(baseSelected.map(normalizeId));
         const allergies = allIds.map(id => {
           const detected = selected.has(id);
           const presence = detected ? (hasFragrance ? 'trace' : (isProcessedHeated ? 'heated' : 'direct')) : 'none';
@@ -237,10 +244,26 @@ const Upload = () => {
         });
 
         console.log('POST /.netlify/functions/save-product', { product, allergies });
+        // メニュー行の組み立て（PDFのメニュー項目ごとに28品目を作成）
+        const normalizeId = (id) => (id === 'soy' ? 'soybean' : id);
+        const allIdsForMenu = (Array.isArray(allergyOptions) ? allergyOptions : []).map(a => normalizeId(a.id));
+        const buildMenuAllergies = (menuName) => {
+          // 簡易推定: 全メニューに同じpresenceを適用（将来: 行ごと推定に拡張）
+          return allIdsForMenu.map(id => ({
+            allergy_item_id: id,
+            presence_type: hasFragrance ? 'trace' : (isProcessedHeated ? 'heated' : 'none'),
+            amount_level: hasFragrance ? 'trace' : (isProcessedHeated ? 'unknown' : 'none'),
+            notes: hasFragrance ? '香料表記を検出' : (isProcessedHeated ? '加工/加熱表記を検出' : '')
+          }));
+        };
+        const menuItems = Array.isArray(extractedInfo?.ingredients) && extractedInfo.ingredients.length > 0
+          ? extractedInfo.ingredients.slice(0, 50).map(name => ({ name, allergies: buildMenuAllergies(name) }))
+          : [];
+
         const resp = await fetch('/.netlify/functions/save-product', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ product, allergies })
+          body: JSON.stringify({ product, allergies, menuItems })
         });
         const txt = await resp.text();
         if (!resp.ok) {
@@ -260,6 +283,41 @@ const Upload = () => {
       alert(`投稿に失敗しました: ${e.message}`);
       setIsProcessing(false);
     }
+  };
+
+  // あなた向け判定（表を見せずに可否表示）
+  const getPersonalVerdict = () => {
+    const allowTrace = !!userSettings?.allowTrace; // 既定: false
+    const allowHeated = !!userSettings?.allowHeated; // 既定: true
+    const hasSelection = Array.isArray(editedInfo.allergens) && editedInfo.allergens.length > 0;
+    // 判定素材（注意書き + メニュー/原材料）
+    const textBlob = [
+      ...(extractedInfo?.warnings || []),
+      ...(Array.isArray(editedInfo.ingredients) ? editedInfo.ingredients : [])
+    ].join(' ');
+    const hasFragrance = /香料/.test(textBlob);
+    const processedHeatedRegex = /(加工品|加熱|加熱済|加熱処理|焼成|ボイル|揚げ|フライ|炒め|蒸し|レトルト|殺菌)/;
+    const isProcessedHeated = processedHeatedRegex.test(textBlob);
+
+    if (!hasSelection) {
+      return { level: 'ok', label: '食べられます', reason: '該当アレルギー成分は検出されませんでした' };
+    }
+
+    // 単純な優先順: direct > heated > trace
+    if (!hasFragrance && !isProcessedHeated) {
+      return { level: 'ng', label: '食べられません', reason: '該当アレルギーが含有されています' };
+    }
+    if (isProcessedHeated) {
+      return allowHeated
+        ? { level: 'ok', label: '食べられます', reason: '該当アレルギーは加熱済み相当（許容設定）' }
+        : { level: 'caution', label: '条件付きでOK', reason: '加熱済みですが許容設定が必要です' };
+    }
+    if (hasFragrance) {
+      return allowTrace
+        ? { level: 'ok', label: '食べられます', reason: '香料レベルの微量（許容設定）' }
+        : { level: 'caution', label: '条件付きでOK', reason: '香料レベルの微量。微量許容でOKになります' };
+    }
+    return { level: 'caution', label: '条件付きでOK', reason: '詳細不明のためご注意ください' };
   };
 
   // リセット
@@ -768,6 +826,19 @@ const Upload = () => {
                 }</p>
               </div>
             </div>
+
+            {/* あなた向けの判定（簡易表示） */}
+            {(() => {
+              const verdict = getPersonalVerdict();
+              const color = verdict.level === 'ok' ? 'green' : verdict.level === 'ng' ? 'red' : 'yellow';
+              return (
+                <div className={`border rounded-lg p-4 mb-6 bg-${color}-50 border-${color}-200`}>
+                  <h3 className={`font-semibold text-${color}-800 mb-1`}>あなた向けの判定</h3>
+                  <p className={`text-${color}-700 font-medium`}>{verdict.label}</p>
+                  <p className="text-sm text-gray-600 mt-1">{verdict.reason}</p>
+                </div>
+              );
+            })()}
 
             <div className="flex space-x-4">
               <button

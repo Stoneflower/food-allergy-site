@@ -13,7 +13,7 @@ export const handler = async (event) => {
     }
 
     const body = JSON.parse(event.body || '{}')
-    const { product, allergies } = body
+    const { product, allergies, menuItems } = body
     if (!product?.name) {
       return { statusCode: 400, headers: corsHeaders(), body: 'Missing product.name' }
     }
@@ -64,6 +64,66 @@ export const handler = async (event) => {
       const paText = await paRes.text()
       if (!paRes.ok) {
         return { statusCode: paRes.status, headers: corsHeaders(), body: JSON.stringify({ stage: 'insert product_allergies', error: paText }) }
+      }
+    }
+
+    // menu_items + menu_item_allergies insert
+    if (Array.isArray(menuItems) && menuItems.length > 0) {
+      // まず menu_items を挿入
+      const miRows = menuItems.map(mi => ({
+        product_id: productId,
+        name: mi.name,
+        price: mi.price || null,
+        notes: mi.notes || ''
+      }))
+      const miRes = await fetch(`${url}/rest/v1/menu_items`, {
+        method: 'POST',
+        headers: {
+          apikey: serviceKey,
+          Authorization: `Bearer ${serviceKey}`,
+          'Content-Type': 'application/json',
+          Prefer: 'return=representation'
+        },
+        body: JSON.stringify(miRows)
+      })
+      const miText = await miRes.text()
+      let miJson
+      try { miJson = JSON.parse(miText) } catch { miJson = miText }
+      if (!miRes.ok) {
+        return { statusCode: miRes.status, headers: corsHeaders(), body: JSON.stringify({ stage: 'insert menu_items', error: miJson }) }
+      }
+
+      // menu_item_allergies をまとめて挿入
+      const miaRows = []
+      menuItems.forEach((mi, idx) => {
+        const insertedId = miJson[idx]?.id
+        if (!insertedId) return
+        const list = Array.isArray(mi.allergies) ? mi.allergies : []
+        list.forEach(a => {
+          miaRows.push({
+            menu_item_id: insertedId,
+            allergy_item_id: a.allergy_item_id,
+            presence_type: a.presence_type || 'none',
+            amount_level: a.amount_level || 'unknown',
+            notes: a.notes || ''
+          })
+        })
+      })
+
+      if (miaRows.length > 0) {
+        const miaRes = await fetch(`${url}/rest/v1/menu_item_allergies`, {
+          method: 'POST',
+          headers: {
+            apikey: serviceKey,
+            Authorization: `Bearer ${serviceKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(miaRows)
+        })
+        const miaText = await miaRes.text()
+        if (!miaRes.ok) {
+          return { statusCode: miaRes.status, headers: corsHeaders(), body: JSON.stringify({ stage: 'insert menu_item_allergies', error: miaText }) }
+        }
       }
     }
 

@@ -29,6 +29,17 @@ const Upload = () => {
   const [csvImporting, setCsvImporting] = useState(false);
   const [branchCsvFile, setBranchCsvFile] = useState(null);
   const [branchImporting, setBranchImporting] = useState(false);
+
+  const readFileAsText = (file) => new Promise((resolve, reject) => {
+    try {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(reader.error || new Error('ファイル読み込みに失敗しました'));
+      reader.readAsText(file, 'utf-8');
+    } catch (e) {
+      reject(e);
+    }
+  });
   
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
@@ -476,7 +487,7 @@ const Upload = () => {
                             try {
                             if (!csvFile) return;
                             setCsvImporting(true);
-                            const text = await csvFile.text();
+                            const text = await readFileAsText(csvFile);
                             const rows = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter(Boolean).map(r => r.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(s => s.replace(/^"|"$/g,'')));
                             const header = rows.shift();
                             // 期待ヘッダー（指定順 + ソースURL）
@@ -587,7 +598,7 @@ const Upload = () => {
                               try{
                                 if (!branchCsvFile) return;
                                 setBranchImporting(true);
-                                const text = await branchCsvFile.text();
+                                const text = await readFileAsText(branchCsvFile);
                                 const rows = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter(Boolean).map(r => r.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(s => s.replace(/^"|"$/g,'')));
                                 const header = rows.shift();
                                 const expected = ['店舗名','支店名','住所','電話番号','営業時間','定休日','情報元URL','備考'];

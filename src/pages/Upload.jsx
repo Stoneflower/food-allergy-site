@@ -27,6 +27,8 @@ const Upload = () => {
   const [uploadType, setUploadType] = useState('image'); // 'image' or 'csv'
   const [csvFile, setCsvFile] = useState(null);
   const [csvImporting, setCsvImporting] = useState(false);
+  const [branchCsvFile, setBranchCsvFile] = useState(null);
+  const [branchImporting, setBranchImporting] = useState(false);
   
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
@@ -556,6 +558,76 @@ const Upload = () => {
                           >テンプレートをダウンロード</a>
                         </div>
                         <p className="text-xs text-gray-500 mt-2">記号: ●=含有, △=工場由来(微量), －=不含</p>
+                      </div>
+                      {/* 支店CSV（store_locations） */}
+                      <div className="bg-white rounded-lg p-4 border">
+                        <h3 className="font-semibold mb-2">支店CSV（住所・電話・営業時間・定休日・URL）</h3>
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => {
+                              const headers = ['店舗名','支店名','住所','電話番号','営業時間','定休日','情報元URL','備考'];
+                              const sample = ['びっくりドンキー','渋谷宇田川店','東京都渋谷区…','03-1234-5678','11:00-23:00','年中無休','https://example.com/source','備考'];
+                              const csv = [headers, sample].map(r=>r.join(',')).join('\n');
+                              const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+                              const a = document.createElement('a');
+                              a.href = URL.createObjectURL(blob);
+                              a.download = '支店取込テンプレート.csv';
+                              a.click();
+                              URL.revokeObjectURL(a.href);
+                            }}
+                            className="px-4 py-2 bg-gray-800 text-white rounded hover:bg-black"
+                          >支店CSVテンプレート</button>
+                          <input type="file" accept=".csv" onChange={(e)=>{
+                            const f = e.target.files?.[0];
+                            if (!f) return; setBranchCsvFile(f);
+                          }} />
+                          <button
+                            disabled={!branchCsvFile || branchImporting}
+                            onClick={async ()=>{
+                              try{
+                                if (!branchCsvFile) return;
+                                setBranchImporting(true);
+                                const text = await branchCsvFile.text();
+                                const rows = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter(Boolean).map(r => r.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(s => s.replace(/^"|"$/g,'')));
+                                const header = rows.shift();
+                                const expected = ['店舗名','支店名','住所','電話番号','営業時間','定休日','情報元URL','備考'];
+                                if (!header || expected.some((h,i)=>header[i]!==h)) {
+                                  alert('支店CSVヘッダーが想定と異なります。テンプレートをご利用ください。');
+                                  setBranchImporting(false); return;
+                                }
+                                const base = import.meta.env.VITE_SUPABASE_URL;
+                                const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
+                                for (const cols of rows) {
+                                  const [storeName, branchName, address, phone, hours, closed, sourceUrl, notes] = cols.map(c => (c||'').trim());
+                                  if (!storeName || !branchName) continue;
+                                  // products を取得/作成（name一致、brandは空許容）
+                                  const q = new URLSearchParams({ select: 'id', name: `eq.${storeName}` });
+                                  const findRes = await fetch(`${base}/rest/v1/products?${q.toString()}`, { headers:{ apikey:key, Authorization:`Bearer ${key}` }});
+                                  let pid;
+                                  if (findRes.ok) { const arr = await findRes.json(); pid = arr[0]?.id; }
+                                  if (!pid) {
+                                    const up = await fetch(`${base}/rest/v1/products?on_conflict=name,brand`, { method:'POST', headers:{ apikey:key, Authorization:`Bearer ${key}`, 'Content-Type':'application/json', Prefer:'return=representation,resolution=merge-duplicates' }, body: JSON.stringify([{ name: storeName, brand: null, category: 'レストラン・店舗' }]) });
+                                    if (!up.ok) { const t = await up.text(); throw new Error(`products作成/更新エラー ${up.status}: ${t}`); }
+                                    const upJson = await up.json(); pid = upJson?.[0]?.id;
+                                  }
+                                  if (!pid) { throw new Error('product_idの特定に失敗しました'); }
+                                  // store_locations UPSERT
+                                  const payload = [{ product_id: pid, branch_name: branchName, address, phone, hours, closed, source_url: sourceUrl, notes }];
+                                  const slRes = await fetch(`${base}/rest/v1/store_locations?on_conflict=product_id,branch_name`, { method:'POST', headers:{ apikey:key, Authorization:`Bearer ${key}`, 'Content-Type':'application/json', Prefer:'return=representation,resolution=merge-duplicates' }, body: JSON.stringify(payload) });
+                                  if (!slRes.ok) { const t = await slRes.text(); throw new Error(`store_locations作成/更新エラー ${slRes.status}: ${t}`); }
+                                }
+                                alert('支店CSVを取り込みました');
+                                setBranchCsvFile(null);
+                                setBranchImporting(false);
+                              }catch(e){
+                                setBranchImporting(false);
+                                alert(e.message || '支店CSV取り込みでエラーが発生しました');
+                              }
+                            }}
+                            className={`px-4 py-2 rounded ${branchCsvFile ? 'bg-orange-500 text-white hover:bg-orange-600' : 'bg-gray-300 text-gray-600 cursor-not-allowed'}`}
+                          >{branchImporting ? '取り込み中...' : '支店CSVを取り込む'}</button>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2">列: 店舗名, 支店名, 住所, 電話番号, 営業時間, 定休日, 情報元URL, 備考</p>
                       </div>
                       <div className="bg-white rounded-lg p-4 border">
                         <h3 className="font-semibold mb-2">URLからCSV生成（PDF→CSV→保存）</h3>

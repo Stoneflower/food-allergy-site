@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import SafeIcon from '../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
 import { useRestaurant } from '../context/RestaurantContext';
-import PDFUploader from '../components/PDFUploader';
+// PDFアップローダは廃止（CSV取込へ移行）
 
 const { FiCamera, FiUpload, FiX, FiCheck, FiAlertCircle, FiEdit3, FiSave, FiImage, FiRefreshCw, FiTrendingUp, FiFileText } = FiIcons;
 
@@ -23,7 +23,7 @@ const Upload = () => {
   });
   const [similarProducts, setSimilarProducts] = useState([]);
   const [showSimilarProducts, setShowSimilarProducts] = useState(false);
-  const [showPDFUploader, setShowPDFUploader] = useState(false);
+  // PDFは廃止
   const [uploadType, setUploadType] = useState('image'); // 'image' or 'pdf'
   
   const fileInputRef = useRef(null);
@@ -401,16 +401,17 @@ const Upload = () => {
                   <SafeIcon icon={FiCamera} className="w-4 h-4" />
                   <span>商品撮影</span>
                 </button>
+                {/* PDF解析は廃止 */}
                 <button
-                  onClick={() => setUploadType('pdf')}
+                  onClick={() => setUploadType('csv')}
                   className={`flex-1 py-3 px-4 rounded-md text-sm font-medium transition-colors flex items-center justify-center space-x-2 ${
-                    uploadType === 'pdf'
+                    uploadType === 'csv'
                       ? 'bg-white text-gray-900 shadow-sm'
                       : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >
                   <SafeIcon icon={FiFileText} className="w-4 h-4" />
-                  <span>PDF解析</span>
+                  <span>CSV取込</span>
                 </button>
               </div>
             </div>
@@ -455,27 +456,80 @@ const Upload = () => {
                   </>
                 ) : (
                   <>
-                    {/* PDF解析ボタン */}
-                    <button
-                      onClick={() => setShowPDFUploader(true)}
-                      className="w-full flex items-center justify-center space-x-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white py-4 px-6 rounded-lg hover:from-blue-600 hover:to-purple-600 transition-colors shadow-md"
-                    >
-                      <SafeIcon icon={FiFileText} className="w-6 h-6" />
-                      <span className="text-lg font-semibold">PDFを解析する</span>
-                    </button>
+                    {/* CSVアップロード */}
+                    <div className="space-y-4">
+                      <div className="bg-white rounded-lg p-4 border">
+                        <h3 className="font-semibold mb-2">CSVアップロード（店舗名＋メニュー＋28品目）</h3>
+                        <div className="flex items-center gap-3">
+                          <input type="file" accept=".csv" onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            const text = await file.text();
+                            const rows = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter(Boolean).map(r => r.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(s => s.replace(/^"|"$/g,'')));
+                            const header = rows.shift();
+                            // 期待ヘッダー
+                            const expected = ['店舗名','系列','カテゴリ','メニュー名','小麦','そば','卵','乳','落花生','えび','かに','くるみ','アーモンド','あわび','いか','いくら','オレンジ','カシューナッツ','キウイ','牛肉','ゼラチン','ごま','さけ','さば','大豆','鶏肉','バナナ','豚肉','まつたけ','もも','やまいも','りんご'];
+                            if (!header || expected.some((h,i)=>header[i]!==h)) {
+                              alert('ヘッダーが想定と異なります。テンプレートCSVをご利用ください。');
+                              return;
+                            }
+                            // 日本語→IDマップ
+                            const idMap = { '小麦':'wheat','そば':'buckwheat','卵':'egg','乳':'milk','落花生':'peanut','えび':'shrimp','かに':'crab','くるみ':'walnut','アーモンド':'almond','あわび':'abalone','いか':'squid','いくら':'salmon_roe','オレンジ':'orange','カシューナッツ':'cashew','キウイ':'kiwi','牛肉':'beef','ゼラチン':'gelatin','ごま':'sesame','さけ':'salmon','さば':'mackerel','大豆':'soybean','鶏肉':'chicken','バナナ':'banana','豚肉':'pork','まつたけ':'matsutake','もも':'peach','やまいも':'yam','りんご':'apple' };
+                            const toPresence = (mark) => (mark==='●' ? 'direct' : (mark==='△' ? 'trace' : 'none'));
 
-                    {/* 登録済みPDFの案内 */}
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                      <h3 className="font-semibold text-blue-800 mb-2">📋 登録済みPDFリンク</h3>
-                      <p className="text-sm text-blue-700 mb-3">
-                        スシロー、かっぱ寿司、マクドナルドなど人気レストランのアレルギー情報PDFが登録済みです
-                      </p>
-                      <button
-                        onClick={() => setShowPDFUploader(true)}
-                        className="text-blue-600 hover:text-blue-800 text-sm font-medium underline"
-                      >
-                        登録済みPDFから選択する →
-                      </button>
+                            // 1ファイル=1店舗想定で逐次保存
+                            for (const cols of rows) {
+                              const [store, brand, category, menuName, ...marks] = cols;
+                              const product = { name: store, brand: brand || null, category: category || null };
+                              const menuAllergies = marks.map((m,i)=>({ allergy_item_id: idMap[expected[4+i]], presence_type: toPresence(m||'－'), amount_level: (m==='△'?'trace':(m==='●'?'unknown':'none')) }));
+
+                              // products + product_allergiesはスキップし、menu_items中心に保存
+                              const base = import.meta.env.VITE_SUPABASE_URL;
+                              const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
+                              // 既存products検索（同名）
+                              const q = new URLSearchParams({ select:'id', name:`eq.${store}` });
+                              const findRes = await fetch(`${base}/rest/v1/products?${q.toString()}`, { headers:{ apikey:key, Authorization:`Bearer ${key}` }});
+                              let pid;
+                              if (findRes.ok) {
+                                const arr = await findRes.json();
+                                pid = arr[0]?.id;
+                              }
+                              if (!pid) {
+                                const ins = await fetch(`${base}/rest/v1/products`, { method:'POST', headers:{ apikey:key, Authorization:`Bearer ${key}`, 'Content-Type':'application/json', Prefer:'return=representation' }, body: JSON.stringify([product]) });
+                                const insJson = await ins.json();
+                                pid = insJson?.[0]?.id;
+                              }
+                              if (!pid) { alert('products作成に失敗しました'); break; }
+                              // menu_items
+                              const miRes = await fetch(`${base}/rest/v1/menu_items`, { method:'POST', headers:{ apikey:key, Authorization:`Bearer ${key}`, 'Content-Type':'application/json', Prefer:'return=representation' }, body: JSON.stringify([{ product_id: pid, name: menuName }]) });
+                              const miJson = await miRes.json();
+                              const menuId = miJson?.[0]?.id;
+                              if (!menuId) { alert('menu_items作成に失敗しました'); break; }
+                              // menu_item_allergies
+                              await fetch(`${base}/rest/v1/menu_item_allergies`, { method:'POST', headers:{ apikey:key, Authorization:`Bearer ${key}`, 'Content-Type':'application/json' }, body: JSON.stringify(menuAllergies.map(a=>({ ...a, menu_item_id: menuId }))) });
+                            }
+                            alert('CSVの内容を取り込みました');
+                          }} />
+                          <a
+                            onClick={(e)=>{
+                              // テンプレCSV生成
+                              const headers = ['店舗名','系列','カテゴリ','メニュー名','小麦','そば','卵','乳','落花生','えび','かに','くるみ','アーモンド','あわび','いか','いくら','オレンジ','カシューナッツ','キウイ','牛肉','ゼラチン','ごま','さけ','さば','大豆','鶏肉','バナナ','豚肉','まつたけ','もも','やまいも','りんご'];
+                              const sample = ['びっくりドンキー','ハンバーグレストラン','レストラン・店舗','レギュラーバーグディッシュ', '●','－','－','－','－','－','－','－','－','－','－','－','－','－','－','－','－','●','－','－','●','－','－','－','－','－','－','－'];
+                              const csv = [headers, sample].map(r=>r.join(',')).join('\n');
+                              const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+                              const a = document.createElement('a');
+                              a.href = URL.createObjectURL(blob);
+                              a.download = 'アレルギー取込テンプレート.csv';
+                              a.click();
+                              URL.revokeObjectURL(a.href);
+                              e.preventDefault();
+                            }}
+                            href="#"
+                            className="text-blue-600 hover:text-blue-800 text-sm underline"
+                          >テンプレートをダウンロード</a>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2">記号: ●=含有, △=工場由来(微量), －=不含</p>
+                      </div>
                     </div>
                   </>
                 )}
@@ -497,11 +551,9 @@ const Upload = () => {
                     </ul>
                   ) : (
                     <ul className="text-sm text-blue-700 space-y-1">
-                      <li>• レストランのアレルギー情報PDFを解析できます</li>
-                      <li>• 登録済みリンクから選択すると高速処理が可能</li>
-                      <li>• 新しいURLも追加・解析できます</li>
-                      <li>• 日本語・英語のアレルギー成分を自動検出</li>
-                      <li>• メニュー項目と注意事項も抽出されます</li>
+                      <li>• 店舗名・メニュー名・28品目（●/△/－）のCSVを取り込めます</li>
+                      <li>• テンプレートCSVをダウンロードして編集してください</li>
+                      <li>• 取込後はSupabaseに自動保存されます</li>
                     </ul>
                   )}
                 </div>

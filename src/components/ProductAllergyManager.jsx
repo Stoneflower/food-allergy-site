@@ -90,12 +90,18 @@ const ProductAllergyManager = () => {
   // 商品アレルギー情報追加
   const addProductAllergy = async (productId, allergyItemId, presenceType, amountLevel, notes) => {
     try {
+      // 加工品は原則「加熱済み相当」として扱うため、保存前に正規化
+      let normalizedPresence = presenceType
+      if (presenceType === 'processed') {
+        normalizedPresence = 'heated'
+        notes = (notes || '') + (notes ? ' ' : '') + '[processed_as_heated] 加工品は加熱済み相当として扱いました'
+      }
       const { error } = await supabase
         .from('product_allergies')
         .insert([{
           product_id: productId,
           allergy_item_id: allergyItemId,
-          presence_type: presenceType,
+          presence_type: normalizedPresence,
           amount_level: amountLevel,
           notes: notes
         }])
@@ -138,6 +144,9 @@ const ProductAllergyManager = () => {
   return (
     <div className="p-6 max-w-6xl mx-auto bg-white rounded-lg shadow-md">
       <h2 className="text-2xl font-bold mb-6">商品アレルギー情報管理</h2>
+      <div className="mb-4 p-3 rounded bg-yellow-50 text-yellow-900 text-sm">
+        運用ルール: 成分表示の末尾に「香料」と記載がある場合は「香料程度（微量）」として登録してください。
+      </div>
       
       {message && (
         <div className={`p-4 rounded mb-4 ${
@@ -273,13 +282,26 @@ const ProductAllergyForm = ({ product, allergyItems, onAdd }) => {
     allergy_item_id: '',
     presence_type: 'direct',
     amount_level: 'unknown',
-    notes: ''
+    notes: '',
+    fragrance_end: false
   })
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    onAdd(product.id, formData.allergy_item_id, formData.presence_type, formData.amount_level, formData.notes)
-    setFormData({ allergy_item_id: '', presence_type: 'direct', amount_level: 'unknown', notes: '' })
+    const normalized = { ...formData }
+    if (normalized.fragrance_end) {
+      normalized.presence_type = 'trace'
+      normalized.amount_level = 'trace'
+      normalized.notes = (normalized.notes || '') + (normalized.notes ? ' ' : '') + '[fragrance_end] 成分末尾に香料表記あり'
+    }
+    onAdd(
+      product.id,
+      normalized.allergy_item_id,
+      normalized.presence_type,
+      normalized.amount_level,
+      normalized.notes
+    )
+    setFormData({ allergy_item_id: '', presence_type: 'direct', amount_level: 'unknown', notes: '', fragrance_end: false })
     setShowForm(false)
   }
 
@@ -317,7 +339,7 @@ const ProductAllergyForm = ({ product, allergyItems, onAdd }) => {
               <option value="direct">直接含有</option>
               <option value="trace">香料程度</option>
               <option value="heated">加熱済み</option>
-              <option value="processed">加工済み</option>
+              <option value="processed">加工済み（保存時に加熱済みに正規化）</option>
             </select>
 
             <select
@@ -340,6 +362,14 @@ const ProductAllergyForm = ({ product, allergyItems, onAdd }) => {
               className="p-1 border rounded text-sm"
             />
           </div>
+          <label className="mt-2 flex items-center gap-2 text-xs text-gray-700">
+            <input
+              type="checkbox"
+              checked={formData.fragrance_end}
+              onChange={(e) => setFormData({...formData, fragrance_end: e.target.checked})}
+            />
+            成分表示の末尾に「香料」がある（自動で香料程度/微量として登録）
+          </label>
           <button
             type="submit"
             className="mt-2 bg-blue-500 hover:bg-blue-600 text-white text-sm py-1 px-3 rounded"

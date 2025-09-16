@@ -88,20 +88,22 @@ const SimpleProductDisplay = ({ userId }) => {
             if (!userAllergy.small_amount_ok) {
               isSafe = false
               warningLevel = 'warning'
-              reasons.push(`${productAllergy.allergy_items.name}が香料程度含まれています`)
+              reasons.push(`${productAllergy.allergy_items.name}が香料程度（成分末尾の香料を含む）で含まれています`)
             } else {
               warningLevel = warningLevel === 'none' ? 'caution' : warningLevel
-              reasons.push(`${productAllergy.allergy_items.name}が香料程度含まれています（少量なら問題なし）`)
+              reasons.push(`${productAllergy.allergy_items.name}が香料程度（成分末尾の香料を含む）で含まれています（少量なら問題なし）`)
             }
-          } else if (productAllergy.presence_type === 'heated') {
+          } else if (productAllergy.presence_type === 'heated' || productAllergy.presence_type === 'processed') {
             // 加熱済みの場合
+            // 加工品は原則加熱済みとして扱う
+            const treatedAsHeated = true
             if (!userAllergy.heated_ok) {
               isSafe = false
               warningLevel = 'warning'
-              reasons.push(`${productAllergy.allergy_items.name}が加熱済みで含まれています`)
+              reasons.push(`${productAllergy.allergy_items.name}が${productAllergy.presence_type === 'processed' ? '加工品（加熱済み相当）' : '加熱済み'}で含まれています`)
             } else {
               warningLevel = warningLevel === 'none' ? 'caution' : warningLevel
-              reasons.push(`${productAllergy.allergy_items.name}が加熱済みで含まれています（加熱済みなら問題なし）`)
+              reasons.push(`${productAllergy.allergy_items.name}が${productAllergy.presence_type === 'processed' ? '加工品（加熱済み相当）' : '加熱済み'}で含まれています（加熱に問題なければ可）`)
             }
           }
         }

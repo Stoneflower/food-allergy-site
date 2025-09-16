@@ -26,8 +26,9 @@ export class PDFOCRProcessor {
 
   async processPDFFromURL(pdfUrl, options = {}) {
     try {
-      // PDFファイルを読み込み
-      const response = await fetch(pdfUrl);
+      // Netlify Functions 経由で取得（CORS回避）
+      const proxied = `/.netlify/functions/fetch-pdf?url=${encodeURIComponent(pdfUrl)}`;
+      const response = await fetch(proxied);
       if (!response.ok) {
         throw new Error(`PDF読み込みエラー: ${response.status}`);
       }

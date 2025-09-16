@@ -260,8 +260,14 @@ const UserRegistration = ({ onRegistrationComplete }) => {
       {step === 2 && (
         <div>
           <h3 className="text-xl font-bold mb-4">アレルギー設定</h3>
-          <p className="text-sm text-gray-600 mb-6">
+          <p className="text-sm text-gray-600 mb-2">
             アレルギーがある品目を選択し、少量摂取や加熱での安全性を設定してください。
+          </p>
+          <p className="text-xs text-yellow-800 bg-yellow-50 p-2 rounded mb-1">
+            運用ルール: 成分表示の末尾に「香料」とある場合は「香料程度（微量）」として扱います。
+          </p>
+          <p className="text-xs text-yellow-800 bg-yellow-50 p-2 rounded mb-6">
+            運用ルール: 加工品は原則「加熱済み」として扱います。
           </p>
           
           <div className="space-y-4 max-h-96 overflow-y-auto">

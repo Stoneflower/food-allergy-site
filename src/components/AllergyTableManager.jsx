@@ -138,6 +138,9 @@ const AllergyTableManager = () => {
       <h2 className="text-2xl font-bold mb-6">アレルギー28品目テーブル管理</h2>
       
       <div className="space-y-4 mb-6">
+        <div className="p-3 rounded bg-yellow-50 text-yellow-900 text-sm">
+          運用ルール: 成分表示の末尾に「香料」と記載がある場合は「香料程度（微量）」として登録してください。加工品は原則「加熱済み」として登録してください。
+        </div>
         <button
           onClick={createAllergyTable}
           disabled={isCreating}

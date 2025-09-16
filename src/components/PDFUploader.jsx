@@ -58,7 +58,7 @@ const PDFUploader = ({ onResult, onClose }) => {
 
     try {
       const options = {
-        maxPages: 5, // 最初の5ページのみ処理
+        maxPages: 20, // 最初の20ページまで処理
         scale: 2.0,
         onProgress: (progressInfo) => {
           setProgress(progressInfo);
@@ -306,7 +306,7 @@ const PDFUploader = ({ onResult, onClose }) => {
                       <h4 className="font-semibold text-yellow-800 mb-2">ご注意</h4>
                       <ul className="text-sm text-yellow-700 space-y-1">
                         <li>• PDF解析には数分かかる場合があります</li>
-                        <li>• 最初の5ページのみ処理されます</li>
+                        <li>• 最初の20ページまで処理されます</li>
                         <li>• 日本語と英語のアレルギー情報を検出します</li>
                         <li>• 結果は参考情報として利用してください</li>
                         <li>• 登録済みリンクは検証済みで高速処理が可能です</li>

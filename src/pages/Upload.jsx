@@ -512,7 +512,7 @@ const Upload = () => {
                               console.log('expected[9]:', expected[9]);
                               console.log('expected[10]:', expected[10]);
                               const menuAllergies = marks.map((m,i)=>({ 
-                                allergy_item_id: idMap[expected[9+i]], 
+                                allergy_item_id: idMap[expected[10+i]], 
                                 presence_type: toPresence(m||'－'), 
                                 amount_level: (m==='△'?'trace':(m==='●'?'unknown':'none')),
                                 notes: null

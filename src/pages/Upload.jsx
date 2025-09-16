@@ -852,6 +852,61 @@ const Upload = () => {
               >
                 ホームに戻る
               </button>
+              <button
+                onClick={async () => {
+                  try {
+                    const base = import.meta.env.VITE_SUPABASE_URL;
+                    const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
+                    const store = window.prompt('店舗名でフィルタ（例: びっくりドンキー）※空で全件', 'びっくりドンキー') || '';
+                    const params = new URLSearchParams();
+                    params.set('select', 'products(name,brand,category),menu_name,egg,milk,wheat,buckwheat,peanut,shrimp,crab,walnut,almond,abalone,squid,salmon_roe,orange,cashew,kiwi,beef,gelatin,sesame,salmon,mackerel,soybean,chicken,banana,pork,matsutake,peach,yam,apple');
+                    params.set('products!inner()', '');
+                    if (store.trim()) {
+                      params.set('products.name', `ilike.*${store.trim()}*`);
+                    }
+                    params.set('order', 'id.desc');
+
+                    const url = `${base}/rest/v1/product_allergies_matrix?${params.toString()}`.replace('products!inner()=', 'products!inner()');
+                    const res = await fetch(url, {
+                      headers: {
+                        apikey: key,
+                        Authorization: `Bearer ${key}`,
+                        Accept: 'application/json'
+                      }
+                    });
+                    if (!res.ok) throw new Error(`CSVエクスポート失敗 ${res.status}`);
+                    const data = await res.json();
+
+                    // 日本語ヘッダー（店舗名入り、びっくりドンキー想定の固定スキーマ）
+                    const headers = ['店舗名','系列','カテゴリ','メニュー名','小麦','そば','卵','乳','落花生','えび','かに','くるみ','アーモンド','あわび','いか','いくら','オレンジ','カシューナッツ','キウイ','牛肉','ゼラチン','ごま','さけ','さば','大豆','鶏肉','バナナ','豚肉','まつたけ','もも','やまいも','りんご'];
+                    const mapRow = (r) => ([
+                      r.products?.name || '',
+                      r.products?.brand || '',
+                      r.products?.category || '',
+                      r.menu_name || '',
+                      r.wheat, r.buckwheat, r.egg, r.milk, r.peanut, r.shrimp, r.crab, r.walnut, r.almond, r.abalone, r.squid, r.salmon_roe, r.orange, r.cashew, r.kiwi, r.beef, r.gelatin, r.sesame, r.salmon, r.mackerel, r.soybean, r.chicken, r.banana, r.pork, r.matsutake, r.peach, r.yam, r.apple
+                    ]);
+
+                    const escapeCSV = (v) => {
+                      const s = v == null ? '' : String(v);
+                      return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+                    };
+                    const rows = data.map(mapRow);
+                    const csv = [headers, ...rows].map(row => row.map(escapeCSV).join(',')).join('\n');
+                    const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = (store.trim() ? `${store.trim()}_` : '') + 'アレルギー一覧.csv';
+                    a.click();
+                    URL.revokeObjectURL(a.href);
+                  } catch (e) {
+                    alert(e.message);
+                  }
+                }}
+                className="flex-1 py-3 px-6 bg-gray-800 text-white rounded-lg hover:bg-black transition-colors font-semibold"
+              >
+                CSVをダウンロード
+              </button>
             </div>
           </motion.div>
         )}

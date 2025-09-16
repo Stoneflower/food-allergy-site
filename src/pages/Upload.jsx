@@ -27,8 +27,6 @@ const Upload = () => {
   const [uploadType, setUploadType] = useState('image'); // 'image' or 'csv'
   const [csvFile, setCsvFile] = useState(null);
   const [csvImporting, setCsvImporting] = useState(false);
-  const [branchCsvFile, setBranchCsvFile] = useState(null);
-  const [branchImporting, setBranchImporting] = useState(false);
 
   const readFileAsText = (file) => new Promise((resolve, reject) => {
     try {
@@ -490,8 +488,8 @@ const Upload = () => {
                             const text = await readFileAsText(csvFile);
                             const rows = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter(Boolean).map(r => r.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(s => s.replace(/^"|"$/g,'')));
                             const header = rows.shift();
-                            // 期待ヘッダー（指定順 + ソースURL）
-                            const expected = ['店舗名','系列','カテゴリ','ソースURL','メニュー名','卵','乳','小麦','そば','落花生','えび','かに','くるみ','大豆','牛肉','豚肉','鶏肉','さけ','さば','あわび','いか','いくら','オレンジ','キウイフルーツ','もも','りんご','やまいも','ゼラチン','バナナ','カシューナッツ','ごま','アーモンド','まつたけ'];
+                            // 期待ヘッダー（指定順 + 住所・電話情報 + 店舗リストURL）
+                            const expected = ['店舗名','系列','カテゴリ','住所','電話番号','営業時間','定休日','情報元URL','店舗リストURL','メニュー名','卵','乳','小麦','そば','落花生','えび','かに','くるみ','大豆','牛肉','豚肉','鶏肉','さけ','さば','あわび','いか','いくら','オレンジ','キウイフルーツ','もも','りんご','やまいも','ゼラチン','バナナ','カシューナッツ','ごま','アーモンド','まつたけ'];
                             if (!header || expected.some((h,i)=>header[i]!==h)) {
                               alert('ヘッダーが想定と異なります。テンプレートCSVをご利用ください。');
                               setCsvImporting(false); return;
@@ -500,14 +498,15 @@ const Upload = () => {
                             const idMap = { '卵':'egg','乳':'milk','小麦':'wheat','そば':'buckwheat','落花生':'peanut','えび':'shrimp','かに':'crab','くるみ':'walnut','大豆':'soybean','牛肉':'beef','豚肉':'pork','鶏肉':'chicken','さけ':'salmon','さば':'mackerel','あわび':'abalone','いか':'squid','いくら':'salmon_roe','オレンジ':'orange','キウイフルーツ':'kiwi','もも':'peach','りんご':'apple','やまいも':'yam','ゼラチン':'gelatin','バナナ':'banana','カシューナッツ':'cashew','ごま':'sesame','アーモンド':'almond','まつたけ':'matsutake' };
                             const toPresence = (mark) => (mark==='●' ? 'direct' : (mark==='△' ? 'trace' : 'none'));
 
-                            // 1ファイル=1店舗想定で逐次保存
+                            // 複数店舗対応：各行で住所情報を個別に保存
+                            const processedLocations = new Set(); // 重複住所防止用
                             for (const cols of rows) {
-                              const [store, brand, category, sourceUrl, rawMenuName, ...marks] = cols;
+                              const [store, brand, category, address, phone, hours, closed, sourceUrl, storeListUrl, rawMenuName, ...marks] = cols;
                               const menuName = (rawMenuName || '').replace(/[\u00A0\u2000-\u200B\u3000]/g,' ').trim();
                               if (!menuName) { console.warn('空のメニュー名行をスキップ', cols); continue; }
                               if (/^(★|\(|（)/.test(menuName) || /^[-\s]*$/.test(menuName)) continue;
                               const product = { name: (store||'').trim(), brand: (brand||'').trim() || null, category: (category||'').trim() || null, source_url: (sourceUrl||'').trim() || null };
-                              const menuAllergies = marks.map((m,i)=>({ allergy_item_id: idMap[expected[4+i]], presence_type: toPresence(m||'－'), amount_level: (m==='△'?'trace':(m==='●'?'unknown':'none')) }));
+                              const menuAllergies = marks.map((m,i)=>({ allergy_item_id: idMap[expected[9+i]], presence_type: toPresence(m||'－'), amount_level: (m==='△'?'trace':(m==='●'?'unknown':'none')) }));
 
                               // products + product_allergiesはスキップし、menu_items中心に保存
                               const base = import.meta.env.VITE_SUPABASE_URL;
@@ -529,6 +528,28 @@ const Upload = () => {
                                 await fetch(`${base}/rest/v1/products?id=eq.${pid}`, { method:'PATCH', headers:{ apikey:key, Authorization:`Bearer ${key}`, 'Content-Type':'application/json' }, body: JSON.stringify({ source_url: product.source_url, brand: product.brand, category: product.category }) });
                               }
                               if (!pid) { alert('products作成に失敗しました'); break; }
+                              
+                              // store_locations（住所・電話情報）を各行で保存（重複チェック付き）
+                              if (address || phone || hours || closed || sourceUrl || storeListUrl) {
+                                const locationKey = `${pid}_${address}_${phone}`; // 重複チェック用キー
+                                if (!processedLocations.has(locationKey)) {
+                                  const locationPayload = [{ 
+                                    product_id: pid, 
+                                    branch_name: null, // 支店名は空
+                                    address: address || null, 
+                                    phone: phone || null, 
+                                    hours: hours || null, 
+                                    closed: closed || null, 
+                                    source_url: sourceUrl || null, 
+                                    store_list_url: storeListUrl || null, // 店舗リストURL
+                                    notes: null 
+                                  }];
+                                  const slRes = await fetch(`${base}/rest/v1/store_locations`, { method:'POST', headers:{ apikey:key, Authorization:`Bearer ${key}`, 'Content-Type':'application/json' }, body: JSON.stringify(locationPayload) });
+                                  if (!slRes.ok) { const t = await slRes.text(); console.warn(`store_locations作成エラー ${slRes.status}: ${t}`); }
+                                  processedLocations.add(locationKey);
+                                }
+                              }
+                              
                               // menu_items
                               const miRes = await fetch(`${base}/rest/v1/menu_items?on_conflict=product_id,name`, { method:'POST', headers:{ apikey:key, Authorization:`Bearer ${key}`, 'Content-Type':'application/json', Prefer:'return=representation,resolution=merge-duplicates' }, body: JSON.stringify([{ product_id: pid, name: menuName }]) });
                               if (!miRes.ok) { const t = await miRes.text(); throw new Error(`menu_items作成エラー ${miRes.status}: ${t}`); }
@@ -552,10 +573,14 @@ const Upload = () => {
                           >{csvImporting ? '取り込み中...' : 'CSVを取り込む'}</button>
                           <a
                             onClick={(e)=>{
-                              // テンプレCSV生成（指定順）
-                              const headers = ['店舗名','系列','カテゴリ','メニュー名','卵','乳','小麦','そば','落花生','えび','かに','くるみ','大豆','牛肉','豚肉','鶏肉','さけ','さば','あわび','いか','いくら','オレンジ','キウイフルーツ','もも','りんご','やまいも','ゼラチン','バナナ','カシューナッツ','ごま','アーモンド','まつたけ'];
-                              const sample = ['びっくりドンキー','ハンバーグレストラン','レストラン・店舗','レギュラーバーグディッシュ', '－','－','－','－','－','－','－','－','－','●','●','－','－','－','－','－','－','－','－','－','－','－','－','－','－','－','－'];
-                              const csv = [headers, sample].map(r=>r.join(',')).join('\n');
+                              // テンプレCSV生成（指定順 + 住所・電話情報 + 店舗リストURL）
+                              const headers = ['店舗名','系列','カテゴリ','住所','電話番号','営業時間','定休日','情報元URL','店舗リストURL','メニュー名','卵','乳','小麦','そば','落花生','えび','かに','くるみ','大豆','牛肉','豚肉','鶏肉','さけ','さば','あわび','いか','いくら','オレンジ','キウイフルーツ','もも','りんご','やまいも','ゼラチン','バナナ','カシューナッツ','ごま','アーモンド','まつたけ'];
+                              const samples = [
+                                ['びっくりドンキー','ハンバーグレストラン','レストラン・店舗','東京都渋谷区宇田川町1-1','03-1234-5678','11:00-23:00','年中無休','https://example.com/allergy-info','https://www.bikkuri-donkey.com/store/','レギュラーバーグディッシュ', '－','－','－','－','－','－','－','－','－','●','●','－','－','－','－','－','－','－','－','－','－','－','－','－','－','－','－'],
+                                ['びっくりドンキー','ハンバーグレストラン','レストラン・店舗','東京都新宿区新宿3-1-1','03-2345-6789','10:00-24:00','火曜日','https://example.com/allergy-info','https://www.bikkuri-donkey.com/store/','チキンバーグディッシュ', '－','－','－','－','－','－','－','－','－','－','●','－','－','－','－','－','－','－','－','－','－','－','－','－','－','－','－'],
+                                ['びっくりドンキー','ハンバーグレストラン','レストラン・店舗','大阪府大阪市北区梅田1-1-1','06-3456-7890','11:00-22:00','水曜日','https://example.com/allergy-info','https://www.bikkuri-donkey.com/store/','フィッシュバーグディッシュ', '－','－','－','－','－','－','－','－','－','－','－','－','－','－','－','－','－','－','－','－','－','－','－','－','－','－','－']
+                              ];
+                              const csv = [headers, ...samples].map(r=>r.join(',')).join('\n');
                               const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
                               const a = document.createElement('a');
                               a.href = URL.createObjectURL(blob);
@@ -570,122 +595,6 @@ const Upload = () => {
                         </div>
                         <p className="text-xs text-gray-500 mt-2">記号: ●=含有, △=工場由来(微量), －=不含</p>
                       </div>
-                      {/* 支店CSV（store_locations） */}
-                      <div className="bg-white rounded-lg p-4 border">
-                        <h3 className="font-semibold mb-2">支店CSV（住所・電話・営業時間・定休日・URL）</h3>
-                        <div className="flex items-center gap-3">
-                      <button
-                            onClick={() => {
-                              const headers = ['店舗名','支店名','住所','電話番号','営業時間','定休日','情報元URL','備考'];
-                              const sample = ['びっくりドンキー','渋谷宇田川店','東京都渋谷区…','03-1234-5678','11:00-23:00','年中無休','https://example.com/source','備考'];
-                              const csv = [headers, sample].map(r=>r.join(',')).join('\n');
-                              const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
-                              const a = document.createElement('a');
-                              a.href = URL.createObjectURL(blob);
-                              a.download = '支店取込テンプレート.csv';
-                              a.click();
-                              URL.revokeObjectURL(a.href);
-                            }}
-                            className="px-4 py-2 bg-gray-800 text-white rounded hover:bg-black"
-                          >支店CSVテンプレート</button>
-                          <input type="file" accept=".csv" onChange={(e)=>{
-                            const f = e.target.files?.[0];
-                            if (!f) return; setBranchCsvFile(f);
-                          }} />
-                          <button
-                            disabled={!branchCsvFile || branchImporting}
-                            onClick={async ()=>{
-                              try{
-                                if (!branchCsvFile) return;
-                                setBranchImporting(true);
-                                const text = await readFileAsText(branchCsvFile);
-                                const rows = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter(Boolean).map(r => r.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(s => s.replace(/^"|"$/g,'')));
-                                const header = rows.shift();
-                                const expected = ['店舗名','支店名','住所','電話番号','営業時間','定休日','情報元URL','備考'];
-                                if (!header || expected.some((h,i)=>header[i]!==h)) {
-                                  alert('支店CSVヘッダーが想定と異なります。テンプレートをご利用ください。');
-                                  setBranchImporting(false); return;
-                                }
-                                const base = import.meta.env.VITE_SUPABASE_URL;
-                                const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
-                                for (const cols of rows) {
-                                  const [storeName, branchName, address, phone, hours, closed, sourceUrl, notes] = cols.map(c => (c||'').trim());
-                                  if (!storeName || !branchName) continue;
-                                  // products を取得/作成（name一致、brandは空許容）
-                                  const q = new URLSearchParams({ select: 'id', name: `eq.${storeName}` });
-                                  const findRes = await fetch(`${base}/rest/v1/products?${q.toString()}`, { headers:{ apikey:key, Authorization:`Bearer ${key}` }});
-                                  let pid;
-                                  if (findRes.ok) { const arr = await findRes.json(); pid = arr[0]?.id; }
-                                  if (!pid) {
-                                    const up = await fetch(`${base}/rest/v1/products?on_conflict=name,brand`, { method:'POST', headers:{ apikey:key, Authorization:`Bearer ${key}`, 'Content-Type':'application/json', Prefer:'return=representation,resolution=merge-duplicates' }, body: JSON.stringify([{ name: storeName, brand: null, category: 'レストラン・店舗' }]) });
-                                    if (!up.ok) { const t = await up.text(); throw new Error(`products作成/更新エラー ${up.status}: ${t}`); }
-                                    const upJson = await up.json(); pid = upJson?.[0]?.id;
-                                  }
-                                  if (!pid) { throw new Error('product_idの特定に失敗しました'); }
-                                  // store_locations UPSERT
-                                  const payload = [{ product_id: pid, branch_name: branchName, address, phone, hours, closed, source_url: sourceUrl, notes }];
-                                  const slRes = await fetch(`${base}/rest/v1/store_locations?on_conflict=product_id,branch_name`, { method:'POST', headers:{ apikey:key, Authorization:`Bearer ${key}`, 'Content-Type':'application/json', Prefer:'return=representation,resolution=merge-duplicates' }, body: JSON.stringify(payload) });
-                                  if (!slRes.ok) { const t = await slRes.text(); throw new Error(`store_locations作成/更新エラー ${slRes.status}: ${t}`); }
-                                }
-                                alert('支店CSVを取り込みました');
-                                setBranchCsvFile(null);
-                                setBranchImporting(false);
-                              }catch(e){
-                                setBranchImporting(false);
-                                alert(e.message || '支店CSV取り込みでエラーが発生しました');
-                              }
-                            }}
-                            className={`px-4 py-2 rounded ${branchCsvFile ? 'bg-orange-500 text-white hover:bg-orange-600' : 'bg-gray-300 text-gray-600 cursor-not-allowed'}`}
-                          >{branchImporting ? '取り込み中...' : '支店CSVを取り込む'}</button>
-                        </div>
-                        <p className="text-xs text-gray-500 mt-2">列: 店舗名, 支店名, 住所, 電話番号, 営業時間, 定休日, 情報元URL, 備考</p>
-                      </div>
-                      <div className="bg-white rounded-lg p-4 border">
-                        <h3 className="font-semibold mb-2">URLからCSV生成（PDF→CSV→保存）</h3>
-                        <div className="flex items-center gap-2">
-                          <input id="csvGenUrl" type="url" defaultValue="https://www.bikkuri-donkey.com/control-panel/uploads/2025/08/2025_0827_allergy.pdf" className="flex-1 px-3 py-2 border rounded" placeholder="PDFのURL" />
-                          <button
-                            onClick={async ()=>{
-                              try{
-                                const input = document.getElementById('csvGenUrl');
-                                const url = input?.value?.trim();
-                                if(!url) return alert('URLを入力してください');
-                                // 既存のOCRパイプラインを利用してテキスト抽出（CORS回避はfetch-pdf関数）
-                                const proxied = `/.netlify/functions/fetch-pdf?url=${encodeURIComponent(url)}`;
-                                const res = await fetch(proxied);
-                                if(!res.ok) throw new Error(`PDF取得失敗 ${res.status}`);
-                                const buf = await res.arrayBuffer();
-                                // 既存関数を使って解析
-                                const { pdfOCRProcessor } = await import('../utils/pdfOCR');
-                                const result = await pdfOCRProcessor.processPDFFromBuffer(buf, { maxPages: 20, scale: 2.0 });
-                                // メニュー名と推定結果から指定順のCSVを作成
-                                const headers = ['店舗名','系列','カテゴリ','メニュー名','卵','乳','小麦','そば','落花生','えび','かに','くるみ','大豆','牛肉','豚肉','鶏肉','さけ','さば','あわび','いか','いくら','オレンジ','キウイフルーツ','もも','りんご','やまいも','ゼラチン','バナナ','カシューナッツ','ごま','アーモンド','まつたけ'];
-                                const orderIds = ['egg','milk','wheat','buckwheat','peanut','shrimp','crab','walnut','soybean','beef','pork','chicken','salmon','mackerel','abalone','squid','salmon_roe','orange','kiwi','peach','apple','yam','gelatin','banana','cashew','sesame','almond','matsutake'];
-                                const storeName = result?.restaurantInfo?.name || 'PDFから抽出された情報';
-                                const brand = result?.restaurantInfo?.category || 'レストラン・店舗';
-                                const rows = (result?.consolidatedInfo?.menuAllergies || []).map(m=>{
-                                  const marks = orderIds.map(id=>{
-                                    const presence = m.allergies[id];
-                                    return presence === 'direct' ? '●' : (presence === 'trace' ? '△' : '－');
-                                  });
-                                  return [storeName, brand, 'レストラン・店舗', m.name, ...marks];
-                                });
-                                const csv = [headers, ...rows].map(r=>r.join(',')).join('\n');
-                                const blob = new Blob(["\uFEFF"+csv], {type:'text/csv;charset=utf-8;'});
-                                const a = document.createElement('a');
-                                a.href = URL.createObjectURL(blob);
-                                a.download = '解析結果.csv';
-                                a.click();
-                                URL.revokeObjectURL(a.href);
-                              }catch(e){
-                                alert(e.message || 'CSV生成に失敗しました');
-                              }
-                            }}
-                            className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600"
-                          >URLからCSV生成</button>
-                        </div>
-                        <p className="text-xs text-gray-500 mt-2">生成後、上のCSV取込で登録できます。</p>
-                      </div>
                     </div>
                   </>
                 )}
@@ -695,7 +604,7 @@ const Upload = () => {
                   <h3 className="font-semibold text-blue-800 mb-2 flex items-center space-x-2">
                     <SafeIcon icon={FiAlertCircle} className="w-5 h-5" />
                     <span>
-                      {uploadType === 'image' ? 'きれいに撮影するコツ' : 'PDF解析について'}
+                      {uploadType === 'image' ? 'きれいに撮影するコツ' : 'CSVアップロードについて'}
                     </span>
                   </h3>
                   {uploadType === 'image' ? (

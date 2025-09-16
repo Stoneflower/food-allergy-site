@@ -26,6 +26,7 @@ const RestaurantDetail = () => {
   const [dbProduct, setDbProduct] = useState(null);
   const [dbMenuItems, setDbMenuItems] = useState([]);
   const [matrixRows, setMatrixRows] = useState([]); // product_allergies_matrix rows
+  const [storeLocations, setStoreLocations] = useState([]); // 複数住所対応
   const [selectedAllergyIds, setSelectedAllergyIds] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -57,10 +58,17 @@ const RestaurantDetail = () => {
           .eq('product_id', productId)
           .order('id', { ascending: false });
         if (mxErr) throw mxErr;
+        const { data: locations, error: locErr } = await supabase
+          .from('store_locations')
+          .select('*')
+          .eq('product_id', productId)
+          .order('id', { ascending: true });
+        if (locErr) throw locErr;
         if (!cancelled) {
           setDbProduct(prod);
           setDbMenuItems(items || []);
           setMatrixRows(matrix || []);
+          setStoreLocations(locations || []);
         }
       } catch (e) {
         console.warn('DB detail load failed:', e.message);
@@ -341,32 +349,81 @@ const RestaurantDetail = () => {
             {/* Contact Info */}
             <div className="bg-white rounded-xl shadow-md p-6">
               <h3 className="text-xl font-semibold mb-4">店舗情報</h3>
-              <div className="space-y-4">
-                <div className="flex items-start space-x-3">
-                  <SafeIcon icon={FiMapPin} className="w-5 h-5 text-gray-400 mt-0.5" />
-                  <div>
-                    <p className="font-medium">住所</p>
-                    <p className="text-gray-600 text-sm">{resolvedRestaurant.address}</p>
-                  </div>
+              {storeLocations.length > 0 ? (
+                <div className="space-y-6">
+                  {storeLocations.map((location, index) => (
+                    <div key={location.id} className="border border-gray-200 rounded-lg p-4">
+                      {location.branch_name && (
+                        <h4 className="font-semibold text-gray-900 mb-3">{location.branch_name}</h4>
+                      )}
+                      <div className="space-y-3">
+                        {location.address && (
+                          <div className="flex items-start space-x-3">
+                            <SafeIcon icon={FiMapPin} className="w-5 h-5 text-gray-400 mt-0.5" />
+                            <div>
+                              <p className="font-medium">住所</p>
+                              <p className="text-gray-600 text-sm">{location.address}</p>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {location.phone && (
+                          <div className="flex items-start space-x-3">
+                            <SafeIcon icon={FiPhone} className="w-5 h-5 text-gray-400 mt-0.5" />
+                            <div>
+                              <p className="font-medium">電話番号</p>
+                              <p className="text-gray-600 text-sm">{location.phone}</p>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {(location.hours || location.closed) && (
+                          <div className="flex items-start space-x-3">
+                            <SafeIcon icon={FiClock} className="w-5 h-5 text-gray-400 mt-0.5" />
+                            <div>
+                              <p className="font-medium">営業時間</p>
+                              {location.hours && <p className="text-gray-600 text-sm">{location.hours}</p>}
+                              {location.closed && <p className="text-gray-600 text-sm">定休日: {location.closed}</p>}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {location.store_list_url && (
+                          <div className="flex items-start space-x-3">
+                            <SafeIcon icon={FiInfo} className="w-5 h-5 text-gray-400 mt-0.5" />
+                            <div>
+                              <p className="font-medium">店舗リスト</p>
+                              <a 
+                                href={location.store_list_url} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:text-blue-800 text-sm underline"
+                              >
+                                全店舗一覧を見る
+                              </a>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {location.notes && (
+                          <div className="flex items-start space-x-3">
+                            <SafeIcon icon={FiInfo} className="w-5 h-5 text-gray-400 mt-0.5" />
+                            <div>
+                              <p className="font-medium">備考</p>
+                              <p className="text-gray-600 text-sm">{location.notes}</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                
-                <div className="flex items-start space-x-3">
-                  <SafeIcon icon={FiPhone} className="w-5 h-5 text-gray-400 mt-0.5" />
-                  <div>
-                    <p className="font-medium">電話番号</p>
-                    <p className="text-gray-600 text-sm">{resolvedRestaurant.phone}</p>
-                  </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <SafeIcon icon={FiMapPin} className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                  <p>店舗情報が登録されていません</p>
                 </div>
-                
-                <div className="flex items-start space-x-3">
-                  <SafeIcon icon={FiClock} className="w-5 h-5 text-gray-400 mt-0.5" />
-                  <div>
-                    <p className="font-medium">営業時間</p>
-                    <p className="text-gray-600 text-sm">{resolvedRestaurant.hours}</p>
-                    <p className="text-gray-600 text-sm">定休日: {resolvedRestaurant.closed}</p>
-                  </div>
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Quick Allergy Info */}

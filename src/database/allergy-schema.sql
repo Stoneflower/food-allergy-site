@@ -172,6 +172,7 @@ CREATE TRIGGER update_product_allergies_updated_at
     EXECUTE FUNCTION update_updated_at_column();
 
 -- 店舗所在地テーブル（チェーン各店舗の住所/電話/営業時間など）
+-- 複数住所対応のためUNIQUE制約を削除
 CREATE TABLE IF NOT EXISTS store_locations (
   id SERIAL PRIMARY KEY,
   product_id INTEGER REFERENCES products(id) ON DELETE CASCADE,
@@ -180,11 +181,11 @@ CREATE TABLE IF NOT EXISTS store_locations (
   phone VARCHAR(50),
   hours VARCHAR(200),
   source_url TEXT,
+  store_list_url TEXT, -- 店舗リストURL（437店舗などの一覧ページ）
   closed VARCHAR(200),
   notes TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  UNIQUE(product_id, branch_name)
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_store_locations_product_id ON store_locations(product_id);

@@ -1,4 +1,17 @@
 export const handler = async (event) => {
+  // Preflight/OPTIONS
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 204,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Headers': '*'
+      },
+      body: ''
+    }
+  }
+
   try {
     const url = event.queryStringParameters?.url
     if (!url) {
@@ -8,7 +21,8 @@ export const handler = async (event) => {
     const res = await fetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-        'Accept': 'application/pdf,*/*'
+        'Accept': 'application/pdf,*/*',
+        'Referer': new URL(url).origin
       },
       redirect: 'follow'
     })

@@ -496,6 +496,7 @@ const Upload = () => {
                             }
                             // 日本語→IDマップ
                             const idMap = { '卵':'egg','乳':'milk','小麦':'wheat','そば':'buckwheat','落花生':'peanut','えび':'shrimp','かに':'crab','くるみ':'walnut','大豆':'soybean','牛肉':'beef','豚肉':'pork','鶏肉':'chicken','さけ':'salmon','さば':'mackerel','あわび':'abalone','いか':'squid','いくら':'salmon_roe','オレンジ':'orange','キウイフルーツ':'kiwi','もも':'peach','りんご':'apple','やまいも':'yam','ゼラチン':'gelatin','バナナ':'banana','カシューナッツ':'cashew','ごま':'sesame','アーモンド':'almond','まつたけ':'matsutake' };
+                            console.log('idMap:', idMap);
                             const toPresence = (mark) => (mark==='●' ? 'direct' : (mark==='△' ? 'trace' : 'none'));
 
                             // 複数店舗対応：各行で住所情報を個別に保存
@@ -513,6 +514,7 @@ const Upload = () => {
                                 notes: null
                               }));
                               console.log('menuAllergies生成データ:', menuAllergies);
+                              console.log('menuAllergies最初の要素:', menuAllergies[0]);
 
                               // products + product_allergiesはスキップし、menu_items中心に保存
                               const base = import.meta.env.VITE_SUPABASE_URL;
@@ -572,6 +574,7 @@ const Upload = () => {
                                 notes: a.notes
                               }));
                               console.log('menu_item_allergies送信データ:', miaData);
+                              console.log('送信データ最初の要素:', miaData[0]);
                               const miaRes = await fetch(`${base}/rest/v1/menu_item_allergies`, { method:'POST', headers:{ apikey:key, Authorization:`Bearer ${key}`, 'Content-Type':'application/json' }, body: JSON.stringify(miaData) });
                               if (!miaRes.ok) { const t = await miaRes.text(); throw new Error(`menu_item_allergies作成エラー ${miaRes.status}: ${t}`); }
                             }

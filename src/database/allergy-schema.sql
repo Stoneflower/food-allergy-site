@@ -127,6 +127,8 @@ CREATE INDEX IF NOT EXISTS idx_user_allergy_settings_allergy_item_id ON user_all
 
 CREATE INDEX IF NOT EXISTS idx_products_name ON products(name);
 CREATE INDEX IF NOT EXISTS idx_products_barcode ON products(barcode);
+-- 重複防止用（CSV UPSERT 対応）
+CREATE UNIQUE INDEX IF NOT EXISTS ux_products_name_brand ON products(name, brand);
 
 CREATE INDEX IF NOT EXISTS idx_product_allergies_product_id ON product_allergies(product_id);
 CREATE INDEX IF NOT EXISTS idx_product_allergies_allergy_item_id ON product_allergies(allergy_item_id);
@@ -168,6 +170,31 @@ CREATE TRIGGER update_product_allergies_updated_at
     BEFORE UPDATE ON product_allergies 
     FOR EACH ROW 
     EXECUTE FUNCTION update_updated_at_column();
+
+-- 店舗所在地テーブル（チェーン各店舗の住所/電話/営業時間など）
+CREATE TABLE IF NOT EXISTS store_locations (
+  id SERIAL PRIMARY KEY,
+  product_id INTEGER REFERENCES products(id) ON DELETE CASCADE,
+  branch_name VARCHAR(200),
+  address TEXT,
+  phone VARCHAR(50),
+  hours VARCHAR(200),
+  source_url TEXT,
+  closed VARCHAR(200),
+  notes TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(product_id, branch_name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_store_locations_product_id ON store_locations(product_id);
+
+CREATE TRIGGER update_store_locations_updated_at
+BEFORE UPDATE ON store_locations
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- メニューの重複防止（CSV UPSERT 対応）
+CREATE UNIQUE INDEX IF NOT EXISTS ux_menu_items_product_name ON menu_items(product_id, name);
 
 -- メニュー項目テーブル
 CREATE TABLE IF NOT EXISTS menu_items (

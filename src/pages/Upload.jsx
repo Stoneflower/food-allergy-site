@@ -477,8 +477,8 @@ const Upload = () => {
                             const text = await csvFile.text();
                             const rows = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter(Boolean).map(r => r.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(s => s.replace(/^"|"$/g,'')));
                             const header = rows.shift();
-                            // 期待ヘッダー（指定順）
-                            const expected = ['店舗名','系列','カテゴリ','メニュー名','卵','乳','小麦','そば','落花生','えび','かに','くるみ','大豆','牛肉','豚肉','鶏肉','さけ','さば','あわび','いか','いくら','オレンジ','キウイフルーツ','もも','りんご','やまいも','ゼラチン','バナナ','カシューナッツ','ごま','アーモンド','まつたけ'];
+                            // 期待ヘッダー（指定順 + ソースURL）
+                            const expected = ['店舗名','系列','カテゴリ','ソースURL','メニュー名','卵','乳','小麦','そば','落花生','えび','かに','くるみ','大豆','牛肉','豚肉','鶏肉','さけ','さば','あわび','いか','いくら','オレンジ','キウイフルーツ','もも','りんご','やまいも','ゼラチン','バナナ','カシューナッツ','ごま','アーモンド','まつたけ'];
                             if (!header || expected.some((h,i)=>header[i]!==h)) {
                               alert('ヘッダーが想定と異なります。テンプレートCSVをご利用ください。');
                               setCsvImporting(false); return;
@@ -489,10 +489,11 @@ const Upload = () => {
 
                             // 1ファイル=1店舗想定で逐次保存
                             for (const cols of rows) {
-                              const [store, brand, category, rawMenuName, ...marks] = cols;
+                              const [store, brand, category, sourceUrl, rawMenuName, ...marks] = cols;
                               const menuName = (rawMenuName || '').replace(/[\u00A0\u2000-\u200B\u3000]/g,' ').trim();
                               if (!menuName) { console.warn('空のメニュー名行をスキップ', cols); continue; }
-                              const product = { name: (store||'').trim(), brand: (brand||'').trim() || null, category: (category||'').trim() || null };
+                              if (/^(★|\(|（)/.test(menuName) || /^[-\s]*$/.test(menuName)) continue;
+                              const product = { name: (store||'').trim(), brand: (brand||'').trim() || null, category: (category||'').trim() || null, source_url: (sourceUrl||'').trim() || null };
                               const menuAllergies = marks.map((m,i)=>({ allergy_item_id: idMap[expected[4+i]], presence_type: toPresence(m||'－'), amount_level: (m==='△'?'trace':(m==='●'?'unknown':'none')) }));
 
                               // products + product_allergiesはスキップし、menu_items中心に保存
@@ -507,19 +508,22 @@ const Upload = () => {
                                 pid = arr[0]?.id;
                               }
                               if (!pid) {
-                                const ins = await fetch(`${base}/rest/v1/products`, { method:'POST', headers:{ apikey:key, Authorization:`Bearer ${key}`, 'Content-Type':'application/json', Prefer:'return=representation' }, body: JSON.stringify([product]) });
-                                if (!ins.ok) { const t = await ins.text(); throw new Error(`products作成エラー ${ins.status}: ${t}`); }
-                                const insJson = await ins.json();
-                                pid = insJson?.[0]?.id;
+                                const up = await fetch(`${base}/rest/v1/products?on_conflict=name,brand`, { method:'POST', headers:{ apikey:key, Authorization:`Bearer ${key}`, 'Content-Type':'application/json', Prefer:'return=representation,resolution=merge-duplicates' }, body: JSON.stringify([product]) });
+                                if (!up.ok) { const t = await up.text(); throw new Error(`products作成/更新エラー ${up.status}: ${t}`); }
+                                const upJson = await up.json();
+                                pid = upJson?.[0]?.id;
+                              } else {
+                                await fetch(`${base}/rest/v1/products?id=eq.${pid}`, { method:'PATCH', headers:{ apikey:key, Authorization:`Bearer ${key}`, 'Content-Type':'application/json' }, body: JSON.stringify({ source_url: product.source_url, brand: product.brand, category: product.category }) });
                               }
                               if (!pid) { alert('products作成に失敗しました'); break; }
                               // menu_items
-                              const miRes = await fetch(`${base}/rest/v1/menu_items`, { method:'POST', headers:{ apikey:key, Authorization:`Bearer ${key}`, 'Content-Type':'application/json', Prefer:'return=representation' }, body: JSON.stringify([{ product_id: pid, name: menuName }]) });
+                              const miRes = await fetch(`${base}/rest/v1/menu_items?on_conflict=product_id,name`, { method:'POST', headers:{ apikey:key, Authorization:`Bearer ${key}`, 'Content-Type':'application/json', Prefer:'return=representation,resolution=merge-duplicates' }, body: JSON.stringify([{ product_id: pid, name: menuName }]) });
                               if (!miRes.ok) { const t = await miRes.text(); throw new Error(`menu_items作成エラー ${miRes.status}: ${t}`); }
                               const miJson = await miRes.json();
                               const menuId = miJson?.[0]?.id;
                               if (!menuId) { alert('menu_items作成に失敗しました'); break; }
                               // menu_item_allergies
+                              await fetch(`${base}/rest/v1/menu_item_allergies?menu_item_id=eq.${menuId}`, { method:'DELETE', headers:{ apikey:key, Authorization:`Bearer ${key}` }});
                               const miaRes = await fetch(`${base}/rest/v1/menu_item_allergies`, { method:'POST', headers:{ apikey:key, Authorization:`Bearer ${key}`, 'Content-Type':'application/json' }, body: JSON.stringify(menuAllergies.map(a=>({ ...a, menu_item_id: menuId }))) });
                               if (!miaRes.ok) { const t = await miaRes.text(); throw new Error(`menu_item_allergies作成エラー ${miaRes.status}: ${t}`); }
                             }

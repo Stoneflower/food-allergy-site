@@ -25,6 +25,8 @@ const RestaurantDetail = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [dbProduct, setDbProduct] = useState(null);
   const [dbMenuItems, setDbMenuItems] = useState([]);
+  const [matrixRows, setMatrixRows] = useState([]); // product_allergies_matrix rows
+  const [selectedAllergyIds, setSelectedAllergyIds] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const isDbId = typeof id === 'string' && id.startsWith('db_');
@@ -49,9 +51,16 @@ const RestaurantDetail = () => {
           .eq('product_id', productId)
           .order('id', { ascending: false });
         if (mErr) throw mErr;
+        const { data: matrix, error: mxErr } = await supabase
+          .from('product_allergies_matrix')
+          .select('*')
+          .eq('product_id', productId)
+          .order('id', { ascending: false });
+        if (mxErr) throw mxErr;
         if (!cancelled) {
           setDbProduct(prod);
           setDbMenuItems(items || []);
+          setMatrixRows(matrix || []);
         }
       } catch (e) {
         console.warn('DB detail load failed:', e.message);
@@ -103,6 +112,24 @@ const RestaurantDetail = () => {
 
   const safeAllergies = getAllergyInfo().filter(a => a.isSafe);
   const unsafeAllergies = getAllergyInfo().filter(a => !a.isSafe);
+
+  // アレルギー選択（メニュー絞り込み）
+  const normalizeId = (id) => (id === 'soy' ? 'soybean' : id);
+  const toggleFilter = (id) => {
+    setSelectedAllergyIds((prev) => (
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    ));
+  };
+  const filteredMenus = (() => {
+    if (!isDbId || matrixRows.length === 0) return [];
+    const needIds = selectedAllergyIds.map(normalizeId);
+    return matrixRows.filter(row => {
+      return needIds.every(aid => {
+        const val = row[aid];
+        return val === '－' || val === '-' || val === null || val === undefined;
+      });
+    });
+  })();
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -186,6 +213,37 @@ const RestaurantDetail = () => {
                     animate={{ opacity: 1 }}
                     className="space-y-6"
                   >
+                    {isDbId && (
+                      <div>
+                        <h3 className="text-xl font-semibold mb-3">メニューの絞り込み</h3>
+                        <div className="flex flex-wrap gap-2 mb-4">
+                          {allergyOptions.map(a => (
+                            <button
+                              key={a.id}
+                              onClick={() => toggleFilter(a.id)}
+                              className={`px-3 py-1 rounded-full text-sm border ${selectedAllergyIds.includes(a.id) ? 'bg-red-500 text-white border-red-500' : 'bg-white text-gray-700 border-gray-300'}`}
+                              title={`${a.name}を含むメニューを除外`}
+                            >
+                              <span className="mr-1">{a.icon}</span>{a.name}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="bg-white rounded-lg border p-4">
+                          <h4 className="font-semibold mb-2 text-gray-900">表示対象のメニュー</h4>
+                          {selectedAllergyIds.length === 0 ? (
+                            <p className="text-sm text-gray-600">上のアイコンから除外したいアレルギーを選択してください。</p>
+                          ) : filteredMenus.length > 0 ? (
+                            <ul className="list-disc list-inside text-sm text-gray-800 space-y-1">
+                              {filteredMenus.slice(0, 50).map(row => (
+                                <li key={`${row.product_id}-${row.menu_name}`}>{row.menu_name}</li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="text-sm text-gray-600">条件を満たすメニューが見つかりませんでした。</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
                     <div>
                       <h3 className="text-xl font-semibold mb-3">レストラン紹介</h3>
                       <p className="text-gray-600 leading-relaxed">{resolvedRestaurant.description}</p>

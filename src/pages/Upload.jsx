@@ -212,7 +212,7 @@ const Upload = () => {
   // 投稿完了（PDF解析結果は Functions 経由で保存を発火）
   const handleSubmit = async () => {
     try {
-      setIsProcessing(true);
+    setIsProcessing(true);
       // PDF由来の場合は保存APIを発火
       if (extractedInfo?.pdfSource) {
         // ID正規化（DBのitem_idに合わせる）
@@ -481,7 +481,7 @@ const Upload = () => {
                             if (!file) return;
                             setCsvFile(file);
                           }} />
-                          <button
+                    <button
                             disabled={!csvFile || csvImporting}
                             onClick={async () => {
                             try {
@@ -574,7 +574,7 @@ const Upload = () => {
                       <div className="bg-white rounded-lg p-4 border">
                         <h3 className="font-semibold mb-2">支店CSV（住所・電話・営業時間・定休日・URL）</h3>
                         <div className="flex items-center gap-3">
-                          <button
+                      <button
                             onClick={() => {
                               const headers = ['店舗名','支店名','住所','電話番号','営業時間','定休日','情報元URL','備考'];
                               const sample = ['びっくりドンキー','渋谷宇田川店','東京都渋谷区…','03-1234-5678','11:00-23:00','年中無休','https://example.com/source','備考'];

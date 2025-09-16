@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useRestaurant } from '../context/RestaurantContext';
 import SafeIcon from '../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
+import { supabase } from '../lib/supabase';
 
 const { 
   FiStar, 
@@ -22,10 +23,65 @@ const RestaurantDetail = () => {
   const { id } = useParams();
   const { restaurants, allergyOptions } = useRestaurant();
   const [activeTab, setActiveTab] = useState('overview');
-  
-  const restaurant = restaurants.find(r => r.id === parseInt(id));
+  const [dbProduct, setDbProduct] = useState(null);
+  const [dbMenuItems, setDbMenuItems] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  if (!restaurant) {
+  const isDbId = typeof id === 'string' && id.startsWith('db_');
+
+  useEffect(() => {
+    if (!isDbId) return;
+    const productId = parseInt(id.slice(3), 10);
+    if (!productId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        setLoading(true);
+        const { data: prod, error: pErr } = await supabase
+          .from('products')
+          .select('*')
+          .eq('id', productId)
+          .single();
+        if (pErr) throw pErr;
+        const { data: items, error: mErr } = await supabase
+          .from('menu_items')
+          .select('id,name,created_at')
+          .eq('product_id', productId)
+          .order('id', { ascending: false });
+        if (mErr) throw mErr;
+        if (!cancelled) {
+          setDbProduct(prod);
+          setDbMenuItems(items || []);
+        }
+      } catch (e) {
+        console.warn('DB detail load failed:', e.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [id, isDbId]);
+
+  const sampleRestaurant = restaurants.find(r => r.id === parseInt(id, 10));
+  const resolvedRestaurant = isDbId && dbProduct ? {
+    id: `db_${dbProduct.id}`,
+    name: dbProduct.name,
+    image: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=1200',
+    rating: 4.5,
+    reviewCount: dbMenuItems.length || 0,
+    area: '',
+    price: '',
+    description: dbProduct.description || '共有データ（Supabase）',
+    cuisine: dbProduct.category || 'レストラン',
+    allergyInfo: {},
+  } : sampleRestaurant;
+
+  if (!resolvedRestaurant) {
+    if (loading && isDbId) {
+      return (
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">読み込み中...</div>
+      );
+    }
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -41,7 +97,7 @@ const RestaurantDetail = () => {
   const getAllergyInfo = () => {
     return allergyOptions.map(allergy => ({
       ...allergy,
-      isSafe: !restaurant.allergyInfo[allergy.id]
+      isSafe: !(resolvedRestaurant.allergyInfo && resolvedRestaurant.allergyInfo[allergy.id])
     }));
   };
 
@@ -53,8 +109,8 @@ const RestaurantDetail = () => {
       {/* Hero Section */}
       <div className="relative h-96">
         <img
-          src={restaurant.image}
-          alt={restaurant.name}
+          src={resolvedRestaurant.image}
+          alt={resolvedRestaurant.name}
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-black bg-opacity-40"></div>
@@ -75,20 +131,20 @@ const RestaurantDetail = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
             >
-              <h1 className="text-4xl font-bold text-white mb-4">{restaurant.name}</h1>
+              <h1 className="text-4xl font-bold text-white mb-4">{resolvedRestaurant.name}</h1>
               <div className="flex items-center space-x-6 text-white">
                 <div className="flex items-center space-x-2">
                   <SafeIcon icon={FiStar} className="w-5 h-5 text-yellow-400" />
-                  <span className="text-lg font-semibold">{restaurant.rating}</span>
-                  <span className="text-gray-300">({restaurant.reviewCount}件のレビュー)</span>
+                  <span className="text-lg font-semibold">{resolvedRestaurant.rating}</span>
+                  <span className="text-gray-300">({resolvedRestaurant.reviewCount}件のレビュー)</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <SafeIcon icon={FiMapPin} className="w-5 h-5" />
-                  <span>{restaurant.area}</span>
+                  <span>{resolvedRestaurant.area}</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <SafeIcon icon={FiDollarSign} className="w-5 h-5" />
-                  <span>{restaurant.price}</span>
+                  <span>{resolvedRestaurant.price}</span>
                 </div>
               </div>
             </motion.div>

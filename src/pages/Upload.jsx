@@ -507,6 +507,10 @@ const Upload = () => {
                               if (!menuName) { console.warn('空のメニュー名行をスキップ', cols); continue; }
                               if (/^(★|\(|（)/.test(menuName) || /^[-\s]*$/.test(menuName)) continue;
                               const product = { name: (store||'').trim(), brand: (brand||'').trim() || null, category: (category||'').trim() || null, source_url: (sourceUrl||'').trim() || null };
+                              console.log('marks:', marks);
+                              console.log('expected配列:', expected);
+                              console.log('expected[9]:', expected[9]);
+                              console.log('expected[10]:', expected[10]);
                               const menuAllergies = marks.map((m,i)=>({ 
                                 allergy_item_id: idMap[expected[9+i]], 
                                 presence_type: toPresence(m||'－'), 

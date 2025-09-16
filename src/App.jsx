@@ -8,6 +8,8 @@ import Login from './pages/Login';
 import About from './pages/About';
 import Upload from './pages/Upload';
 import FoodSearch from './pages/FoodSearch';
+import SupabaseTestPage from './pages/SupabaseTestPage';
+import AllergyTablePage from './pages/AllergyTablePage';
 import { RestaurantProvider } from './context/RestaurantContext';
 import './App.css';
 
@@ -25,6 +27,8 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/about" element={<About />} />
             <Route path="/upload" element={<Upload />} />
+            <Route path="/supabase-test" element={<SupabaseTestPage />} />
+            <Route path="/allergy-table" element={<AllergyTablePage />} />
           </Routes>
         </div>
       </Router>

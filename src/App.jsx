@@ -10,6 +10,8 @@ import Upload from './pages/Upload';
 import FoodSearch from './pages/FoodSearch';
 import SupabaseTestPage from './pages/SupabaseTestPage';
 import AllergyTablePage from './pages/AllergyTablePage';
+import AllergySettingsPage from './pages/AllergySettingsPage';
+import ProductManagementPage from './pages/ProductManagementPage';
 import { RestaurantProvider } from './context/RestaurantContext';
 import './App.css';
 
@@ -29,6 +31,8 @@ function App() {
             <Route path="/upload" element={<Upload />} />
             <Route path="/supabase-test" element={<SupabaseTestPage />} />
             <Route path="/allergy-table" element={<AllergyTablePage />} />
+            <Route path="/allergy-settings" element={<AllergySettingsPage />} />
+            <Route path="/product-management" element={<ProductManagementPage />} />
           </Routes>
         </div>
       </Router>

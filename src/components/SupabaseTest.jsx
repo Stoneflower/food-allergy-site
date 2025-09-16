@@ -60,7 +60,10 @@ const SupabaseTest = () => {
           if (error) {
             console.error('Supabase error:', error)
             // 404エラーやテーブルが存在しないエラーは接続成功とみなす
-            if (error.code === 'PGRST116' || error.message.includes('404') || error.message.includes('relation "_test" does not exist')) {
+            if (error.code === 'PGRST116' || 
+                error.message.includes('404') || 
+                error.message.includes('relation "_test" does not exist') ||
+                error.message.includes('Failed to load resource: the server responded with a status of 404')) {
               result = { success: true, data: null, message: '✅ 接続成功！Supabaseとの接続は正常です（テストテーブルは存在しませんが、これは正常です）' }
             } else {
               throw error

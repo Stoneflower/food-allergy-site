@@ -188,13 +188,13 @@ const RestaurantDetail = () => {
                   >
                     <div>
                       <h3 className="text-xl font-semibold mb-3">レストラン紹介</h3>
-                      <p className="text-gray-600 leading-relaxed">{restaurant.description}</p>
+                      <p className="text-gray-600 leading-relaxed">{resolvedRestaurant.description}</p>
                     </div>
                     
                     <div>
                       <h3 className="text-xl font-semibold mb-3">料理ジャンル</h3>
                       <span className="inline-block bg-orange-100 text-orange-800 px-3 py-1 rounded-full">
-                        {restaurant.cuisine}
+                        {resolvedRestaurant.cuisine}
                       </span>
                     </div>
 
@@ -288,7 +288,7 @@ const RestaurantDetail = () => {
                   <SafeIcon icon={FiMapPin} className="w-5 h-5 text-gray-400 mt-0.5" />
                   <div>
                     <p className="font-medium">住所</p>
-                    <p className="text-gray-600 text-sm">{restaurant.address}</p>
+                    <p className="text-gray-600 text-sm">{resolvedRestaurant.address}</p>
                   </div>
                 </div>
                 
@@ -296,7 +296,7 @@ const RestaurantDetail = () => {
                   <SafeIcon icon={FiPhone} className="w-5 h-5 text-gray-400 mt-0.5" />
                   <div>
                     <p className="font-medium">電話番号</p>
-                    <p className="text-gray-600 text-sm">{restaurant.phone}</p>
+                    <p className="text-gray-600 text-sm">{resolvedRestaurant.phone}</p>
                   </div>
                 </div>
                 
@@ -304,8 +304,8 @@ const RestaurantDetail = () => {
                   <SafeIcon icon={FiClock} className="w-5 h-5 text-gray-400 mt-0.5" />
                   <div>
                     <p className="font-medium">営業時間</p>
-                    <p className="text-gray-600 text-sm">{restaurant.hours}</p>
-                    <p className="text-gray-600 text-sm">定休日: {restaurant.closed}</p>
+                    <p className="text-gray-600 text-sm">{resolvedRestaurant.hours}</p>
+                    <p className="text-gray-600 text-sm">定休日: {resolvedRestaurant.closed}</p>
                   </div>
                 </div>
               </div>

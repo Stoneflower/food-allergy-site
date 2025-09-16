@@ -512,6 +512,7 @@ const Upload = () => {
                                 amount_level: (m==='△'?'trace':(m==='●'?'unknown':'none')),
                                 notes: null
                               }));
+                              console.log('menuAllergies生成データ:', menuAllergies);
 
                               // products + product_allergiesはスキップし、menu_items中心に保存
                               const base = import.meta.env.VITE_SUPABASE_URL;
@@ -563,13 +564,15 @@ const Upload = () => {
                               if (!menuId) { alert('menu_items作成に失敗しました'); break; }
                               // menu_item_allergies
                               await fetch(`${base}/rest/v1/menu_item_allergies?menu_item_id=eq.${menuId}`, { method:'DELETE', headers:{ apikey:key, Authorization:`Bearer ${key}` }});
-                              const miaRes = await fetch(`${base}/rest/v1/menu_item_allergies`, { method:'POST', headers:{ apikey:key, Authorization:`Bearer ${key}`, 'Content-Type':'application/json' }, body: JSON.stringify(menuAllergies.map(a=>({ 
+                              const miaData = menuAllergies.map(a=>({ 
                                 menu_item_id: menuId,
                                 allergy_item_id: a.allergy_item_id,
                                 presence_type: a.presence_type,
                                 amount_level: a.amount_level,
                                 notes: a.notes
-                              }))) });
+                              }));
+                              console.log('menu_item_allergies送信データ:', miaData);
+                              const miaRes = await fetch(`${base}/rest/v1/menu_item_allergies`, { method:'POST', headers:{ apikey:key, Authorization:`Bearer ${key}`, 'Content-Type':'application/json' }, body: JSON.stringify(miaData) });
                               if (!miaRes.ok) { const t = await miaRes.text(); throw new Error(`menu_item_allergies作成エラー ${miaRes.status}: ${t}`); }
                             }
                             alert('CSVの内容を取り込みました');

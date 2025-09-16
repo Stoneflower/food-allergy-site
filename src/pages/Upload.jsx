@@ -24,7 +24,9 @@ const Upload = () => {
   const [similarProducts, setSimilarProducts] = useState([]);
   const [showSimilarProducts, setShowSimilarProducts] = useState(false);
   // PDFは廃止
-  const [uploadType, setUploadType] = useState('image'); // 'image' or 'pdf'
+  const [uploadType, setUploadType] = useState('image'); // 'image' or 'csv'
+  const [csvFile, setCsvFile] = useState(null);
+  const [csvImporting, setCsvImporting] = useState(false);
   
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
@@ -461,20 +463,28 @@ const Upload = () => {
                       <div className="bg-white rounded-lg p-4 border">
                         <h3 className="font-semibold mb-2">CSVアップロード（店舗名＋メニュー＋28品目）</h3>
                         <div className="flex items-center gap-3">
-                          <input type="file" accept=".csv" onChange={async (e) => {
+                          <input type="file" accept=".csv" onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (!file) return;
-                            const text = await file.text();
+                            setCsvFile(file);
+                          }} />
+                          <button
+                            disabled={!csvFile || csvImporting}
+                            onClick={async () => {
+                            try {
+                            if (!csvFile) return;
+                            setCsvImporting(true);
+                            const text = await csvFile.text();
                             const rows = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter(Boolean).map(r => r.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(s => s.replace(/^"|"$/g,'')));
                             const header = rows.shift();
-                            // 期待ヘッダー
-                            const expected = ['店舗名','系列','カテゴリ','メニュー名','小麦','そば','卵','乳','落花生','えび','かに','くるみ','アーモンド','あわび','いか','いくら','オレンジ','カシューナッツ','キウイ','牛肉','ゼラチン','ごま','さけ','さば','大豆','鶏肉','バナナ','豚肉','まつたけ','もも','やまいも','りんご'];
+                            // 期待ヘッダー（指定順）
+                            const expected = ['店舗名','系列','カテゴリ','メニュー名','卵','乳','小麦','そば','落花生','えび','かに','くるみ','大豆','牛肉','豚肉','鶏肉','さけ','さば','あわび','いか','いくら','オレンジ','キウイフルーツ','もも','りんご','やまいも','ゼラチン','バナナ','カシューナッツ','ごま','アーモンド','まつたけ'];
                             if (!header || expected.some((h,i)=>header[i]!==h)) {
                               alert('ヘッダーが想定と異なります。テンプレートCSVをご利用ください。');
-                              return;
+                              setCsvImporting(false); return;
                             }
                             // 日本語→IDマップ
-                            const idMap = { '小麦':'wheat','そば':'buckwheat','卵':'egg','乳':'milk','落花生':'peanut','えび':'shrimp','かに':'crab','くるみ':'walnut','アーモンド':'almond','あわび':'abalone','いか':'squid','いくら':'salmon_roe','オレンジ':'orange','カシューナッツ':'cashew','キウイ':'kiwi','牛肉':'beef','ゼラチン':'gelatin','ごま':'sesame','さけ':'salmon','さば':'mackerel','大豆':'soybean','鶏肉':'chicken','バナナ':'banana','豚肉':'pork','まつたけ':'matsutake','もも':'peach','やまいも':'yam','りんご':'apple' };
+                            const idMap = { '卵':'egg','乳':'milk','小麦':'wheat','そば':'buckwheat','落花生':'peanut','えび':'shrimp','かに':'crab','くるみ':'walnut','大豆':'soybean','牛肉':'beef','豚肉':'pork','鶏肉':'chicken','さけ':'salmon','さば':'mackerel','あわび':'abalone','いか':'squid','いくら':'salmon_roe','オレンジ':'orange','キウイフルーツ':'kiwi','もも':'peach','りんご':'apple','やまいも':'yam','ゼラチン':'gelatin','バナナ':'banana','カシューナッツ':'cashew','ごま':'sesame','アーモンド':'almond','まつたけ':'matsutake' };
                             const toPresence = (mark) => (mark==='●' ? 'direct' : (mark==='△' ? 'trace' : 'none'));
 
                             // 1ファイル=1店舗想定で逐次保存
@@ -509,12 +519,20 @@ const Upload = () => {
                               await fetch(`${base}/rest/v1/menu_item_allergies`, { method:'POST', headers:{ apikey:key, Authorization:`Bearer ${key}`, 'Content-Type':'application/json' }, body: JSON.stringify(menuAllergies.map(a=>({ ...a, menu_item_id: menuId }))) });
                             }
                             alert('CSVの内容を取り込みました');
-                          }} />
+                            setCsvImporting(false);
+                            setCsvFile(null);
+                          } catch (err) {
+                            setCsvImporting(false);
+                            alert(err.message || 'CSV取り込み中にエラーが発生しました');
+                          }
+                          }}
+                            className={`px-4 py-2 rounded ${csvFile ? 'bg-orange-500 text-white hover:bg-orange-600' : 'bg-gray-300 text-gray-600 cursor-not-allowed'}`}
+                          >{csvImporting ? '取り込み中...' : 'CSVを取り込む'}</button>
                           <a
                             onClick={(e)=>{
-                              // テンプレCSV生成
-                              const headers = ['店舗名','系列','カテゴリ','メニュー名','小麦','そば','卵','乳','落花生','えび','かに','くるみ','アーモンド','あわび','いか','いくら','オレンジ','カシューナッツ','キウイ','牛肉','ゼラチン','ごま','さけ','さば','大豆','鶏肉','バナナ','豚肉','まつたけ','もも','やまいも','りんご'];
-                              const sample = ['びっくりドンキー','ハンバーグレストラン','レストラン・店舗','レギュラーバーグディッシュ', '●','－','－','－','－','－','－','－','－','－','－','－','－','－','－','－','－','●','－','－','●','－','－','－','－','－','－','－'];
+                              // テンプレCSV生成（指定順）
+                              const headers = ['店舗名','系列','カテゴリ','メニュー名','卵','乳','小麦','そば','落花生','えび','かに','くるみ','大豆','牛肉','豚肉','鶏肉','さけ','さば','あわび','いか','いくら','オレンジ','キウイフルーツ','もも','りんご','やまいも','ゼラチン','バナナ','カシューナッツ','ごま','アーモンド','まつたけ'];
+                              const sample = ['びっくりドンキー','ハンバーグレストラン','レストラン・店舗','レギュラーバーグディッシュ', '－','－','－','－','－','－','－','－','－','●','●','－','－','－','－','－','－','－','－','－','－','－','－','－','－','－','－'];
                               const csv = [headers, sample].map(r=>r.join(',')).join('\n');
                               const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
                               const a = document.createElement('a');
@@ -529,6 +547,52 @@ const Upload = () => {
                           >テンプレートをダウンロード</a>
                         </div>
                         <p className="text-xs text-gray-500 mt-2">記号: ●=含有, △=工場由来(微量), －=不含</p>
+                      </div>
+                      <div className="bg-white rounded-lg p-4 border">
+                        <h3 className="font-semibold mb-2">URLからCSV生成（PDF→CSV→保存）</h3>
+                        <div className="flex items-center gap-2">
+                          <input id="csvGenUrl" type="url" defaultValue="https://www.bikkuri-donkey.com/control-panel/uploads/2025/08/2025_0827_allergy.pdf" className="flex-1 px-3 py-2 border rounded" placeholder="PDFのURL" />
+                          <button
+                            onClick={async ()=>{
+                              try{
+                                const input = document.getElementById('csvGenUrl');
+                                const url = input?.value?.trim();
+                                if(!url) return alert('URLを入力してください');
+                                // 既存のOCRパイプラインを利用してテキスト抽出（CORS回避はfetch-pdf関数）
+                                const proxied = `/.netlify/functions/fetch-pdf?url=${encodeURIComponent(url)}`;
+                                const res = await fetch(proxied);
+                                if(!res.ok) throw new Error(`PDF取得失敗 ${res.status}`);
+                                const buf = await res.arrayBuffer();
+                                // 既存関数を使って解析
+                                const { pdfOCRProcessor } = await import('../utils/pdfOCR');
+                                const result = await pdfOCRProcessor.processPDFFromBuffer(buf, { maxPages: 20, scale: 2.0 });
+                                // メニュー名と推定結果から指定順のCSVを作成
+                                const headers = ['店舗名','系列','カテゴリ','メニュー名','卵','乳','小麦','そば','落花生','えび','かに','くるみ','大豆','牛肉','豚肉','鶏肉','さけ','さば','あわび','いか','いくら','オレンジ','キウイフルーツ','もも','りんご','やまいも','ゼラチン','バナナ','カシューナッツ','ごま','アーモンド','まつたけ'];
+                                const orderIds = ['egg','milk','wheat','buckwheat','peanut','shrimp','crab','walnut','soybean','beef','pork','chicken','salmon','mackerel','abalone','squid','salmon_roe','orange','kiwi','peach','apple','yam','gelatin','banana','cashew','sesame','almond','matsutake'];
+                                const storeName = result?.restaurantInfo?.name || 'PDFから抽出された情報';
+                                const brand = result?.restaurantInfo?.category || 'レストラン・店舗';
+                                const rows = (result?.consolidatedInfo?.menuAllergies || []).map(m=>{
+                                  const marks = orderIds.map(id=>{
+                                    const presence = m.allergies[id];
+                                    return presence === 'direct' ? '●' : (presence === 'trace' ? '△' : '－');
+                                  });
+                                  return [storeName, brand, 'レストラン・店舗', m.name, ...marks];
+                                });
+                                const csv = [headers, ...rows].map(r=>r.join(',')).join('\n');
+                                const blob = new Blob(["\uFEFF"+csv], {type:'text/csv;charset=utf-8;'});
+                                const a = document.createElement('a');
+                                a.href = URL.createObjectURL(blob);
+                                a.download = '解析結果.csv';
+                                a.click();
+                                URL.revokeObjectURL(a.href);
+                              }catch(e){
+                                alert(e.message || 'CSV生成に失敗しました');
+                              }
+                            }}
+                            className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600"
+                          >URLからCSV生成</button>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2">生成後、上のCSV取込で登録できます。</p>
                       </div>
                     </div>
                   </>

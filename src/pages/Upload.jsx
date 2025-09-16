@@ -506,7 +506,12 @@ const Upload = () => {
                               if (!menuName) { console.warn('空のメニュー名行をスキップ', cols); continue; }
                               if (/^(★|\(|（)/.test(menuName) || /^[-\s]*$/.test(menuName)) continue;
                               const product = { name: (store||'').trim(), brand: (brand||'').trim() || null, category: (category||'').trim() || null, source_url: (sourceUrl||'').trim() || null };
-                              const menuAllergies = marks.map((m,i)=>({ allergy_item_id: idMap[expected[9+i]], presence_type: toPresence(m||'－'), amount_level: (m==='△'?'trace':(m==='●'?'unknown':'none')) }));
+                              const menuAllergies = marks.map((m,i)=>({ 
+                                allergy_item_id: idMap[expected[9+i]], 
+                                presence_type: toPresence(m||'－'), 
+                                amount_level: (m==='△'?'trace':(m==='●'?'unknown':'none')),
+                                notes: null
+                              }));
 
                               // products + product_allergiesはスキップし、menu_items中心に保存
                               const base = import.meta.env.VITE_SUPABASE_URL;
@@ -558,7 +563,13 @@ const Upload = () => {
                               if (!menuId) { alert('menu_items作成に失敗しました'); break; }
                               // menu_item_allergies
                               await fetch(`${base}/rest/v1/menu_item_allergies?menu_item_id=eq.${menuId}`, { method:'DELETE', headers:{ apikey:key, Authorization:`Bearer ${key}` }});
-                              const miaRes = await fetch(`${base}/rest/v1/menu_item_allergies`, { method:'POST', headers:{ apikey:key, Authorization:`Bearer ${key}`, 'Content-Type':'application/json' }, body: JSON.stringify(menuAllergies.map(a=>({ ...a, menu_item_id: menuId }))) });
+                              const miaRes = await fetch(`${base}/rest/v1/menu_item_allergies`, { method:'POST', headers:{ apikey:key, Authorization:`Bearer ${key}`, 'Content-Type':'application/json' }, body: JSON.stringify(menuAllergies.map(a=>({ 
+                                menu_item_id: menuId,
+                                allergy_item_id: a.allergy_item_id,
+                                presence_type: a.presence_type,
+                                amount_level: a.amount_level,
+                                notes: a.notes
+                              }))) });
                               if (!miaRes.ok) { const t = await miaRes.text(); throw new Error(`menu_item_allergies作成エラー ${miaRes.status}: ${t}`); }
                             }
                             alert('CSVの内容を取り込みました');

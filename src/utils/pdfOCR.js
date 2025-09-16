@@ -321,7 +321,7 @@ export class PDFOCRProcessor {
           }
         });
         // メニューのまとまりをゆるく区切る
-        if (/^[\-=＊*\u25FC]+$/u.test(line) || line.length === 0) {
+        if (/^[-=＊*\u25FC]+$/u.test(line) || line.length === 0) {
           current = null;
         }
       }

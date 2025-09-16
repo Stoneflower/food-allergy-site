@@ -489,8 +489,10 @@ const Upload = () => {
 
                             // 1ファイル=1店舗想定で逐次保存
                             for (const cols of rows) {
-                              const [store, brand, category, menuName, ...marks] = cols;
-                              const product = { name: store, brand: brand || null, category: category || null };
+                              const [store, brand, category, rawMenuName, ...marks] = cols;
+                              const menuName = (rawMenuName || '').replace(/[\u00A0\u2000-\u200B\u3000]/g,' ').trim();
+                              if (!menuName) { console.warn('空のメニュー名行をスキップ', cols); continue; }
+                              const product = { name: (store||'').trim(), brand: (brand||'').trim() || null, category: (category||'').trim() || null };
                               const menuAllergies = marks.map((m,i)=>({ allergy_item_id: idMap[expected[4+i]], presence_type: toPresence(m||'－'), amount_level: (m==='△'?'trace':(m==='●'?'unknown':'none')) }));
 
                               // products + product_allergiesはスキップし、menu_items中心に保存
@@ -506,17 +508,20 @@ const Upload = () => {
                               }
                               if (!pid) {
                                 const ins = await fetch(`${base}/rest/v1/products`, { method:'POST', headers:{ apikey:key, Authorization:`Bearer ${key}`, 'Content-Type':'application/json', Prefer:'return=representation' }, body: JSON.stringify([product]) });
+                                if (!ins.ok) { const t = await ins.text(); throw new Error(`products作成エラー ${ins.status}: ${t}`); }
                                 const insJson = await ins.json();
                                 pid = insJson?.[0]?.id;
                               }
                               if (!pid) { alert('products作成に失敗しました'); break; }
                               // menu_items
                               const miRes = await fetch(`${base}/rest/v1/menu_items`, { method:'POST', headers:{ apikey:key, Authorization:`Bearer ${key}`, 'Content-Type':'application/json', Prefer:'return=representation' }, body: JSON.stringify([{ product_id: pid, name: menuName }]) });
+                              if (!miRes.ok) { const t = await miRes.text(); throw new Error(`menu_items作成エラー ${miRes.status}: ${t}`); }
                               const miJson = await miRes.json();
                               const menuId = miJson?.[0]?.id;
                               if (!menuId) { alert('menu_items作成に失敗しました'); break; }
                               // menu_item_allergies
-                              await fetch(`${base}/rest/v1/menu_item_allergies`, { method:'POST', headers:{ apikey:key, Authorization:`Bearer ${key}`, 'Content-Type':'application/json' }, body: JSON.stringify(menuAllergies.map(a=>({ ...a, menu_item_id: menuId }))) });
+                              const miaRes = await fetch(`${base}/rest/v1/menu_item_allergies`, { method:'POST', headers:{ apikey:key, Authorization:`Bearer ${key}`, 'Content-Type':'application/json' }, body: JSON.stringify(menuAllergies.map(a=>({ ...a, menu_item_id: menuId }))) });
+                              if (!miaRes.ok) { const t = await miaRes.text(); throw new Error(`menu_item_allergies作成エラー ${miaRes.status}: ${t}`); }
                             }
                             alert('CSVの内容を取り込みました');
                             setCsvImporting(false);

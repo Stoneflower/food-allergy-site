@@ -287,11 +287,11 @@ export class PDFOCRProcessor {
     };
     const symbolRegex = {
       direct: /[●◉○]/, // ○も一部で含有表記に使われる場合があるため暫定
-      trace: /[△※]/,
-      none: /[－-]/
+      trace: /[△※OＯ〇]/, // PDF凡例で微量がOのケースを許容
+      none: /[－-×✕]/
     };
     const isLikelyMenuName = (line) => {
-      if (line.length < 2 || line.length > 30) return false;
+      if (line.length < 2 || line.length > 50) return false;
       if (/^(アレルギー|注意|ご注意|注|原材料|成分|特定原材料|栄養|本日の|価格|税込)/.test(line)) return false;
       if (/^[A-Za-z0-9\s\-_.()]+$/.test(line)) return false; // 英数字のみは除外
       return /[\u3040-\u30ff\u4e00-\u9faf]/.test(line); // かな漢字を含む

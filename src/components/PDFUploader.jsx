@@ -122,12 +122,19 @@ const PDFUploader = ({ onResult, onClose }) => {
     const hasFragrance = /香料/.test(textBlob);
     const processedHeatedRegex = /(加工品|加熱|加熱済|加熱処理|焼成|ボイル|揚げ|フライ|炒め|蒸し|レトルト|殺菌)/;
     const isProcessedHeated = processedHeatedRegex.test(textBlob);
-    const initialRows = allergens.map(a => ({
-      allergy_item_id: a,
-      presence_type: hasFragrance ? 'trace' : (isProcessedHeated ? 'heated' : 'direct'),
-      amount_level: hasFragrance ? 'trace' : 'unknown',
-      notes: hasFragrance ? '香料表記を検出' : (isProcessedHeated ? '加工/加熱表記を検出' : '')
-    }));
+    const symbolMap = inferSymbolsFromText(textBlob);
+    const initialRows = allergens.map(a => {
+      const sym = symbolMap[a];
+      const presence = sym === 'direct' ? 'direct' : sym === 'trace' ? 'trace' : (hasFragrance ? 'trace' : (isProcessedHeated ? 'heated' : 'direct'));
+      const amount = (sym === 'trace' || hasFragrance) ? 'trace' : 'unknown';
+      const note = sym === 'trace' ? '表内記号（△/※）を検出' : (hasFragrance ? '香料表記を検出' : (isProcessedHeated ? '加工/加熱表記を検出' : ''));
+      return {
+        allergy_item_id: a,
+        presence_type: presence,
+        amount_level: amount,
+        notes: note
+      };
+    });
     setReviewRows(initialRows);
     setShowReview(true);
     setAutoSaved(false);
@@ -661,10 +668,38 @@ const SaveToSupabaseButton = ({ result, onSaved, autoSaved = false }) => {
   )
 }
 
+// 記号からpresence推定（●=direct, △/※=trace, －=none）
+function inferSymbolsFromText(text) {
+  const map = {};
+  // 簡易ルール: 行内に品目名の近くに記号があるかをザックリ判定
+  // 後続改良: 表構造の列位置で厳密に判定
+  const lines = text.split(/\n+/);
+  const symbols = { direct: /[●○◉]/, trace: /[△※]/, none: /[－-]/ };
+  const allergenIds = ['egg','milk','wheat','buckwheat','peanut','shrimp','crab','walnut','almond','abalone','squid','salmon_roe','orange','cashew','kiwi','beef','gelatin','sesame','salmon','mackerel','soy','chicken','banana','pork','matsutake','peach','yam','apple'];
+  const jpNames = {
+    egg:'卵', milk:'乳', wheat:'小麦', buckwheat:'そば', peanut:'落花生', shrimp:'えび', crab:'かに', walnut:'くるみ',
+    almond:'アーモンド', abalone:'あわび', squid:'いか', salmon_roe:'いくら', orange:'オレンジ', cashew:'カシューナッツ', kiwi:'キウイ', beef:'牛肉', gelatin:'ゼラチン', sesame:'ごま', salmon:'さけ', mackerel:'さば', soy:'大豆', chicken:'鶏肉', banana:'バナナ', pork:'豚肉', matsutake:'まつたけ', peach:'もも', yam:'やまいも', apple:'りんご'
+  };
+  lines.forEach(line => {
+    const trimmed = line.trim();
+    allergenIds.forEach(id => {
+      const name = jpNames[id];
+      if (!name) return;
+      if (trimmed.includes(name)) {
+        if (symbols.trace.test(trimmed)) map[id] = map[id] || 'trace';
+        if (symbols.direct.test(trimmed)) map[id] = 'direct';
+        if (symbols.none.test(trimmed)) map[id] = map[id] || 'none';
+      }
+    })
+  })
+  return map;
+}
+
 // 保存前確認モーダル
 const ReviewSaveModal = ({ productForm, setProductForm, reviewRows, setReviewRows, onClose, onSaved, result }) => {
   const [saving, setSaving] = React.useState(false)
   const [message, setMessage] = React.useState('')
+  const [details, setDetails] = React.useState('')
 
   const updateRow = (idx, patch) => {
     setReviewRows(rows => rows.map((r, i) => (i === idx ? { ...r, ...patch } : r)))
@@ -674,34 +709,33 @@ const ReviewSaveModal = ({ productForm, setProductForm, reviewRows, setReviewRow
     try {
       setSaving(true)
       setMessage('')
+      setDetails('')
       if (!productForm.name?.trim()) {
         setMessage('商品名を入力してください')
         setSaving(false)
         return
       }
 
-      const { data: prod, error: prodErr } = await supabase
-        .from('products')
-        .insert([{ name: productForm.name.trim(), brand: productForm.brand || null, category: productForm.category || null }])
-        .select()
-      if (prodErr) throw prodErr
-      const productId = prod[0].id
-
-      const rows = reviewRows
-        .filter(r => r.allergy_item_id)
-        .map(r => ({
-          product_id: productId,
-          allergy_item_id: r.allergy_item_id,
-          presence_type: r.presence_type || 'direct',
-          amount_level: r.amount_level || 'unknown',
-          notes: r.notes || ''
-        }))
-      if (rows.length > 0) {
-        const { error: paErr } = await supabase.from('product_allergies').insert(rows)
-        if (paErr) throw paErr
+      // Netlify Functionへ保存
+      const resp = await fetch('/.netlify/functions/save-product', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          product: {
+            name: productForm.name.trim(),
+            brand: productForm.brand || null,
+            category: productForm.category || null
+          },
+          allergies: reviewRows.filter(r => r.allergy_item_id)
+        })
+      })
+      const txt = await resp.text()
+      setDetails(txt)
+      if (!resp.ok) {
+        throw new Error(`Function error ${resp.status}`)
       }
 
-      setMessage('✅ 保存しました')
+      setMessage('✅ 保存しました（Functions 経由）')
       onClose()
       if (onSaved) onSaved()
     } catch (e) {
@@ -807,6 +841,9 @@ const ReviewSaveModal = ({ productForm, setProductForm, reviewRows, setReviewRow
 
           {message && (
             <div className={`text-sm ${message.startsWith('✅') ? 'text-green-700' : 'text-red-700'}`}>{message}</div>
+          )}
+          {details && (
+            <pre className="text-xs bg-gray-50 p-2 rounded border overflow-auto max-h-40">{details}</pre>
           )}
 
           <div className="flex gap-3 justify-end">

@@ -55,7 +55,7 @@ const Header = () => {
           <div className="flex items-center space-x-2 text-center">
             <SafeIcon icon={FiAlertTriangle} className="w-4 h-4 text-yellow-300 flex-shrink-0" />
             <span className="font-medium">
-              （重要）情報は日々変わることがあるため、必ずお店に確認をお願いします
+              （重要）情報は日々変わることがあるため、必ずお店、もしくは商品の成分の確認をお願いします
             </span>
           </div>
         </div>
@@ -145,7 +145,7 @@ const Header = () => {
           {/* 検索バー */}
           <div className="flex justify-center items-center h-16">
             <form onSubmit={handleSearch} className="w-full max-w-6xl">
-              <div className="bg-white border-2 border-orange-400 rounded-lg overflow-hidden flex shadow-md">
+              <div className="bg-white border-2 border-orange-400 rounded-lg overflow-visible flex shadow-md">
                 {/* Category Dropdown */}
                 <div className="relative">
                   <select

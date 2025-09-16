@@ -580,7 +580,7 @@ const Upload = () => {
                               const shouldSave = normalizedAddress || normalizedPhone || normalizedHours || normalizedClosed || normalizedSourceUrl || normalizedStoreListUrl;
                               console.log(`保存判定: ${shouldSave}`);
                               if (shouldSave) {
-                                const locationKey = `${pid}_${normalizedAddress}_${normalizedPhone}`; // 重複チェック用キー
+                                const locationKey = `${pid}_${normalizedAddress}`; // 重複チェック用キー（product_id + address）
                                 console.log(`locationKey: ${locationKey}, 既に処理済み: ${processedLocations.has(locationKey)}`);
                                 if (!processedLocations.has(locationKey)) {
                                   const locationPayload = [{ 

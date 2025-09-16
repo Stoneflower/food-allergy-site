@@ -1,5 +1,3 @@
-import fetch from 'node-fetch'
-
 export const handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
     return {
@@ -20,10 +18,10 @@ export const handler = async (event) => {
       return { statusCode: 400, headers: corsHeaders(), body: 'Missing product.name' }
     }
 
-    const url = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE || process.env.VITE_SUPABASE_ANON_KEY
+    const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE || process.env.SUPABASE_SERVICE_KEY || process.env.VITE_SUPABASE_ANON_KEY
     if (!url || !serviceKey) {
-      return { statusCode: 500, headers: corsHeaders(), body: 'Missing Supabase env' }
+      return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify({ error: 'Missing Supabase env', have: { url: !!url, serviceKey: !!serviceKey } }) }
     }
 
     // products insert
@@ -37,9 +35,11 @@ export const handler = async (event) => {
       },
       body: JSON.stringify([{ name: product.name, brand: product.brand || null, category: product.category || null }])
     })
-    const prodJson = await prodRes.json()
+    const prodText = await prodRes.text()
+    let prodJson
+    try { prodJson = JSON.parse(prodText) } catch { prodJson = prodText }
     if (!prodRes.ok) {
-      return { statusCode: prodRes.status, headers: corsHeaders(), body: JSON.stringify({ error: prodJson }) }
+      return { statusCode: prodRes.status, headers: corsHeaders(), body: JSON.stringify({ stage: 'insert products', error: prodJson }) }
     }
     const productId = prodJson[0]?.id
 
@@ -61,15 +61,15 @@ export const handler = async (event) => {
         },
         body: JSON.stringify(rows)
       })
+      const paText = await paRes.text()
       if (!paRes.ok) {
-        const paJson = await paRes.text()
-        return { statusCode: paRes.status, headers: corsHeaders(), body: JSON.stringify({ error: paJson }) }
+        return { statusCode: paRes.status, headers: corsHeaders(), body: JSON.stringify({ stage: 'insert product_allergies', error: paText }) }
       }
     }
 
-    return { statusCode: 200, headers: corsHeaders(), body: JSON.stringify({ id: productId }) }
+    return { statusCode: 200, headers: corsHeaders(), body: JSON.stringify({ id: productId, ok: true }) }
   } catch (e) {
-    return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify({ error: e.message }) }
+    return { statusCode: 500, headers: corsHeaders(), body: JSON.stringify({ stage: 'catch', error: e.message }) }
   }
 }
 

@@ -486,7 +486,15 @@ const Upload = () => {
                             if (!csvFile) return;
                             setCsvImporting(true);
                             const text = await readFileAsText(csvFile);
-                            const rows = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter(Boolean).map(r => r.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(s => s.replace(/^"|"$/g,'')));
+                            const rows = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter(Boolean).map(r => {
+                              // CSVの分割を改善：カンマで分割し、空の要素も保持
+                              const parts = r.split(',');
+                              // 38列に調整（不足分は空文字で埋める）
+                              while (parts.length < 38) {
+                                parts.push('');
+                              }
+                              return parts.map(s => s.replace(/^"|"$/g,'').trim());
+                            });
                             const header = rows.shift();
                             // 期待ヘッダー（指定順 + 住所・電話情報 + 店舗リストURL）
                             const expected = ['店舗名','系列','カテゴリ','住所','電話番号','営業時間','定休日','情報元URL','店舗リストURL','メニュー名','卵','乳','小麦','そば','落花生','えび','かに','くるみ','大豆','牛肉','豚肉','鶏肉','さけ','さば','あわび','いか','いくら','オレンジ','キウイフルーツ','もも','りんご','やまいも','ゼラチン','バナナ','カシューナッツ','ごま','アーモンド','まつたけ'];
@@ -506,10 +514,26 @@ const Upload = () => {
                               console.log('CSV行データ:', cols);
                               const [store, brand, category, address, phone, hours, closed, sourceUrl, storeListUrl, rawMenuName, ...marks] = cols;
                               
+                              // 空欄をNULLで対応：空文字列や"-"をnullに変換
+                              const normalizeValue = (value) => {
+                                if (!value || value.trim() === '' || value.trim() === '-') {
+                                  return null;
+                                }
+                                return value.trim();
+                              };
+                              
+                              const normalizedAddress = normalizeValue(address);
+                              const normalizedPhone = normalizeValue(phone);
+                              const normalizedHours = normalizeValue(hours);
+                              const normalizedClosed = normalizeValue(closed);
+                              const normalizedSourceUrl = normalizeValue(sourceUrl);
+                              const normalizedStoreListUrl = normalizeValue(storeListUrl);
+                              
                               // 宮城県の行を特定しやすくする
                               if (store && store.includes('宮城')) {
                                 console.log('=== 宮城県の行を発見 ===');
                                 console.log('宮城県の行データ:', { store, brand, category, address, phone, hours, closed, sourceUrl, storeListUrl, rawMenuName });
+                                console.log('正規化後:', { normalizedAddress, normalizedPhone, normalizedHours, normalizedClosed, normalizedSourceUrl, normalizedStoreListUrl });
                               }
                               const menuName = (rawMenuName || '').replace(/[\u00A0\u2000-\u200B\u3000]/g,' ').trim();
                               if (!menuName) { console.warn('空のメニュー名行をスキップ', cols); continue; }
@@ -551,24 +575,23 @@ const Upload = () => {
                               
                               // store_locations（住所・電話情報）を各行で保存（重複チェック付き）
                               console.log(`店舗: ${store}, 住所: "${address}", 電話: "${phone}", 営業時間: "${hours}", 定休日: "${closed}", 情報元URL: "${sourceUrl}", 店舗リストURL: "${storeListUrl}"`);
-                              console.log(`住所の長さ: ${address ? address.length : 0}, 電話の長さ: ${phone ? phone.length : 0}`);
-                              console.log(`条件チェック: address=${!!address}, phone=${!!phone}, hours=${!!hours}, closed=${!!closed}, sourceUrl=${!!sourceUrl}, storeListUrl=${!!storeListUrl}`);
-                              console.log(`条件の詳細: address="${address}" (${typeof address}), phone="${phone}" (${typeof phone}), hours="${hours}" (${typeof hours}), closed="${closed}" (${typeof closed}), sourceUrl="${sourceUrl}" (${typeof sourceUrl}), storeListUrl="${storeListUrl}" (${typeof storeListUrl})`);
-                              const shouldSave = address || phone || hours || closed || sourceUrl || storeListUrl;
+                              console.log(`正規化後: 住所=${normalizedAddress}, 電話=${normalizedPhone}, 営業時間=${normalizedHours}, 定休日=${normalizedClosed}, 情報元URL=${normalizedSourceUrl}, 店舗リストURL=${normalizedStoreListUrl}`);
+                              console.log(`条件チェック: address=${!!normalizedAddress}, phone=${!!normalizedPhone}, hours=${!!normalizedHours}, closed=${!!normalizedClosed}, sourceUrl=${!!normalizedSourceUrl}, storeListUrl=${!!normalizedStoreListUrl}`);
+                              const shouldSave = normalizedAddress || normalizedPhone || normalizedHours || normalizedClosed || normalizedSourceUrl || normalizedStoreListUrl;
                               console.log(`保存判定: ${shouldSave}`);
                               if (shouldSave) {
-                                const locationKey = `${pid}_${address}_${phone}`; // 重複チェック用キー
+                                const locationKey = `${pid}_${normalizedAddress}_${normalizedPhone}`; // 重複チェック用キー
                                 console.log(`locationKey: ${locationKey}, 既に処理済み: ${processedLocations.has(locationKey)}`);
                                 if (!processedLocations.has(locationKey)) {
                                   const locationPayload = [{ 
                                     product_id: pid, 
                                     branch_name: null, // 支店名は空
-                                    address: address || null, 
-                                    phone: phone || null, 
-                                    hours: hours || null, 
-                                    closed: closed || null, 
-                                    source_url: sourceUrl || null, 
-                                    store_list_url: storeListUrl || null, // 店舗リストURL
+                                    address: normalizedAddress, 
+                                    phone: normalizedPhone, 
+                                    hours: normalizedHours, 
+                                    closed: normalizedClosed, 
+                                    source_url: normalizedSourceUrl, 
+                                    store_list_url: normalizedStoreListUrl, // 店舗リストURL
                                     notes: null 
                                   }];
                                   console.log('store_locations保存データ:', locationPayload);
@@ -576,7 +599,7 @@ const Upload = () => {
                                   if (!slRes.ok) { const t = await slRes.text(); console.warn(`store_locations作成エラー ${slRes.status}: ${t}`); }
                                   processedLocations.add(locationKey);
                                   console.log('store_locations保存完了');
-                              console.log(`保存されたデータ: 店舗ID=${pid}, 住所="${address}", 電話="${phone}", 作成日時=${new Date().toISOString()}`);
+                                  console.log(`保存されたデータ: 店舗ID=${pid}, 住所="${normalizedAddress}", 電話="${normalizedPhone}", 作成日時=${new Date().toISOString()}`);
                                 } else {
                                   console.log('重複のためスキップ');
                                 }

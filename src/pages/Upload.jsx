@@ -497,12 +497,20 @@ const Upload = () => {
                             // 日本語→IDマップ
                             const idMap = { '卵':'egg','乳':'milk','小麦':'wheat','そば':'buckwheat','落花生':'peanut','えび':'shrimp','かに':'crab','くるみ':'walnut','大豆':'soybean','牛肉':'beef','豚肉':'pork','鶏肉':'chicken','さけ':'salmon','さば':'mackerel','あわび':'abalone','いか':'squid','いくら':'salmon_roe','オレンジ':'orange','キウイフルーツ':'kiwi','もも':'peach','りんご':'apple','やまいも':'yam','ゼラチン':'gelatin','バナナ':'banana','カシューナッツ':'cashew','ごま':'sesame','アーモンド':'almond','まつたけ':'matsutake' };
                             console.log('idMap:', idMap);
+                            console.log('=== CSV取込開始:', new Date().toISOString(), '===');
                             const toPresence = (mark) => (mark==='●' ? 'direct' : (mark==='△' ? 'trace' : 'none'));
 
                             // 複数店舗対応：各行で住所情報を個別に保存
                             const processedLocations = new Set(); // 重複住所防止用
                             for (const cols of rows) {
+                              console.log('CSV行データ:', cols);
                               const [store, brand, category, address, phone, hours, closed, sourceUrl, storeListUrl, rawMenuName, ...marks] = cols;
+                              
+                              // 宮城県の行を特定しやすくする
+                              if (store && store.includes('宮城')) {
+                                console.log('=== 宮城県の行を発見 ===');
+                                console.log('宮城県の行データ:', { store, brand, category, address, phone, hours, closed, sourceUrl, storeListUrl, rawMenuName });
+                              }
                               const menuName = (rawMenuName || '').replace(/[\u00A0\u2000-\u200B\u3000]/g,' ').trim();
                               if (!menuName) { console.warn('空のメニュー名行をスキップ', cols); continue; }
                               if (/^(★|\(|（)/.test(menuName) || /^[-\s]*$/.test(menuName)) continue;
@@ -542,8 +550,15 @@ const Upload = () => {
                               if (!pid) { alert('products作成に失敗しました'); break; }
                               
                               // store_locations（住所・電話情報）を各行で保存（重複チェック付き）
-                              if (address || phone || hours || closed || sourceUrl || storeListUrl) {
+                              console.log(`店舗: ${store}, 住所: "${address}", 電話: "${phone}", 営業時間: "${hours}", 定休日: "${closed}", 情報元URL: "${sourceUrl}", 店舗リストURL: "${storeListUrl}"`);
+                              console.log(`住所の長さ: ${address ? address.length : 0}, 電話の長さ: ${phone ? phone.length : 0}`);
+                              console.log(`条件チェック: address=${!!address}, phone=${!!phone}, hours=${!!hours}, closed=${!!closed}, sourceUrl=${!!sourceUrl}, storeListUrl=${!!storeListUrl}`);
+                              console.log(`条件の詳細: address="${address}" (${typeof address}), phone="${phone}" (${typeof phone}), hours="${hours}" (${typeof hours}), closed="${closed}" (${typeof closed}), sourceUrl="${sourceUrl}" (${typeof sourceUrl}), storeListUrl="${storeListUrl}" (${typeof storeListUrl})`);
+                              const shouldSave = address || phone || hours || closed || sourceUrl || storeListUrl;
+                              console.log(`保存判定: ${shouldSave}`);
+                              if (shouldSave) {
                                 const locationKey = `${pid}_${address}_${phone}`; // 重複チェック用キー
+                                console.log(`locationKey: ${locationKey}, 既に処理済み: ${processedLocations.has(locationKey)}`);
                                 if (!processedLocations.has(locationKey)) {
                                   const locationPayload = [{ 
                                     product_id: pid, 
@@ -556,10 +571,17 @@ const Upload = () => {
                                     store_list_url: storeListUrl || null, // 店舗リストURL
                                     notes: null 
                                   }];
+                                  console.log('store_locations保存データ:', locationPayload);
                                   const slRes = await fetch(`${base}/rest/v1/store_locations`, { method:'POST', headers:{ apikey:key, Authorization:`Bearer ${key}`, 'Content-Type':'application/json' }, body: JSON.stringify(locationPayload) });
                                   if (!slRes.ok) { const t = await slRes.text(); console.warn(`store_locations作成エラー ${slRes.status}: ${t}`); }
                                   processedLocations.add(locationKey);
+                                  console.log('store_locations保存完了');
+                              console.log(`保存されたデータ: 店舗ID=${pid}, 住所="${address}", 電話="${phone}", 作成日時=${new Date().toISOString()}`);
+                                } else {
+                                  console.log('重複のためスキップ');
                                 }
+                              } else {
+                                console.log('住所・電話・営業時間・定休日・URLがすべて空のためスキップ');
                               }
                               
                               // menu_items
@@ -582,6 +604,7 @@ const Upload = () => {
                               const miaRes = await fetch(`${base}/rest/v1/menu_item_allergies`, { method:'POST', headers:{ apikey:key, Authorization:`Bearer ${key}`, 'Content-Type':'application/json' }, body: JSON.stringify(miaData) });
                               if (!miaRes.ok) { const t = await miaRes.text(); throw new Error(`menu_item_allergies作成エラー ${miaRes.status}: ${t}`); }
                             }
+                            console.log('=== CSV取込完了:', new Date().toISOString(), '===');
                             alert('CSVの内容を取り込みました');
                             setCsvImporting(false);
                             setCsvFile(null);

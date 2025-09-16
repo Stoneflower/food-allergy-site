@@ -194,15 +194,56 @@ const Upload = () => {
     }));
   };
 
-  // 投稿完了
+  // 投稿完了（PDF解析結果は Functions 経由で保存を発火）
   const handleSubmit = async () => {
-    setIsProcessing(true);
-    
-    // 実際にはサーバーに送信
-    setTimeout(() => {
+    try {
+      setIsProcessing(true);
+      // PDF由来の場合は保存APIを発火
+      if (extractedInfo?.pdfSource) {
+        const product = {
+          name: (editedInfo.productName || '').trim(),
+          brand: editedInfo.brand || null,
+          category: extractedInfo.pdfSource ? 'レストラン・店舗' : null
+        };
+        if (!product.name) {
+          alert('店舗名（商品名）を入力してください');
+          setIsProcessing(false);
+          return;
+        }
+
+        const allergies = Array.isArray(editedInfo.allergens)
+          ? editedInfo.allergens.map(id => ({
+              allergy_item_id: id,
+              presence_type: 'direct',
+              amount_level: 'unknown',
+              notes: 'shared from upload page'
+            }))
+          : [];
+
+        console.log('POST /.netlify/functions/save-product', { product, allergies });
+        const resp = await fetch('/.netlify/functions/save-product', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ product, allergies })
+        });
+        const txt = await resp.text();
+        if (!resp.ok) {
+          console.error('save-product error', resp.status, txt);
+          alert(`保存エラー: ${resp.status}`);
+          setIsProcessing(false);
+          return;
+        }
+        console.log('save-product ok', txt);
+      }
+
+      // 保存成功または画像由来（将来拡張）の場合は完了画面へ
       setIsProcessing(false);
       setStep(3);
-    }, 1000);
+    } catch (e) {
+      console.error('投稿保存中エラー', e);
+      alert(`投稿に失敗しました: ${e.message}`);
+      setIsProcessing(false);
+    }
   };
 
   // リセット
@@ -671,7 +712,7 @@ const Upload = () => {
               </button>
               <button
                 onClick={handleSubmit}
-                disabled={!editedInfo.productName || !editedInfo.brand}
+                disabled={!editedInfo.productName}
                 className="flex-1 py-3 px-6 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold flex items-center justify-center space-x-2"
               >
                 <SafeIcon icon={FiSave} className="w-5 h-5" />

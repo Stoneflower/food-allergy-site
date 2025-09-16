@@ -288,7 +288,7 @@ export class PDFOCRProcessor {
     const symbolRegex = {
       direct: /[●◉○]/, // ○も一部で含有表記に使われる場合があるため暫定
       trace: /[△※OＯ〇]/, // PDF凡例で微量がOのケースを許容
-      none: /[－-×✕]/
+      none: /[－×✕-]/
     };
     const isLikelyMenuName = (line) => {
       if (line.length < 2 || line.length > 50) return false;

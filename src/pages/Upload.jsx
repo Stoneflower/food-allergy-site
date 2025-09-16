@@ -245,7 +245,6 @@ const Upload = () => {
 
         console.log('POST /.netlify/functions/save-product', { product, allergies });
         // メニュー行の組み立て（PDFのメニュー項目ごとに28品目を作成）
-        const normalizeId = (id) => (id === 'soy' ? 'soybean' : id);
         const allIdsForMenu = (Array.isArray(allergyOptions) ? allergyOptions : []).map(a => normalizeId(a.id));
         const buildMenuAllergies = (menuName) => {
           // 簡易推定: 全メニューに同じpresenceを適用（将来: 行ごと推定に拡張）

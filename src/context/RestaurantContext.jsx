@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 
 const RestaurantContext = createContext();
 
@@ -191,6 +192,10 @@ export const RestaurantProvider = ({ children }) => {
     }
   ];
 
+  // 共有（DB）から取得した商品
+  const [dbProducts, setDbProducts] = useState([]);
+
+  // 既存のサンプル商品
   const products = [
     {
       id: 'p1',
@@ -408,8 +413,41 @@ export const RestaurantProvider = ({ children }) => {
     }
   ];
 
-  // 統合データ
-  const allItems = [...restaurants, ...products, ...supermarkets, ...onlineShops];
+  // Supabase から最近の共有商品を取得
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .order('id', { ascending: false })
+          .limit(24);
+        if (error) throw error;
+        const mapped = (data || []).map((p) => ({
+          id: `db_${p.id}`,
+          name: p.name,
+          image: 'https://images.unsplash.com/photo-1511690656952-34342bb7c2f2?w=600',
+          price: '',
+          brand: p.brand || '',
+          category: 'products',
+          type: p.category || '共有商品',
+          description: 'みんなが共有した商品',
+          rating: 4.5,
+          reviewCount: 0,
+          availability: { online: [] },
+          allergyFree: [],
+          source: { type: 'community', contributor: '共有', lastUpdated: new Date().toISOString(), confidence: 80, verified: false },
+        }));
+        setDbProducts(mapped);
+      } catch (e) {
+        console.warn('Supabase products fetch failed:', e.message);
+      }
+    };
+    loadProducts();
+  }, []);
+
+  // 統合データ（DBの共有商品を先頭に表示）
+  const allItems = [...restaurants, ...dbProducts, ...products, ...supermarkets, ...onlineShops];
 
   // お気に入り機能
   const toggleFavorite = (itemId, category) => {

@@ -150,7 +150,7 @@ const Upload = () => {
       confidence: mockExtractedInfo.confidence
     });
     
-    setShowPDFUploader(false);
+    // PDF機能は廃止: 直接Step遷移のみ
     setStep(2);
   };
 
@@ -964,13 +964,7 @@ const Upload = () => {
         )}
       </div>
 
-      {/* PDF Uploader Modal */}
-      {showPDFUploader && (
-        <PDFUploader
-          onResult={handlePDFResult}
-          onClose={() => setShowPDFUploader(false)}
-        />
-      )}
+      {/* CSV移行のためPDFモーダルは廃止 */}
     </div>
   );
 };

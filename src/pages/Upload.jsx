@@ -531,7 +531,9 @@ const Upload = () => {
                             // 欠落している都道府県を特定
                             const missingPrefectures = allPrefectures.filter(pref => !csvPrefectures.has(pref));
                             console.log('CSVに含まれている都道府県数:', csvPrefectures.size);
+                            console.log('CSVに含まれている都道府県:', Array.from(csvPrefectures).sort());
                             console.log('欠落している都道府県:', missingPrefectures);
+                            console.log('欠落件数:', missingPrefectures.length);
 
                             // 欠落している都道府県の行を自動補完
                             const completedRows = [...rows];
@@ -551,10 +553,27 @@ const Upload = () => {
                             }
 
                             console.log('補完後の行数:', completedRows.length, '(元:', rows.length, '+ 補完:', completedRows.length - rows.length, ')');
+                            
+                            // 補完後の都道府県を確認
+                            const completedPrefectures = new Set();
+                            for (const cols of completedRows) {
+                                const address = cols[3]; // D列（住所）
+                                if (address && allPrefectures.includes(address)) {
+                                    completedPrefectures.add(address);
+                                }
+                            }
+                            console.log('補完後の都道府県数:', completedPrefectures.size);
+                            console.log('補完後の都道府県:', Array.from(completedPrefectures).sort());
 
                             // 複数店舗対応：各行で住所情報を個別に保存
                             const processedLocations = new Set(); // 重複住所防止用
+                            let processedCount = 0;
+                            let skippedCount = 0;
+                            let errorCount = 0;
+                            
                             for (const cols of completedRows) {
+                              processedCount++;
+                              console.log(`=== 行 ${processedCount}/${completedRows.length} 処理開始 ===`);
                               console.log('CSV行データ:', cols);
                               const [store, brand, category, address, phone, hours, closed, sourceUrl, storeListUrl, rawMenuName, ...marks] = cols;
                               
@@ -590,6 +609,7 @@ const Upload = () => {
                                   store.includes('サラダ') ||
                                   store.length < 2) {
                                 console.log('A列（店舗名）が無効なため、メニュー情報の保存をスキップ:', store);
+                                skippedCount++;
                                 continue;
                               }
                               
@@ -763,7 +783,14 @@ const Upload = () => {
                               if (!miaRes.ok) { const t = await miaRes.text(); throw new Error(`menu_item_allergies作成エラー ${miaRes.status}: ${t}`); }
                             }
                             console.log('=== CSV取込完了:', new Date().toISOString(), '===');
-                            alert('CSVの内容を取り込みました');
+                            console.log('処理統計:');
+                            console.log('- 総行数:', completedRows.length);
+                            console.log('- 処理済み:', processedCount);
+                            console.log('- スキップ:', skippedCount);
+                            console.log('- エラー:', errorCount);
+                            console.log('- 保存された住所数:', processedLocations.size);
+                            
+                            alert(`CSV取込が完了しました。\n処理行数: ${processedCount}\n保存された住所数: ${processedLocations.size}`);
                             setCsvImporting(false);
                             setCsvFile(null);
                           } catch (err) {

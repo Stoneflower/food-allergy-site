@@ -593,8 +593,15 @@ const Upload = () => {
                                 console.log('削除対象の都道府県:', missingPrefectures);
                                 console.log('削除対象の都道府県数:', missingPrefectures.length);
                                 try {
+                                    console.log('🔍 削除処理の詳細デバッグ開始');
+                                    console.log('  - base:', base);
+                                    console.log('  - key:', key ? 'APIキーあり' : 'APIキーなし');
+                                    
                                     // 既存のstore_locationsを取得
-                                    const existingRes = await fetch(`${base}/rest/v1/store_locations?select=id,address,product_id`, { 
+                                    const fetchUrl = `${base}/rest/v1/store_locations?select=id,address,product_id`;
+                                    console.log('  - fetchURL:', fetchUrl);
+                                    
+                                    const existingRes = await fetch(fetchUrl, { 
                                         headers: { apikey: key, Authorization: `Bearer ${key}` } 
                                     });
                                     if (existingRes.ok) {
@@ -638,7 +645,13 @@ const Upload = () => {
                                         console.error('既存のstore_locations取得エラー:', existingRes.status, await existingRes.text());
                                     }
                                 } catch (error) {
-                                    console.warn('既存データの更新中にエラー:', error);
+                                    console.error('🚨 削除処理中にエラーが発生:', error);
+                                    console.error('  - エラー名:', error.name);
+                                    console.error('  - エラーメッセージ:', error.message);
+                                    console.error('  - スタックトレース:', error.stack);
+                                    
+                                    // エラーが発生しても処理を続行
+                                    console.warn('削除処理でエラーが発生しましたが、CSV取込は続行します');
                                 }
                             } else {
                                 console.log('🔧 削除処理は実行されません');

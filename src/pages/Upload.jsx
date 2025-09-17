@@ -508,9 +508,53 @@ const Upload = () => {
                             console.log('=== CSV取込開始:', new Date().toISOString(), '===');
                             const toPresence = (mark) => (mark==='●' ? 'direct' : (mark==='△' ? 'trace' : 'none'));
 
+                            // 47都道府県の完全なリスト
+                            const allPrefectures = [
+                                '北海道', '青森県', '岩手県', '宮城県', '秋田県', '山形県', '福島県',
+                                '茨城県', '栃木県', '群馬県', '埼玉県', '千葉県', '東京都', '神奈川県',
+                                '新潟県', '富山県', '石川県', '福井県', '山梨県', '長野県', '岐阜県',
+                                '静岡県', '愛知県', '三重県', '滋賀県', '京都府', '大阪府', '兵庫県',
+                                '奈良県', '和歌山県', '鳥取県', '島根県', '岡山県', '広島県', '山口県',
+                                '徳島県', '香川県', '愛媛県', '高知県', '福岡県', '佐賀県', '長崎県',
+                                '熊本県', '大分県', '宮崎県', '鹿児島県', '沖縄県'
+                            ];
+
+                            // CSVから抽出された都道府県を取得
+                            const csvPrefectures = new Set();
+                            for (const cols of rows) {
+                                const address = cols[3]; // D列（住所）
+                                if (address && allPrefectures.includes(address)) {
+                                    csvPrefectures.add(address);
+                                }
+                            }
+
+                            // 欠落している都道府県を特定
+                            const missingPrefectures = allPrefectures.filter(pref => !csvPrefectures.has(pref));
+                            console.log('CSVに含まれている都道府県数:', csvPrefectures.size);
+                            console.log('欠落している都道府県:', missingPrefectures);
+
+                            // 欠落している都道府県の行を自動補完
+                            const completedRows = [...rows];
+                            for (const missingPref of missingPrefectures) {
+                                // 既存の行から店舗情報を取得（最初の有効な行を使用）
+                                const firstValidRow = rows.find(row => row[0] && row[0].trim() !== '' && !row[0].includes('（乳小麦卵使わないHB•ソイHB用）'));
+                                if (firstValidRow) {
+                                    const [store, brand, category, , , , , sourceUrl, storeListUrl] = firstValidRow;
+                                    // 欠落している都道府県の行を作成（メニュー名は空、アレルギー情報は全て"-"）
+                                    const newRow = [
+                                        store, brand, category, missingPref, '', '', '', sourceUrl, storeListUrl, '',
+                                        ...Array(28).fill('-') // 28個のアレルギー項目を全て"-"で埋める
+                                    ];
+                                    completedRows.push(newRow);
+                                    console.log('自動補完:', missingPref, 'の行を追加');
+                                }
+                            }
+
+                            console.log('補完後の行数:', completedRows.length, '(元:', rows.length, '+ 補完:', completedRows.length - rows.length, ')');
+
                             // 複数店舗対応：各行で住所情報を個別に保存
                             const processedLocations = new Set(); // 重複住所防止用
-                            for (const cols of rows) {
+                            for (const cols of completedRows) {
                               console.log('CSV行データ:', cols);
                               const [store, brand, category, address, phone, hours, closed, sourceUrl, storeListUrl, rawMenuName, ...marks] = cols;
                               

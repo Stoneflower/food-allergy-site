@@ -543,6 +543,44 @@ const Upload = () => {
                             if (missingPrefectures.length > 0) {
                                 console.warn('⚠️ 以下の都道府県がCSVに含まれていません:', missingPrefectures.join(', '));
                                 console.warn('これらの都道府県には店舗がない可能性があります。');
+                                
+                                // 既存のstore_locationsから、CSVに含まれていない都道府県の店舗を無効化
+                                console.log('既存のstore_locationsを更新中...');
+                                try {
+                                    // 既存のstore_locationsを取得
+                                    const existingRes = await fetch(`${base}/rest/v1/store_locations?select=id,address,product_id`, { 
+                                        headers: { apikey: key, Authorization: `Bearer ${key}` } 
+                                    });
+                                    if (existingRes.ok) {
+                                        const existingLocations = await existingRes.json();
+                                        console.log('既存のstore_locations数:', existingLocations.length);
+                                        
+                                        // CSVに含まれていない都道府県の店舗を特定
+                                        const locationsToDeactivate = existingLocations.filter(loc => 
+                                            loc.address && missingPrefectures.includes(loc.address)
+                                        );
+                                        
+                                        if (locationsToDeactivate.length > 0) {
+                                            console.log('無効化対象の店舗数:', locationsToDeactivate.length);
+                                            console.log('無効化対象の都道府県:', locationsToDeactivate.map(l => l.address));
+                                            
+                                            // 物理削除（またはactive = falseに設定）
+                                            for (const location of locationsToDeactivate) {
+                                                const deleteRes = await fetch(`${base}/rest/v1/store_locations?id=eq.${location.id}`, { 
+                                                    method: 'DELETE', 
+                                                    headers: { apikey: key, Authorization: `Bearer ${key}` } 
+                                                });
+                                                if (deleteRes.ok) {
+                                                    console.log('削除完了:', location.address);
+                                                } else {
+                                                    console.warn('削除失敗:', location.address, deleteRes.status);
+                                                }
+                                            }
+                                        }
+                                    }
+                                } catch (error) {
+                                    console.warn('既存データの更新中にエラー:', error);
+                                }
                             }
 
                             // 複数店舗対応：各行で住所情報を個別に保存
@@ -781,7 +819,7 @@ const Upload = () => {
                             // 欠落している都道府県がある場合は警告を表示
                             let alertMessage = `CSV取込が完了しました。\n処理行数: ${processedCount}\n保存された住所数: ${processedLocations.size}`;
                             if (missingPrefectures.length > 0) {
-                                alertMessage += `\n\n⚠️ 注意: 以下の都道府県がCSVに含まれていません:\n${missingPrefectures.join(', ')}\n\nこれらの都道府県には店舗がない可能性があります。`;
+                                alertMessage += `\n\n⚠️ 注意: 以下の都道府県がCSVに含まれていません:\n${missingPrefectures.join(', ')}\n\nこれらの都道府県の店舗は削除されました。`;
                             }
                             
                             alert(alertMessage);

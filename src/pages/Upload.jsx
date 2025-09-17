@@ -537,6 +537,18 @@ const Upload = () => {
                               }
                               const menuName = (rawMenuName || '').replace(/[\u00A0\u2000-\u200B\u3000]/g,' ').trim();
                               
+                              // A列（店舗名）が空または無効な場合はスキップ（productsテーブルに不要なレコードを作成しない）
+                              if (!store || store.trim() === '' || 
+                                  store.includes('（乳小麦卵使わないHB•ソイHB用）') ||
+                                  store.includes('★') ||
+                                  store.includes('ディッシュ') ||
+                                  store.includes('バーグ') ||
+                                  store.includes('サラダ') ||
+                                  store.length < 2) {
+                                console.log('A列（店舗名）が無効なため、メニュー情報の保存をスキップ:', store);
+                                continue;
+                              }
+                              
                               // メニュー名が空でも住所情報がある場合は住所のみ保存
                               if (!menuName) { 
                                 console.log('メニュー名が空 - 住所情報のみチェック', cols);
@@ -616,12 +628,6 @@ const Upload = () => {
                                 continue; 
                               }
                               if (/^[-\s]*$/.test(menuName)) continue; // 空のメニュー名のみスキップ（★で始まるメニュー名は住所情報がある場合は処理を続行）
-                              
-                              // A列（店舗名）が空の場合はスキップ（productsテーブルに不要なレコードを作成しない）
-                              if (!store || store.trim() === '') {
-                                console.log('A列（店舗名）が空のため、メニュー情報の保存をスキップ');
-                                continue;
-                              }
                               
                               const product = { name: (store||'').trim(), brand: (brand||'').trim() || null, category: (category||'').trim() || null, source_url: (sourceUrl||'').trim() || null };
                               console.log('marks:', marks);

@@ -572,7 +572,7 @@ const Upload = () => {
                     <button
                             disabled={!csvFile || csvImporting}
                             onClick={async () => {
-                            return await handleCsvImportStaging();
+                            return await handleCsvImportStaging(); /*
                             try {
                             if (!csvFile) return;
                             setCsvImporting(true);

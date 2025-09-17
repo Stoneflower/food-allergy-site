@@ -13,6 +13,7 @@ export const useRestaurant = () => {
 
 export const RestaurantProvider = ({ children }) => {
   const [selectedAllergies, setSelectedAllergies] = useState([]);
+  const [allergyMaster, setAllergyMaster] = useState([]);
   const [searchKeyword, setSearchKeyword] = useState('');
   const [selectedArea, setSelectedArea] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -88,6 +89,7 @@ export const RestaurantProvider = ({ children }) => {
   useEffect(() => {
     const loadProducts = async () => {
       try {
+        // 効率的なJOINクエリでデータを一括取得
         const { data, error } = await supabase
           .from('products')
           .select(`
@@ -99,7 +101,8 @@ export const RestaurantProvider = ({ children }) => {
                 allergy_items (name, icon)
               )
             ),
-            store_locations (*)
+            store_locations (*),
+            product_allergies_matrix (*)
           `)
           .order('id', { ascending: false })
           .limit(24);
@@ -133,7 +136,9 @@ export const RestaurantProvider = ({ children }) => {
             // Supabaseデータ用の追加フィールド
             menuItems: p.menu_items || [],
             storeLocations: p.store_locations || [],
-            // サンプルデータとの互換性のため
+            // product_allergies_matrixからアレルギー情報を取得
+            allergyMatrix: p.product_allergies_matrix || [],
+            // サンプルデータとの互換性のため（デフォルト値）
             allergyInfo: {
               egg: false, milk: false, wheat: false, buckwheat: true,
               peanut: true, shrimp: true, crab: true, walnut: true,
@@ -147,16 +152,117 @@ export const RestaurantProvider = ({ children }) => {
         });
         
         console.log('Supabase products loaded:', mapped.length, 'items');
+        console.log('Loaded products:', mapped.map(p => ({ 
+          id: p.id, 
+          name: p.name, 
+          category: p.category,
+          menuItems: p.menuItems?.length || 0,
+          storeLocations: p.storeLocations?.length || 0,
+          allergyMatrix: p.allergyMatrix?.length || 0
+        })));
+        
+        // びっくりドンキーが含まれているかチェック
+        const bikkuriDonkey = mapped.find(p => p.name && p.name.includes('びっくりドンキー'));
+        if (bikkuriDonkey) {
+          console.log('✅ びっくりドンキーが見つかりました:', bikkuriDonkey);
+        } else {
+          console.log('❌ びっくりドンキーが見つかりませんでした');
+        }
+        
         setDbProducts(mapped);
       } catch (e) {
-        console.warn('Supabase products fetch failed:', e.message);
+        console.error('Supabase products fetch failed:', e);
+        console.error('Error details:', {
+          message: e.message,
+          details: e.details,
+          hint: e.hint,
+          code: e.code
+        });
+        // エラーが発生しても空配列を設定してアプリがクラッシュしないようにする
+        setDbProducts([]);
       }
     };
     loadProducts();
   }, []);
 
+  // アレルギーマスタ（表示名/アイコン/並び）
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('allergy_items')
+          .select('slug,name,icon,sort_order')
+          .order('sort_order', { ascending: true });
+        if (error) throw error;
+        setAllergyMaster(data || []);
+      } catch (e) {
+        console.warn('allergy master load failed:', e.message);
+        setAllergyMaster([]);
+      }
+    })();
+  }, []);
+
   // 統合データ（Supabaseデータのみを使用）
   const allItems = [...dbProducts];
+
+  // 選択アレルギーに対して、安全メニューを持つ product_id を事前計算
+  const [safeProductIds, setSafeProductIds] = useState(null);
+  useEffect(() => {
+    (async () => {
+      try {
+        // 初期化
+        if (!Array.isArray(dbProducts) || dbProducts.length === 0) {
+          setSafeProductIds(new Set());
+          return;
+        }
+        if (!Array.isArray(selectedAllergies) || selectedAllergies.length === 0) {
+          setSafeProductIds(null); // フィルタなし
+          return;
+        }
+
+        const pidList = dbProducts
+          .filter(p => typeof p.id === 'string' && p.id.startsWith('db_'))
+          .map(p => Number(p.id.slice(3)));
+        if (pidList.length === 0) {
+          setSafeProductIds(new Set());
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from('v_product_allergies_long')
+          .select('product_id,menu_name,allergy_item_slug,presence_type')
+          .in('product_id', pidList)
+          .in('allergy_item_slug', selectedAllergies)
+          .in('presence_type', ['none', 'trace']);
+        if (error) throw error;
+
+        // product_id -> menu_name -> Set(slug)
+        const byProduct = new Map();
+        for (const r of data || []) {
+          let byMenu = byProduct.get(r.product_id);
+          if (!byMenu) { byMenu = new Map(); byProduct.set(r.product_id, byMenu); }
+          let slugSet = byMenu.get(r.menu_name);
+          if (!slugSet) { slugSet = new Set(); byMenu.set(r.menu_name, slugSet); }
+          slugSet.add(r.allergy_item_slug);
+        }
+
+        const need = new Set(selectedAllergies);
+        const okProducts = new Set();
+        for (const [pid, byMenu] of byProduct.entries()) {
+          for (const slugSet of byMenu.values()) {
+            let allOk = true;
+            for (const s of need) { if (!slugSet.has(s)) { allOk = false; break; } }
+            if (allOk) { okProducts.add(pid); break; }
+          }
+        }
+        setSafeProductIds(okProducts);
+        console.log('✅ safeProductIds computed:', okProducts.size);
+      } catch (e) {
+        console.warn('safeProductIds compute failed:', e.message);
+        setSafeProductIds(new Set());
+      }
+    })();
+  }, [JSON.stringify(dbProducts.map(p => p.id)), JSON.stringify(selectedAllergies)]);
 
   // お気に入り機能
   const toggleFavorite = (itemId, category) => {
@@ -261,37 +367,14 @@ export const RestaurantProvider = ({ children }) => {
       console.log('📂 カテゴリフィルター後:', items.length, 'items');
     }
 
-    // アレルギーフィルター
+    // アレルギーフィルター（ビューに統一）
     if (selectedAllergies.length > 0) {
       const beforeAllergyFilter = items.length;
       items = items.filter(item => {
-        // Supabaseデータの場合は特別な処理
-        if (item.id && typeof item.id === 'string' && item.id.startsWith('db_')) {
-          console.log('🍽️ Supabaseデータのアレルギーチェック:', item.name, {
-            menuItems: item.menuItems?.length || 0,
-            selectedAllergies
-          });
-          
-          // Supabaseのメニューデータからアレルギー情報を確認
-          const hasSafeMenu = item.menuItems && item.menuItems.some(menuItem => {
-            return selectedAllergies.every(allergyId => {
-              return menuItem.menu_item_allergies && menuItem.menu_item_allergies.some(allergy => 
-                allergy.allergy_item_id === allergyId && 
-                (allergy.presence_type === 'none' || allergy.presence_type === 'trace')
-              );
-            });
-          });
-          
-          console.log('✅ アレルギー安全メニュー:', hasSafeMenu);
-          return hasSafeMenu;
-        } else {
-          // サンプルデータの場合は既存のロジック（allergyInfoが存在する場合のみ）
-          if (item.allergyInfo) {
-            return selectedAllergies.every(allergy => !item.allergyInfo[allergy]);
-          }
-          // allergyInfoが存在しない場合は安全でないとみなす
-          return false;
-        }
+        if (!(item.id && typeof item.id === 'string' && item.id.startsWith('db_'))) return false;
+        if (safeProductIds === null) return true; // 計算中は通す
+        const pid = Number(item.id.slice(3));
+        return safeProductIds.has(pid);
       });
       console.log('🚫 アレルギーフィルター後:', beforeAllergyFilter, '→', items.length, 'items');
     }

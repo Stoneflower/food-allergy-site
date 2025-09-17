@@ -571,6 +571,10 @@ const Upload = () => {
                             let skippedCount = 0;
                             let errorCount = 0;
                             
+                            // Supabase設定を最初に定義
+                            const base = import.meta.env.VITE_SUPABASE_URL;
+                            const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
+                            
                             for (const cols of completedRows) {
                               try {
                                 processedCount++;
@@ -657,8 +661,6 @@ const Upload = () => {
                                   let pid = targetProductId;
                                   if (!pid) {
                                     const product = { name: (store||'').trim(), brand: (brand||'').trim() || null, category: (category||'').trim() || null, source_url: (sourceUrl||'').trim() || null };
-                                    const base = import.meta.env.VITE_SUPABASE_URL;
-                                    const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
                                     
                                     // 店舗の取得または作成
                                     const pRes = await fetch(`${base}/rest/v1/products?on_conflict=name,brand`, { method:'POST', headers:{ apikey:key, Authorization:`Bearer ${key}`, 'Content-Type':'application/json', Prefer:'return=representation,resolution=merge-duplicates' }, body: JSON.stringify([product]) });
@@ -709,8 +711,6 @@ const Upload = () => {
                               console.log('menuAllergies最初の要素:', menuAllergies[0]);
 
                               // products + product_allergiesはスキップし、menu_items中心に保存
-                              const base = import.meta.env.VITE_SUPABASE_URL;
-                              const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
                               // 既存products検索（同名）
                               const q = new URLSearchParams({ select:'id', name:`eq.${store}` });
                               const findRes = await fetch(`${base}/rest/v1/products?${q.toString()}`, { headers:{ apikey:key, Authorization:`Bearer ${key}` }});

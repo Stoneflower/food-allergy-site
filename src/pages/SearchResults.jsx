@@ -11,7 +11,7 @@ import { useRestaurant } from '../context/RestaurantContext';
 import SafeIcon from '../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
 
-const { FiFilter, FiGrid, FiList, FiMapPin, FiStar, FiInfo, FiShield, FiUser, FiFileText, FiChevronDown, FiChevronRight } = FiIcons;
+const { FiFilter, FiGrid, FiList, FiMapPin, FiStar, FiInfo, FiShield, FiUser, FiFileText, FiChevronDown, FiChevronRight, FiExternalLink } = FiIcons;
 
 const SearchResults = () => {
   const [showFilters, setShowFilters] = useState(true);
@@ -29,7 +29,7 @@ const SearchResults = () => {
     safetyLevel: 'all'
   });
 
-  const { getFilteredItems, selectedAllergies, setSelectedAllergies, searchKeyword, selectedArea, selectedCategory, categories } = useRestaurant();
+  const { getFilteredItems, selectedAllergies, setSelectedAllergies, selectedArea, selectedCategory, categories, allergyOptions } = useRestaurant();
 
   const filteredItems = getFilteredItems();
 
@@ -167,80 +167,108 @@ const SearchResults = () => {
   const restaurantsWithEdible = restaurantsOnly.map(item => {
     const menus = Array.isArray(item.menuItems) ? item.menuItems : [];
     const edible = menus.filter(isMenuSafe);
-    return { item, edible };
+    // URLは source_url のみ（NULLは無視）
+    const locs = Array.isArray(item.storeLocations) ? item.storeLocations : [];
+    const primaryUrl = (locs.find(l => l.source_url)?.source_url) || null;
+    return { item, edible, primaryUrl };
   }).filter(x => x.edible.length > 0);
 
   const shouldShowGrouped = selectedAllergies.length > 0 && selectedCategory === 'restaurants';
+
+  // コンパクトなアレルギーアイコンバー（常時表示・サイドと同期）
+  const toggleAllergy = (slug) => {
+    setSelectedAllergies(prev => prev.includes(slug) ? prev.filter(s => s !== slug) : [...prev, slug]);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-4">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">検索結果</h1>
-          <p className="text-gray-600 mb-4">{getSearchSummary()}</p>
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <p className="text-sm text-gray-500">
-              {shouldShowGrouped ? restaurantsWithEdible.length : sortedItems.length}件のアイテムが見つかりました
-            </p>
-            <div className="flex items-center space-x-4">
-              {/* Sort */}
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="px-3 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              >
-                <option value="rating">評価順</option>
-                <option value="reviews">レビュー数順</option>
-                <option value="confidence">信頼度順</option>
-                <option value="updated">更新日順</option>
-                <option value="name">名前順</option>
-                <option value="price">価格順</option>
-              </select>
+          <p className="text-gray-600">{getSearchSummary()}</p>
+        </div>
 
-              {/* Source Filter Toggle */}
+        {/* 常時表示のアレルギーアイコンバー */}
+        <div className="mb-6 bg-white border rounded-lg p-3 overflow-x-auto">
+          <div className="flex items-center gap-2 min-w-max">
+            {(allergyOptions || []).map(a => {
+              const active = selectedAllergies.includes(a.id);
+              return (
+                <button
+                  key={a.id}
+                  onClick={() => toggleAllergy(a.id)}
+                  className={`px-2 py-1 rounded-full text-xs whitespace-nowrap border ${active ? 'bg-red-500 text-white border-red-500' : 'bg-white text-gray-700 border-gray-300'}`}
+                  title={`${a.name}${active ? '（選択中）' : ''}`}
+                >
+                  <span className="mr-1">{a.icon}</span>{a.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between flex-wrap gap-4 mb-8">
+          <p className="text-sm text-gray-500">
+            {shouldShowGrouped ? restaurantsWithEdible.length : sortedItems.length}件のアイテムが見つかりました
+          </p>
+          <div className="flex items-center space-x-4">
+            {/* Sort */}
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="px-3 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            >
+              <option value="rating">評価順</option>
+              <option value="reviews">レビュー数順</option>
+              <option value="confidence">信頼度順</option>
+              <option value="updated">更新日順</option>
+              <option value="name">名前順</option>
+              <option value="price">価格順</option>
+            </select>
+
+            {/* Source Filter Toggle */}
+            <button
+              onClick={() => setShowSourceFilter(!showSourceFilter)}
+              className={`flex items-center space-x-2 px-3 py-1 border rounded-lg text-sm hover:bg-gray-50 transition-colors ${
+                selectedSourceTypes.length > 0
+                  ? 'border-orange-500 bg-orange-50 text-orange-700'
+                  : 'border-gray-300'
+              }`}
+            >
+              <SafeIcon icon={FiInfo} className="w-4 h-4" />
+              <span>情報源</span>
+              {selectedSourceTypes.length > 0 && (
+                <span className="bg-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                  {selectedSourceTypes.length}
+                </span>
+              )}
+            </button>
+
+            {/* View Mode */}
+            <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
               <button
-                onClick={() => setShowSourceFilter(!showSourceFilter)}
-                className={`flex items-center space-x-2 px-3 py-1 border rounded-lg text-sm hover:bg-gray-50 transition-colors ${
-                  selectedSourceTypes.length > 0
-                    ? 'border-orange-500 bg-orange-50 text-orange-700'
-                    : 'border-gray-300'
-                }`}
+                onClick={() => setViewMode('grid')}
+                className={`p-1 rounded ${viewMode === 'grid' ? 'bg-white shadow-sm' : ''}`}
               >
-                <SafeIcon icon={FiInfo} className="w-4 h-4" />
-                <span>情報源</span>
-                {selectedSourceTypes.length > 0 && (
-                  <span className="bg-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                    {selectedSourceTypes.length}
-                  </span>
-                )}
+                <SafeIcon icon={FiGrid} className="w-4 h-4" />
               </button>
-
-              {/* View Mode */}
-              <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className={`p-1 rounded ${viewMode === 'grid' ? 'bg-white shadow-sm' : ''}`}
-                >
-                  <SafeIcon icon={FiGrid} className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={`p-1 rounded ${viewMode === 'list' ? 'bg-white shadow-sm' : ''}`}
-                >
-                  <SafeIcon icon={FiList} className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Filter Toggle */}
               <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center space-x-2 px-3 py-1 border border-gray-300 rounded-lg text-sm hover:bg-gray-50"
+                onClick={() => setViewMode('list')}
+                className={`p-1 rounded ${viewMode === 'list' ? 'bg-white shadow-sm' : ''}`}
               >
-                <SafeIcon icon={FiFilter} className="w-4 h-4" />
-                <span>フィルター</span>
+                <SafeIcon icon={FiList} className="w-4 h-4" />
               </button>
             </div>
+
+            {/* Filter Toggle */}
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center space-x-2 px-3 py-1 border border-gray-300 rounded-lg text-sm hover:bg-gray-50"
+            >
+              <SafeIcon icon={FiFilter} className="w-4 h-4" />
+              <span>フィルター</span>
+            </button>
           </div>
         </div>
 
@@ -338,18 +366,32 @@ const SearchResults = () => {
             {shouldShowGrouped ? (
               restaurantsWithEdible.length > 0 ? (
                 <div className="space-y-3">
-                  {restaurantsWithEdible.map(({ item, edible }) => (
+                  {restaurantsWithEdible.map(({ item, edible, primaryUrl }) => (
                     <div key={item.id} className="bg-white rounded-lg border shadow-sm">
-                      <button
-                        onClick={() => toggleExpand(item.id)}
-                        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-gray-50"
-                      >
-                        <div className="flex items-center space-x-2">
-                          <SafeIcon icon={expanded[item.id] ? FiChevronDown : FiChevronRight} className="w-4 h-4 text-gray-500" />
-                          <span className="font-semibold text-gray-900">{item.name}</span>
-                          <span className="text-xs text-gray-500">（{edible.length}件 食べられる）</span>
-                        </div>
-                      </button>
+                      <div className="flex items-center justify-between">
+                        <button
+                          onClick={() => toggleExpand(item.id)}
+                          className="flex-1 flex items-center justify-between px-4 py-3 text-left hover:bg-gray-50"
+                        >
+                          <div className="flex items-center space-x-2">
+                            <SafeIcon icon={expanded[item.id] ? FiChevronDown : FiChevronRight} className="w-4 h-4 text-gray-500" />
+                            <span className="font-semibold text-gray-900">{item.name}</span>
+                            <span className="text-xs text-gray-500">（{edible.length}件 食べられる）</span>
+                          </div>
+                        </button>
+                        {primaryUrl && (
+                          <a
+                            href={primaryUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mx-3 inline-flex items-center space-x-1 text-sm text-blue-600 hover:text-blue-800"
+                            title="情報元を開く"
+                          >
+                            <SafeIcon icon={FiExternalLink} className="w-4 h-4" />
+                            <span>情報元</span>
+                          </a>
+                        )}
+                      </div>
                       {expanded[item.id] && (
                         <div className="px-4 pb-3">
                           <ul className="list-disc list-inside text-sm text-gray-800 space-y-1">

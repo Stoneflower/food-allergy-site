@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import PDFUpload from '../components/PDFUpload';
 import CompanyRuleEditor from '../components/CompanyRuleEditor';
 import ConversionPreview from '../components/ConversionPreview';
@@ -9,6 +9,30 @@ const PdfConverter = () => {
   const [rawText, setRawText] = useState('');
   const [rules, setRules] = useState(null); // { allergen_order:[], mark_mapping:{} }
   const [tableRows, setTableRows] = useState([]); // [{menu:"", egg:"－", ...}]
+
+  // 隠しページ: 検索エンジンにインデックスさせない
+  useEffect(() => {
+    const sel = 'meta[name="robots"]';
+    const prev = document.querySelector(sel);
+    const prevContent = prev?.getAttribute('content') || '';
+    let created = false;
+    let el = prev;
+    if (!el) {
+      el = document.createElement('meta');
+      el.setAttribute('name', 'robots');
+      created = true;
+    }
+    el.setAttribute('content', 'noindex,nofollow');
+    if (created) document.head.appendChild(el);
+    return () => {
+      if (created) {
+        document.head.removeChild(el);
+      } else if (el) {
+        // 元に戻す
+        el.setAttribute('content', prevContent);
+      }
+    };
+  }, []);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

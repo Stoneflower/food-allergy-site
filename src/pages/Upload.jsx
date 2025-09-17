@@ -858,21 +858,35 @@ const Upload = () => {
                                         if (locationsToDelete.length > 0) {
                                             console.log('🗑️ 削除処理開始:');
                                             
-                                            // 物理削除
+                                            // 物理削除 - Supabaseクライアントを使用
                                             for (const location of locationsToDelete) {
                                                 console.log('削除中:', location.address, '(ID:', location.id, ')');
-                                                const deleteRes = await fetch(`${base}/rest/v1/store_locations?id=eq.${location.id}`, { 
-                                                    method: 'DELETE', 
-                                                    headers: { apikey: key, Authorization: `Bearer ${key}` } 
-                                                });
-                                                if (deleteRes.ok) {
-                                                    console.log('✅ 削除完了:', location.address);
+                                                
+                                                // Supabaseクライアントを使用した削除
+                                                const { error: deleteError } = await supabase
+                                                    .from('store_locations')
+                                                    .delete()
+                                                    .eq('id', location.id);
+                                                
+                                                if (deleteError) {
+                                                    console.warn('❌ 削除失敗:', location.address, deleteError);
                                                 } else {
-                                                    const errorText = await deleteRes.text();
-                                                    console.warn('❌ 削除失敗:', location.address, deleteRes.status, errorText);
+                                                    console.log('✅ 削除完了:', location.address);
                                                 }
                                             }
                                             console.log('🗑️ 削除処理完了');
+                                            
+                                            // 削除後の確認
+                                            const verifyRes = await fetch(`${base}/rest/v1/store_locations?select=address&in=address.${missingPrefectures.join(',')}`, { 
+                                                headers: { apikey: key, Authorization: `Bearer ${key}` } 
+                                            });
+                                            if (verifyRes.ok) {
+                                                const remaining = await verifyRes.json();
+                                                console.log('🔍 削除後の確認:', remaining.length, '件のレコードが残っています');
+                                                if (remaining.length > 0) {
+                                                    console.warn('⚠️ 削除処理が不完全です。残っているレコード:', remaining);
+                                                }
+                                            }
                                         } else {
                                             console.log('削除対象の店舗はありません');
                                         }

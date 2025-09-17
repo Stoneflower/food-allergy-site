@@ -175,7 +175,7 @@ const SearchResults = () => {
 
   const shouldShowGrouped = selectedAllergies.length > 0 && selectedCategory === 'restaurants';
 
-  // コンパクトなアレルギーアイコンバー（常時表示・サイドと同期）
+  // アレルギー選択トグル
   const toggleAllergy = (slug) => {
     setSelectedAllergies(prev => prev.includes(slug) ? prev.filter(s => s !== slug) : [...prev, slug]);
   };
@@ -190,25 +190,6 @@ const SearchResults = () => {
         <div className="mb-4">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">検索結果</h1>
           <p className="text-gray-600">{getSearchSummary()}</p>
-        </div>
-
-        {/* 常時表示のアレルギーアイコンバー */}
-        <div className="mb-6 bg-white border rounded-lg p-3 overflow-x-auto">
-          <div className="flex items-center gap-2 min-w-max">
-            {(allergyOptions || []).map(a => {
-              const active = selectedAllergies.includes(a.id);
-              return (
-                <button
-                  key={a.id}
-                  onClick={() => toggleAllergy(a.id)}
-                  className={`px-2 py-1 rounded-full text-xs whitespace-nowrap border ${active ? 'bg-red-500 text-white border-red-500' : 'bg-white text-gray-700 border-gray-300'}`}
-                  title={`${a.name}${active ? '（選択中）' : ''}`}
-                >
-                  <span className="mr-1">{a.icon}</span>{a.name}
-                </button>
-              );
-            })}
-          </div>
         </div>
 
         <div className="flex items-center justify-between flex-wrap gap-4 mb-8">
@@ -359,12 +340,52 @@ const SearchResults = () => {
                 </div>
               )}
 
+              {/* 8品目 + 20品目（上と連動） */}
+              <div className="bg-white rounded-xl shadow-md p-4">
+                <h3 className="text-sm font-semibold text-gray-900 mb-2">表示義務のある8品目</h3>
+                <div className="grid grid-cols-2 gap-2 mb-4">
+                  {(allergyOptions || []).slice(0,8).map(a => {
+                    const active = selectedAllergies.includes(a.id);
+                    return (
+                      <button
+                        key={a.id}
+                        onClick={() => toggleAllergy(a.id)}
+                        className={`p-2 rounded-lg border-2 text-xs transition-all ${active ? 'bg-red-500 text-white border-red-500' : 'bg-white border-gray-200 hover:border-red-300'}`}
+                        title={`${a.name}${active ? '（選択中）' : ''}`}
+                      >
+                        <div className="text-center">
+                          <div className="text-lg mb-1">{a.icon}</div>
+                          <div className="font-medium">{a.name}</div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+                <h3 className="text-sm font-semibold text-gray-900 mb-2">表示が推奨される20品目</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {(allergyOptions || []).slice(8).map(a => {
+                    const active = selectedAllergies.includes(a.id);
+                    return (
+                      <button
+                        key={a.id}
+                        onClick={() => toggleAllergy(a.id)}
+                        className={`p-2 rounded-lg border-2 text-xs transition-all ${active ? 'bg-red-500 text-white border-red-500' : 'bg-white border-gray-200 hover:border-red-300'}`}
+                        title={`${a.name}${active ? '（選択中）' : ''}`}
+                      >
+                        <div className="text-center">
+                          <div className="text-lg mb-1">{a.icon}</div>
+                          <div className="font-medium">{a.name}</div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               <AdvancedSearchPanel 
                 onSearch={handleSearchFilters}
                 initialFilters={searchFilters}
               />
-
-              {/* 統合アレルギーフィルターは重複するため非表示 */}
 
               {/* Source Statistics */}
               <div className="bg-white rounded-xl shadow-md p-6">

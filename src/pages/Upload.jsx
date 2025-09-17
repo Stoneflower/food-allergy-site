@@ -536,7 +536,66 @@ const Upload = () => {
                                 console.log('正規化後:', { normalizedAddress, normalizedPhone, normalizedHours, normalizedClosed, normalizedSourceUrl, normalizedStoreListUrl });
                               }
                               const menuName = (rawMenuName || '').replace(/[\u00A0\u2000-\u200B\u3000]/g,' ').trim();
-                              if (!menuName) { console.warn('空のメニュー名行をスキップ', cols); continue; }
+                              
+                              // メニュー名が空でも住所情報がある場合は住所のみ保存
+                              if (!menuName) { 
+                                console.log('メニュー名が空 - 住所情報のみチェック', cols);
+                                // 住所情報の正規化
+                                const normalizeValue = (value) => {
+                                  if (!value || value.trim() === '' || value.trim() === '-') {
+                                    return null;
+                                  }
+                                  return value.trim();
+                                };
+                                
+                                const normalizedAddress = normalizeValue(address);
+                                const normalizedPhone = normalizeValue(phone);
+                                const normalizedHours = normalizeValue(hours);
+                                const normalizedClosed = normalizeValue(closed);
+                                const normalizedSourceUrl = normalizeValue(sourceUrl);
+                                const normalizedStoreListUrl = normalizeValue(storeListUrl);
+                                
+                                // 住所情報がある場合は保存
+                                const shouldSaveLocation = normalizedAddress || normalizedPhone || normalizedHours || normalizedClosed || normalizedSourceUrl || normalizedStoreListUrl;
+                                if (shouldSaveLocation) {
+                                  console.log('住所情報のみ保存:', { address: normalizedAddress, phone: normalizedPhone });
+                                  
+                                  // 店舗情報を取得または作成
+                                  const product = { name: (store||'').trim(), brand: (brand||'').trim() || null, category: (category||'').trim() || null, source_url: (sourceUrl||'').trim() || null };
+                                  const base = import.meta.env.VITE_SUPABASE_URL;
+                                  const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
+                                  
+                                  // 店舗の取得または作成
+                                  const pRes = await fetch(`${base}/rest/v1/products?on_conflict=name,brand`, { method:'POST', headers:{ apikey:key, Authorization:`Bearer ${key}`, 'Content-Type':'application/json', Prefer:'return=representation,resolution=merge-duplicates' }, body: JSON.stringify([product]) });
+                                  if (!pRes.ok) { const t = await pRes.text(); throw new Error(`products作成エラー ${pRes.status}: ${t}`); }
+                                  const pJson = await pRes.json();
+                                  const pid = pJson[0]?.id;
+                                  
+                                  if (pid) {
+                                    // 住所情報の保存
+                                    const locationKey = `${pid}_${normalizedAddress}`;
+                                    if (!processedLocations.has(locationKey)) {
+                                      const locationPayload = [{ 
+                                        product_id: pid, 
+                                        branch_name: null,
+                                        address: normalizedAddress, 
+                                        phone: normalizedPhone, 
+                                        hours: normalizedHours, 
+                                        closed: normalizedClosed, 
+                                        source_url: normalizedSourceUrl, 
+                                        store_list_url: normalizedStoreListUrl,
+                                        notes: null 
+                                      }];
+                                      console.log('住所のみ保存:', locationPayload);
+                                      const slRes = await fetch(`${base}/rest/v1/store_locations`, { method:'POST', headers:{ apikey:key, Authorization:`Bearer ${key}`, 'Content-Type':'application/json' }, body: JSON.stringify(locationPayload) });
+                                      if (!slRes.ok) { const t = await slRes.text(); console.warn(`store_locations作成エラー ${slRes.status}: ${t}`); }
+                                      processedLocations.add(locationKey);
+                                      console.log('住所保存完了:', normalizedAddress);
+                                    }
+                                  }
+                                }
+                                continue; 
+                              }
                               if (/^(★|\(|（)/.test(menuName) || /^[-\s]*$/.test(menuName)) continue;
                               const product = { name: (store||'').trim(), brand: (brand||'').trim() || null, category: (category||'').trim() || null, source_url: (sourceUrl||'').trim() || null };
                               console.log('marks:', marks);

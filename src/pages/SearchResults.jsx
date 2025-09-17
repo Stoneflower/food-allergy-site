@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import CategoryFilter from '../components/CategoryFilter';
 import AdvancedSearchPanel from '../components/AdvancedSearchPanel';
-import UnifiedAllergyFilter from '../components/UnifiedAllergyFilter';
+// import UnifiedAllergyFilter from '../components/UnifiedAllergyFilter';
 import RestaurantCard from '../components/RestaurantCard';
 import ProductCard from '../components/ProductCard';
 import SupermarketCard from '../components/SupermarketCard';
@@ -180,6 +180,9 @@ const SearchResults = () => {
     setSelectedAllergies(prev => prev.includes(slug) ? prev.filter(s => s !== slug) : [...prev, slug]);
   };
 
+  // サイドバー上部に選択済み成分チップを表示
+  const selectedChips = (allergyOptions || []).filter(a => selectedAllergies.includes(a.id));
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -329,17 +332,39 @@ const SearchResults = () => {
               animate={{ opacity: 1, x: 0 }}
               className="lg:w-96 space-y-6"
             >
+              {/* 選択済みアレルギー（サイド上部で表示・同期） */}
+              {selectedChips.length > 0 && (
+                <div className="bg-white rounded-xl shadow-md p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-sm font-semibold text-gray-900">選択中の成分</h3>
+                    <button
+                      onClick={() => setSelectedAllergies([])}
+                      className="text-xs text-gray-500 hover:text-gray-700"
+                    >
+                      クリア
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedChips.map(a => (
+                      <button
+                        key={a.id}
+                        onClick={() => toggleAllergy(a.id)}
+                        className="px-2 py-1 rounded-full text-xs bg-red-50 text-red-700 border border-red-200"
+                        title={`${a.name} を外す`}
+                      >
+                        <span className="mr-1">{a.icon}</span>{a.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <AdvancedSearchPanel 
                 onSearch={handleSearchFilters}
                 initialFilters={searchFilters}
               />
 
-              <UnifiedAllergyFilter 
-                onAllergyChange={(allergies) => {
-                  setSelectedAllergies(allergies);
-                }}
-                selectedAllergies={selectedAllergies}
-              />
+              {/* 統合アレルギーフィルターは重複するため非表示 */}
 
               {/* Source Statistics */}
               <div className="bg-white rounded-xl shadow-md p-6">

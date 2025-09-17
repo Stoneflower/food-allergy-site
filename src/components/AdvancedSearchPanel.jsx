@@ -12,14 +12,10 @@ const AdvancedSearchPanel = ({ onSearch, initialFilters = {} }) => {
     keyword: initialFilters.keyword || '',
     brand: initialFilters.brand || '',
     category: initialFilters.category || 'all',
-    containsAllergens: initialFilters.containsAllergens || [],
-    excludeAllergens: initialFilters.excludeAllergens || [],
-    priceRange: initialFilters.priceRange || 'all',
-    safetyLevel: initialFilters.safetyLevel || 'all',
     ...initialFilters
   });
 
-  const { allergyOptions, categories, selectedArea, setSelectedArea, selectedCategory, setSelectedCategory } = useRestaurant();
+  const { categories, selectedArea, setSelectedArea, selectedCategory, setSelectedCategory } = useRestaurant();
 
   // 初期表示でカテゴリをレストランに固定
   useEffect(() => {
@@ -31,21 +27,6 @@ const AdvancedSearchPanel = ({ onSearch, initialFilters = {} }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const priceRanges = [
-    { id: 'all', name: 'すべて', range: '' },
-    { id: 'budget', name: '〜¥1,000', range: '0-1000' },
-    { id: 'mid', name: '¥1,000〜¥3,000', range: '1000-3000' },
-    { id: 'high', name: '¥3,000〜¥5,000', range: '3000-5000' },
-    { id: 'premium', name: '¥5,000〜', range: '5000+' }
-  ];
-
-  const safetyLevels = [
-    { id: 'all', name: 'すべて表示', emoji: '🔍' },
-    { id: 'safe', name: 'OK のみ', emoji: '✅' },
-    { id: 'caution', name: '注意以下', emoji: '⚠️' },
-    { id: 'warning', name: 'NG以下', emoji: '❌' }
-  ];
-
   const handleFilterChange = (key, value) => {
     const newFilters = { ...filters, [key]: value };
     setFilters(newFilters);
@@ -54,23 +35,11 @@ const AdvancedSearchPanel = ({ onSearch, initialFilters = {} }) => {
     }
   };
 
-  const toggleAllergen = (allergenId, type) => {
-    const currentList = filters[type] || [];
-    const newList = currentList.includes(allergenId)
-      ? currentList.filter(id => id !== allergenId)
-      : [...currentList, allergenId];
-    handleFilterChange(type, newList);
-  };
-
   const clearFilters = () => {
     const clearedFilters = {
       keyword: '',
       brand: '',
-      category: 'restaurants',
-      containsAllergens: [],
-      excludeAllergens: [],
-      priceRange: 'all',
-      safetyLevel: 'all'
+      category: 'restaurants'
     };
     setFilters(clearedFilters);
     setSelectedArea('');
@@ -85,10 +54,6 @@ const AdvancedSearchPanel = ({ onSearch, initialFilters = {} }) => {
     if (filters.keyword) count++;
     if (filters.brand) count++;
     if (filters.category && filters.category !== 'restaurants') count++;
-    if (filters.containsAllergens?.length) count++;
-    if (filters.excludeAllergens?.length) count++;
-    if (filters.priceRange !== 'all') count++;
-    if (filters.safetyLevel !== 'all') count++;
     if (selectedArea) count++;
     return count;
   };
@@ -182,173 +147,6 @@ const AdvancedSearchPanel = ({ onSearch, initialFilters = {} }) => {
                     <div className="text-center">
                       <div className="text-lg mb-1">{category.icon}</div>
                       <div className="font-medium text-xs">{category.name}</div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Contains Allergens */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                ⚠️ 含まれるアレルギー成分で検索
-              </label>
-              <p className="text-xs text-gray-500 mb-3">
-                指定した成分が含まれている商品を検索します
-              </p>
-              <div className="mb-4">
-                <h4 className="text-sm font-semibold text-red-800 mb-2">
-                  表示義務のある8品目（特定原材料）
-                </h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  {allergyOptions.slice(0, 8).map(allergy => (
-                    <button
-                      key={allergy.id}
-                      onClick={() => toggleAllergen(allergy.id, 'containsAllergens')}
-                      className={`p-2 rounded-lg border-2 text-xs transition-all ${
-                        (filters.containsAllergens || []).includes(allergy.id)
-                          ? 'bg-red-500 text-white border-red-500'
-                          : 'bg-white border-gray-200 hover:border-red-300'
-                      }`}
-                    >
-                      <div className="text-center">
-                        <div className="text-lg mb-1">{allergy.icon}</div>
-                        <div className="font-medium">{allergy.name}</div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="mb-4">
-                <h4 className="text-sm font-semibold text-orange-800 mb-2">
-                  表示が推奨される20品目（特定原材料に準ずるもの）
-                </h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  {allergyOptions.slice(8).map(allergy => (
-                    <button
-                      key={allergy.id}
-                      onClick={() => toggleAllergen(allergy.id, 'containsAllergens')}
-                      className={`p-2 rounded-lg border-2 text-xs transition-all ${
-                        (filters.containsAllergens || []).includes(allergy.id)
-                          ? 'bg-red-500 text-white border-red-500'
-                          : 'bg-white border-gray-200 hover:border-red-300'
-                      }`}
-                    >
-                      <div className="text-center">
-                        <div className="text-lg mb-1">{allergy.icon}</div>
-                        <div className="font-medium">{allergy.name}</div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {(filters.containsAllergens?.length > 0) && (
-                <div className="mt-2 text-xs text-red-700">
-                  {filters.containsAllergens.length}個の成分が選択されています
-                </div>
-              )}
-            </div>
-
-            {/* Exclude Allergens */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                🚫 除外するアレルギー成分
-              </label>
-              <p className="text-xs text-gray-500 mb-3">
-                指定した成分が含まれていない商品のみ表示します
-              </p>
-              <div className="mb-4">
-                <h4 className="text-sm font-semibold text-green-800 mb-2">
-                  表示義務のある8品目（特定原材料）
-                </h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  {allergyOptions.slice(0, 8).map(allergy => (
-                    <button
-                      key={allergy.id}
-                      onClick={() => toggleAllergen(allergy.id, 'excludeAllergens')}
-                      className={`p-2 rounded-lg border-2 text-xs transition-all ${
-                        (filters.excludeAllergens || []).includes(allergy.id)
-                          ? 'bg-green-500 text-white border-green-500'
-                          : 'bg-white border-gray-200 hover:border-green-300'
-                      }`}
-                    >
-                      <div className="text-center">
-                        <div className="text-lg mb-1">{allergy.icon}</div>
-                        <div className="font-medium">{allergy.name}</div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="mb-4">
-                <h4 className="text-sm font-semibold text-green-800 mb-2">
-                  表示が推奨される20品目（特定原材料に準ずるもの）
-                </h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  {allergyOptions.slice(8).map(allergy => (
-                    <button
-                      key={allergy.id}
-                      onClick={() => toggleAllergen(allergy.id, 'excludeAllergens')}
-                      className={`p-2 rounded-lg border-2 text-xs transition-all ${
-                        (filters.excludeAllergens || []).includes(allergy.id)
-                          ? 'bg-green-500 text-white border-green-500'
-                          : 'bg-white border-gray-200 hover:border-green-300'
-                      }`}
-                    >
-                      <div className="text-center">
-                        <div className="text-lg mb-1">{allergy.icon}</div>
-                        <div className="font-medium">{allergy.name}</div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Price Range */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                💰 価格帯
-              </label>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                {priceRanges.map(range => (
-                  <button
-                    key={range.id}
-                    onClick={() => handleFilterChange('priceRange', range.id)}
-                    className={`p-3 rounded-lg border-2 text-sm transition-all ${
-                      filters.priceRange === range.id
-                        ? 'border-orange-500 bg-orange-50 text-orange-700'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <div className="text-center font-medium">{range.name}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Safety Level */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                🛡️ 安全レベル
-              </label>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                {safetyLevels.map(level => (
-                  <button
-                    key={level.id}
-                    onClick={() => handleFilterChange('safetyLevel', level.id)}
-                    className={`p-3 rounded-lg border-2 text-sm transition-all ${
-                      filters.safetyLevel === level.id
-                        ? 'border-orange-500 bg-orange-50 text-orange-700'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <div className="text-center">
-                      <div className="text-2xl mb-1">{level.emoji}</div>
-                      <div className="font-medium text-xs">{level.name}</div>
                     </div>
                   </button>
                 ))}

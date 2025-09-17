@@ -14,6 +14,7 @@ import AllergySettingsPage from './pages/AllergySettingsPage';
 import ProductManagementPage from './pages/ProductManagementPage';
 import { RestaurantProvider } from './context/RestaurantContext';
 import './App.css';
+import PdfConverter from './pages/PdfConverter';
 
 function App() {
   return (
@@ -33,6 +34,7 @@ function App() {
             <Route path="/allergy-table" element={<AllergyTablePage />} />
             <Route path="/allergy-settings" element={<AllergySettingsPage />} />
             <Route path="/product-management" element={<ProductManagementPage />} />
+            <Route path="/pdf-converter" element={<PdfConverter />} />
           </Routes>
         </div>
       </Router>

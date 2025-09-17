@@ -413,16 +413,28 @@ export const RestaurantProvider = ({ children }) => {
     }
   ];
 
-  // Supabase から最近の共有商品を取得
+  // Supabase から最近の共有商品を取得（メニューとアレルギー情報も含む）
   useEffect(() => {
     const loadProducts = async () => {
       try {
         const { data, error } = await supabase
           .from('products')
-          .select('*')
+          .select(`
+            *,
+            menu_items (
+              *,
+              menu_item_allergies (
+                *,
+                allergy_items (name, icon)
+              )
+            ),
+            store_locations (*)
+          `)
           .order('id', { ascending: false })
           .limit(24);
+        
         if (error) throw error;
+        
         const mapped = (data || []).map((p) => {
           const catRaw = (p.category || '').toString().toLowerCase();
           const normalizedCategory = catRaw.includes('レストラン') || catRaw.includes('restaurant')
@@ -432,6 +444,7 @@ export const RestaurantProvider = ({ children }) => {
               : (catRaw.includes('online') || catRaw.includes('ネット'))
                 ? 'online'
                 : 'restaurants';
+          
           return {
             id: `db_${p.id}`,
             name: p.name,
@@ -446,8 +459,23 @@ export const RestaurantProvider = ({ children }) => {
             availability: { online: [] },
             allergyFree: [],
             source: { type: 'community', contributor: '共有', lastUpdated: new Date().toISOString(), confidence: 80, verified: false },
+            // Supabaseデータ用の追加フィールド
+            menuItems: p.menu_items || [],
+            storeLocations: p.store_locations || [],
+            // サンプルデータとの互換性のため
+            allergyInfo: {
+              egg: false, milk: false, wheat: false, buckwheat: true,
+              peanut: true, shrimp: true, crab: true, walnut: true,
+              almond: true, abalone: true, squid: true, salmon_roe: true,
+              orange: true, cashew: true, kiwi: true, beef: true,
+              gelatin: true, sesame: true, salmon: true, mackerel: true,
+              soy: true, chicken: true, banana: true, pork: true,
+              matsutake: true, peach: true, yam: true, apple: true
+            }
           };
         });
+        
+        console.log('Supabase products loaded:', mapped.length, 'items');
         setDbProducts(mapped);
       } catch (e) {
         console.warn('Supabase products fetch failed:', e.message);
@@ -538,21 +566,49 @@ export const RestaurantProvider = ({ children }) => {
   // フィルタリング機能
   const getFilteredItems = () => {
     let items = allItems;
+    
+    console.log('🔍 検索開始:', {
+      totalItems: allItems.length,
+      selectedCategory,
+      selectedAllergies,
+      selectedArea,
+      searchKeyword
+    });
 
     if (selectedCategory !== 'all') {
       items = items.filter(item => item.category === selectedCategory);
+      console.log('📂 カテゴリフィルター後:', items.length, 'items');
     }
 
-    // ログインユーザーの場合はユーザー設定を考慮
-    if (isLoggedIn && userSettings.selectedAllergies.length > 0) {
+    // アレルギーフィルター
+    if (selectedAllergies.length > 0) {
+      const beforeAllergyFilter = items.length;
       items = items.filter(item => {
-        return userSettings.selectedAllergies.every(allergy => !item.allergyInfo[allergy]);
+        // Supabaseデータの場合は特別な処理
+        if (item.id && item.id.startsWith('db_')) {
+          console.log('🍽️ Supabaseデータのアレルギーチェック:', item.name, {
+            menuItems: item.menuItems?.length || 0,
+            selectedAllergies
+          });
+          
+          // Supabaseのメニューデータからアレルギー情報を確認
+          const hasSafeMenu = item.menuItems && item.menuItems.some(menuItem => {
+            return selectedAllergies.every(allergyId => {
+              return menuItem.menu_item_allergies && menuItem.menu_item_allergies.some(allergy => 
+                allergy.allergy_item_id === allergyId && 
+                (allergy.presence_type === 'none' || allergy.presence_type === 'trace')
+              );
+            });
+          });
+          
+          console.log('✅ アレルギー安全メニュー:', hasSafeMenu);
+          return hasSafeMenu;
+        } else {
+          // サンプルデータの場合は既存のロジック
+          return selectedAllergies.every(allergy => !item.allergyInfo[allergy]);
+        }
       });
-    } else if (selectedAllergies.length > 0) {
-      // 非ログインユーザーは基本的なフィルタリングのみ
-      items = items.filter(item => {
-        return selectedAllergies.every(allergy => !item.allergyInfo[allergy]);
-      });
+      console.log('🚫 アレルギーフィルター後:', beforeAllergyFilter, '→', items.length, 'items');
     }
 
     if (searchKeyword) {
@@ -565,12 +621,28 @@ export const RestaurantProvider = ({ children }) => {
       );
     }
 
+    // エリア検索
     if (selectedArea) {
-      items = items.filter(item => 
-        !item.area || item.area.toLowerCase().includes(selectedArea.toLowerCase())
-      );
+      const beforeAreaFilter = items.length;
+      items = items.filter(item => {
+        // Supabaseデータの場合は住所から検索
+        if (item.id && item.id.startsWith('db_')) {
+          const hasMatchingLocation = item.storeLocations && item.storeLocations.some(location => 
+            location.address && location.address.includes(selectedArea)
+          );
+          console.log('📍 エリアマッチ:', item.name, hasMatchingLocation, {
+            locations: item.storeLocations?.map(l => l.address) || []
+          });
+          return hasMatchingLocation;
+        } else {
+          // サンプルデータの場合は既存のロジック
+          return item.area && item.area.toLowerCase().includes(selectedArea.toLowerCase());
+        }
+      });
+      console.log('📍 エリアフィルター後:', beforeAreaFilter, '→', items.length, 'items');
     }
 
+    console.log('🎯 最終結果:', items.length, 'items');
     return items;
   };
 

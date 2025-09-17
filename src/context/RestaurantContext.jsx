@@ -118,7 +118,7 @@ export const RestaurantProvider = ({ children }) => {
                 : 'restaurants';
           
           const isBikkuri = (p.name || '').includes('びっくりドンキー');
-          const imageUrl = isBikkuri ? '/images/gohan.jpg' : 'https://images.unsplash.com/photo-1511690656952-34342bb7c2f2?w=600';
+          const imageUrl = 'https://images.unsplash.com/photo-1511690656952-34342bb7c2f2?w=600';
           
           return {
             id: `db_${p.id}`,

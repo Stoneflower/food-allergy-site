@@ -117,10 +117,13 @@ export const RestaurantProvider = ({ children }) => {
                 ? 'online'
                 : 'restaurants';
           
+          const isBikkuri = (p.name || '').includes('びっくりドンキー');
+          const imageUrl = isBikkuri ? '/images/gohan.jpg' : 'https://images.unsplash.com/photo-1511690656952-34342bb7c2f2?w=600';
+          
           return {
             id: `db_${p.id}`,
             name: p.name,
-            image: 'https://images.unsplash.com/photo-1511690656952-34342bb7c2f2?w=600',
+            image: imageUrl,
             price: '',
             brand: p.brand || '',
             category: normalizedCategory,
@@ -479,3 +482,5 @@ export const RestaurantProvider = ({ children }) => {
     </RestaurantContext.Provider>
   );
 };
+
+export default RestaurantContext;

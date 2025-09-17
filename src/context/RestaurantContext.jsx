@@ -104,8 +104,7 @@ export const RestaurantProvider = ({ children }) => {
             store_locations (*),
             product_allergies_matrix (*)
           `)
-          .order('id', { ascending: false })
-          .limit(24);
+          .order('id', { ascending: false });
         
         if (error) throw error;
         

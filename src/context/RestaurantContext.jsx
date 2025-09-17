@@ -75,7 +75,7 @@ export const RestaurantProvider = ({ children }) => {
   // 軽量化されたサンプルデータ（更新履歴を追加）
   const restaurants = [
     {
-      id: 1,
+      id: '1',
       name: 'アレルギーフリー カフェ 渋谷店',
       image: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400',
       rating: 4.5,
@@ -142,7 +142,7 @@ export const RestaurantProvider = ({ children }) => {
       }
     },
     {
-      id: 2,
+      id: '2',
       name: 'グルテンフリー レストラン 新宿店',
       image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400',
       rating: 4.3,
@@ -608,7 +608,7 @@ export const RestaurantProvider = ({ children }) => {
       name: item.name,
       category: item.category,
       area: item.area,
-      isDbData: item.id && item.id.startsWith('db_'),
+      isDbData: item.id && typeof item.id === 'string' && item.id.startsWith('db_'),
       hasStoreLocations: item.storeLocations?.length || 0
     })));
 
@@ -622,7 +622,7 @@ export const RestaurantProvider = ({ children }) => {
       const beforeAllergyFilter = items.length;
       items = items.filter(item => {
         // Supabaseデータの場合は特別な処理
-        if (item.id && item.id.startsWith('db_')) {
+        if (item.id && typeof item.id === 'string' && item.id.startsWith('db_')) {
           console.log('🍽️ Supabaseデータのアレルギーチェック:', item.name, {
             menuItems: item.menuItems?.length || 0,
             selectedAllergies

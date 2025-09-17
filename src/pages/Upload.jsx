@@ -572,9 +572,10 @@ const Upload = () => {
                             let errorCount = 0;
                             
                             for (const cols of completedRows) {
-                              processedCount++;
-                              console.log(`=== 行 ${processedCount}/${completedRows.length} 処理開始 ===`);
-                              console.log('CSV行データ:', cols);
+                              try {
+                                processedCount++;
+                                console.log(`=== 行 ${processedCount}/${completedRows.length} 処理開始 ===`);
+                                console.log('CSV行データ:', cols);
                               const [store, brand, category, address, phone, hours, closed, sourceUrl, storeListUrl, rawMenuName, ...marks] = cols;
                               
                               // 空欄をNULLで対応：空文字列や"-"をnullに変換
@@ -781,6 +782,13 @@ const Upload = () => {
                               console.log('送信データ最初の要素:', miaData[0]);
                               const miaRes = await fetch(`${base}/rest/v1/menu_item_allergies`, { method:'POST', headers:{ apikey:key, Authorization:`Bearer ${key}`, 'Content-Type':'application/json' }, body: JSON.stringify(miaData) });
                               if (!miaRes.ok) { const t = await miaRes.text(); throw new Error(`menu_item_allergies作成エラー ${miaRes.status}: ${t}`); }
+                              } catch (rowError) {
+                                errorCount++;
+                                console.error(`行 ${processedCount} でエラーが発生:`, rowError);
+                                console.error('エラー詳細:', rowError.message);
+                                // エラーが発生しても次の行の処理を続行
+                                continue;
+                              }
                             }
                             console.log('=== CSV取込完了:', new Date().toISOString(), '===');
                             console.log('処理統計:');

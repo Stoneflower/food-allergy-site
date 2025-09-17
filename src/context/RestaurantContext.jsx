@@ -72,373 +72,17 @@ export const RestaurantProvider = ({ children }) => {
     { id: 'online', name: 'ネットショップ', icon: '📦' }
   ];
 
-  // 軽量化されたサンプルデータ（更新履歴を追加）
-  const restaurants = [
-    {
-      id: '1',
-      name: 'アレルギーフリー カフェ 渋谷店',
-      image: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400',
-      rating: 4.5,
-      reviewCount: 128,
-      price: '¥1,000～¥2,000',
-      area: '渋谷',
-      cuisine: 'カフェ・洋食',
-      category: 'restaurants',
-      allergyFree: ['egg', 'milk', 'wheat'],
-      allergyInfo: {
-        // 義務8品目
-        egg: false,
-        milk: false,
-        wheat: false,
-        buckwheat: true,
-        peanut: false,
-        shrimp: true,
-        crab: true,
-        walnut: true,
-        // 推奨20品目
-        almond: false,
-        abalone: true,
-        squid: true,
-        salmon_roe: true,
-        orange: true,
-        cashew: false,
-        kiwi: true,
-        beef: true,
-        gelatin: true,
-        sesame: true,
-        salmon: true,
-        mackerel: true,
-        soy: true,
-        chicken: true,
-        banana: true,
-        pork: true,
-        matsutake: true,
-        peach: true,
-        yam: true,
-        apple: true
-      },
-      description: 'アレルギーをお持ちの方でも安心してお食事を楽しめるカフェです。',
-      address: '東京都渋谷区渋谷1-1-1',
-      phone: '03-1234-5678',
-      hours: '11:00～22:00',
-      closed: '年中無休',
-      storeLocations: [
-        {
-          address: '東京都渋谷区渋谷1-1-1',
-          phone: '03-1234-5678',
-          hours: '11:00～22:00',
-          closed: '年中無休',
-          source_url: 'https://example.com/allergy-info-shibuya'
-        }
-      ],
-      source: {
-        type: 'official',
-        contributor: '店舗公式',
-        lastUpdated: '2024-01-15',
-        confidence: 95,
-        verified: true,
-        reviewCount: 25,
-        url: 'https://example.com/official-allergy-info'
-      }
-    },
-    {
-      id: '2',
-      name: 'グルテンフリー レストラン 新宿店',
-      image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400',
-      rating: 4.3,
-      reviewCount: 95,
-      price: '¥2,000～¥3,000',
-      area: '新宿',
-      cuisine: 'イタリアン',
-      category: 'restaurants',
-      allergyFree: ['wheat', 'milk'],
-      allergyInfo: {
-        // 義務8品目
-        egg: true,
-        milk: false,
-        wheat: false,
-        buckwheat: true,
-        peanut: true,
-        shrimp: true,
-        crab: true,
-        walnut: true,
-        // 推奨20品目
-        almond: true,
-        abalone: true,
-        squid: true,
-        salmon_roe: true,
-        orange: true,
-        cashew: true,
-        kiwi: true,
-        beef: true,
-        gelatin: true,
-        sesame: true,
-        salmon: true,
-        mackerel: true,
-        soy: true,
-        chicken: true,
-        banana: true,
-        pork: true,
-        matsutake: true,
-        peach: true,
-        yam: true,
-        apple: true
-      },
-      description: 'グルテンフリーパスタが自慢のイタリアンレストランです。',
-      address: '東京都新宿区新宿2-2-2',
-      phone: '03-2345-6789',
-      hours: '17:00～23:00',
-      closed: '月曜日',
-      storeLocations: [
-        {
-          address: '東京都新宿区新宿2-2-2',
-          phone: '03-2345-6789',
-          hours: '17:00～23:00',
-          closed: '月曜日',
-          source_url: 'https://example.com/allergy-info-shinjuku'
-        }
-      ],
-      source: {
-        type: 'pdf',
-        contributor: 'システム解析',
-        lastUpdated: '2024-01-20',
-        confidence: 88,
-        verified: true,
-        reviewCount: 12,
-        url: 'https://example.com/restaurant-menu.pdf'
-      }
-    }
-  ];
+  // サンプルデータを削除 - Supabaseデータのみを使用
 
   // 共有（DB）から取得した商品
   const [dbProducts, setDbProducts] = useState([]);
 
-  // 既存のサンプル商品
-  const products = [
-    {
-      id: 'p1',
-      name: 'グルテンフリー米粉パン',
-      image: 'https://images.unsplash.com/photo-1549931319-a545dcf3bc73?w=400',
-      price: '¥480',
-      brand: 'アレルギー対応パン工房',
-      category: 'products',
-      type: 'パン・米粉製品',
-      allergyFree: ['wheat', 'egg', 'milk'],
-      allergyInfo: {
-        // 義務8品目
-        egg: false,
-        milk: false,
-        wheat: false,
-        buckwheat: true,
-        peanut: true,
-        shrimp: true,
-        crab: true,
-        walnut: true,
-        // 推奨20品目
-        almond: true,
-        abalone: true,
-        squid: true,
-        salmon_roe: true,
-        orange: true,
-        cashew: true,
-        kiwi: true,
-        beef: true,
-        gelatin: true,
-        sesame: true,
-        salmon: true,
-        mackerel: true,
-        soy: true,
-        chicken: true,
-        banana: true,
-        pork: true,
-        matsutake: true,
-        peach: true,
-        yam: true,
-        apple: true
-      },
-      description: '小麦粉不使用、米粉100%で作られたふわふわパンです。',
-      rating: 4.6,
-      reviewCount: 89,
-      ingredients: [
-        '米粉（国産）',
-        '砂糖',
-        '植物油脂',
-        '食塩',
-        'イースト',
-        'キサンタンガム'
-      ],
-      availability: {
-        supermarkets: ['イオン', 'イトーヨーカドー'],
-        online: ['Amazon', '楽天市場']
-      },
-      source: {
-        type: 'user_upload',
-        contributor: '田中さん',
-        lastUpdated: '2024-01-18',
-        confidence: 92,
-        verified: false,
-        reviewCount: 8,
-        uploadDate: '2024-01-18'
-      },
-      // 更新履歴を追加
-      updateHistory: [
-        {
-          id: 'update_p1_1',
-          type: 'info_change',
-          submittedBy: '山田さん',
-          submittedAt: new Date('2024-01-25'),
-          status: 'approved',
-          changes: [
-            { field: '価格', old: '¥450', new: '¥480' }
-          ],
-          changeReason: '1月からの値上げを確認しました。',
-          reviewedBy: '運営チーム',
-          reviewedAt: new Date('2024-01-26')
-        }
-      ],
-      lastUpdateReport: '2024-01-25',
-      pendingUpdates: 0
-    },
-    {
-      id: 'p2',
-      name: 'オーガニック豆乳ヨーグルト',
-      image: 'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400',
-      price: '¥298',
-      brand: 'オーガニック食品',
-      category: 'products',
-      type: '乳製品代替',
-      allergyFree: ['milk', 'egg'],
-      allergyInfo: {
-        // 義務8品目
-        egg: false,
-        milk: false,
-        wheat: true,
-        buckwheat: true,
-        peanut: true,
-        shrimp: true,
-        crab: true,
-        walnut: true,
-        // 推奨20品目
-        almond: true,
-        abalone: true,
-        squid: true,
-        salmon_roe: true,
-        orange: true,
-        cashew: true,
-        kiwi: true,
-        beef: true,
-        gelatin: true,
-        sesame: true,
-        salmon: true,
-        mackerel: true,
-        soy: true,
-        chicken: true,
-        banana: true,
-        pork: true,
-        matsutake: true,
-        peach: true,
-        yam: true,
-        apple: true
-      },
-      description: '乳製品不使用、豆乳ベースのプロバイオティクスヨーグルトです。',
-      rating: 4.3,
-      reviewCount: 156,
-      ingredients: [
-        '有機豆乳',
-        '有機砂糖',
-        '乳酸菌',
-        '寒天',
-        'クエン酸'
-      ],
-      availability: {
-        supermarkets: ['ナチュラルローソン', '成城石井'],
-        online: ['iHerb', 'ケンコーコム']
-      },
-      source: {
-        type: 'verified',
-        contributor: '運営チーム',
-        lastUpdated: '2024-01-22',
-        confidence: 98,
-        verified: true,
-        reviewCount: 45
-      },
-      updateHistory: [
-        {
-          id: 'update_p2_1',
-          type: 'info_change',
-          submittedBy: '佐藤さん',
-          submittedAt: new Date('2024-01-20'),
-          status: 'pending_review',
-          changes: [
-            { field: 'アレルギー成分（追加）', old: '', new: '🫘 大豆', type: 'addition' }
-          ],
-          changeReason: 'パッケージに大豆アレルギーの注意書きが追加されていました。'
-        }
-      ],
-      pendingUpdates: 1
-    }
-  ];
+  // サンプル商品データを削除 - Supabaseデータのみを使用
+  const products = [];
 
-  const supermarkets = [
-    {
-      id: 's1',
-      name: 'イオン 渋谷店',
-      image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400',
-      category: 'supermarkets',
-      area: '渋谷',
-      rating: 4.2,
-      reviewCount: 445,
-      allergyFreeProducts: 25,
-      specialFeatures: ['アレルギー対応コーナー', '専門スタッフ常駐'],
-      address: '東京都渋谷区渋谷2-24-1',
-      hours: '9:00～23:00',
-      phone: '03-5456-7890',
-      description: 'アレルギー対応商品を豊富に取り揃えているイオンの大型店舗です。',
-      storeLocations: [
-        {
-          address: '東京都渋谷区渋谷2-24-1',
-          phone: '03-5456-7890',
-          hours: '9:00～23:00',
-          closed: '年中無休',
-          source_url: 'https://example.com/allergy-info-aeon'
-        }
-      ],
-      source: {
-        type: 'community',
-        contributor: 'アレルギー情報収集グループ',
-        lastUpdated: '2024-01-10',
-        confidence: 85,
-        verified: false,
-        reviewCount: 32
-      }
-    }
-  ];
+  const supermarkets = [];
 
-  const onlineShops = [
-    {
-      id: 'o1',
-      name: 'アレルギー対応食品専門店',
-      image: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400',
-      category: 'online',
-      url: 'https://allergy-foods.com',
-      rating: 4.8,
-      reviewCount: 1234,
-      allergyFreeProducts: 150,
-      specialFeatures: ['28品目完全対応', '栄養士監修', '全国配送'],
-      description: 'アレルギー対応食品に特化した専門オンラインストアです。',
-      shippingInfo: '全国送料無料（5,000円以上）',
-      deliveryTime: '1-3営業日',
-      source: {
-        type: 'official',
-        contributor: 'ショップ公式',
-        lastUpdated: '2024-01-25',
-        confidence: 96,
-        verified: true,
-        reviewCount: 67,
-        url: 'https://allergy-foods.com'
-      }
-    }
-  ];
+  const onlineShops = [];
 
   // Supabase から最近の共有商品を取得（メニューとアレルギー情報も含む）
   useEffect(() => {
@@ -511,8 +155,8 @@ export const RestaurantProvider = ({ children }) => {
     loadProducts();
   }, []);
 
-  // 統合データ（DBの共有商品を先頭に表示）
-  const allItems = [...restaurants, ...dbProducts, ...products, ...supermarkets, ...onlineShops];
+  // 統合データ（Supabaseデータのみを使用）
+  const allItems = [...dbProducts];
 
   // お気に入り機能
   const toggleFavorite = (itemId, category) => {
@@ -641,8 +285,12 @@ export const RestaurantProvider = ({ children }) => {
           console.log('✅ アレルギー安全メニュー:', hasSafeMenu);
           return hasSafeMenu;
         } else {
-          // サンプルデータの場合は既存のロジック
-          return selectedAllergies.every(allergy => !item.allergyInfo[allergy]);
+          // サンプルデータの場合は既存のロジック（allergyInfoが存在する場合のみ）
+          if (item.allergyInfo) {
+            return selectedAllergies.every(allergy => !item.allergyInfo[allergy]);
+          }
+          // allergyInfoが存在しない場合は安全でないとみなす
+          return false;
         }
       });
       console.log('🚫 アレルギーフィルター後:', beforeAllergyFilter, '→', items.length, 'items');
@@ -723,10 +371,6 @@ export const RestaurantProvider = ({ children }) => {
     mandatoryAllergies,
     recommendedAllergies,
     categories,
-    restaurants,
-    products,
-    supermarkets,
-    onlineShops,
     allItems,
 
     // 状態

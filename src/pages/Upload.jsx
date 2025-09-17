@@ -437,6 +437,8 @@ const Upload = () => {
       alert(`CSV取込が完了しました。\nバッチID: ${batchId}\nstore_locations 件数: ${countSL ?? 'N/A'}`);
       setCsvImporting(false);
       setCsvFile(null);
+      // 取り込み結果を即時反映（Context再読込のため）
+      window.location.reload();
     } catch (err) {
       setCsvImporting(false);
       alert(err.message || 'CSV取り込み中にエラーが発生しました');

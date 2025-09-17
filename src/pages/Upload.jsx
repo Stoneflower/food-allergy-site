@@ -587,7 +587,7 @@ const Upload = () => {
                                         notes: null 
                                       }];
                                       console.log('住所のみ保存:', locationPayload);
-                                      const slRes = await fetch(`${base}/rest/v1/store_locations`, { method:'POST', headers:{ apikey:key, Authorization:`Bearer ${key}`, 'Content-Type':'application/json' }, body: JSON.stringify(locationPayload) });
+                                      const slRes = await fetch(`${base}/rest/v1/store_locations?on_conflict=product_id,address`, { method:'POST', headers:{ apikey:key, Authorization:`Bearer ${key}`, 'Content-Type':'application/json', Prefer:'return=representation,resolution=merge-duplicates' }, body: JSON.stringify(locationPayload) });
                                       if (!slRes.ok) { const t = await slRes.text(); console.warn(`store_locations作成エラー ${slRes.status}: ${t}`); }
                                       processedLocations.add(locationKey);
                                       console.log('住所保存完了:', normalizedAddress);
@@ -596,7 +596,7 @@ const Upload = () => {
                                 }
                                 continue; 
                               }
-                              if (/^(★|\(|（)/.test(menuName) || /^[-\s]*$/.test(menuName)) continue;
+                              if (/^[-\s]*$/.test(menuName)) continue; // 空のメニュー名のみスキップ（★で始まるメニュー名は住所情報がある場合は処理を続行）
                               const product = { name: (store||'').trim(), brand: (brand||'').trim() || null, category: (category||'').trim() || null, source_url: (sourceUrl||'').trim() || null };
                               console.log('marks:', marks);
                               console.log('expected配列:', expected);
@@ -654,7 +654,7 @@ const Upload = () => {
                                     notes: null 
                                   }];
                                   console.log('store_locations保存データ:', locationPayload);
-                                  const slRes = await fetch(`${base}/rest/v1/store_locations`, { method:'POST', headers:{ apikey:key, Authorization:`Bearer ${key}`, 'Content-Type':'application/json' }, body: JSON.stringify(locationPayload) });
+                                  const slRes = await fetch(`${base}/rest/v1/store_locations?on_conflict=product_id,address`, { method:'POST', headers:{ apikey:key, Authorization:`Bearer ${key}`, 'Content-Type':'application/json', Prefer:'return=representation,resolution=merge-duplicates' }, body: JSON.stringify(locationPayload) });
                                   if (!slRes.ok) { const t = await slRes.text(); console.warn(`store_locations作成エラー ${slRes.status}: ${t}`); }
                                   processedLocations.add(locationKey);
                                   console.log('store_locations保存完了');

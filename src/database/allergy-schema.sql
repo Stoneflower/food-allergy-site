@@ -190,6 +190,9 @@ CREATE TABLE IF NOT EXISTS store_locations (
 
 CREATE INDEX IF NOT EXISTS idx_store_locations_product_id ON store_locations(product_id);
 
+-- 店舗住所の重複防止（CSV UPSERT 対応）
+CREATE UNIQUE INDEX IF NOT EXISTS ux_store_locations_product_address ON store_locations(product_id, address);
+
 CREATE TRIGGER update_store_locations_updated_at
 BEFORE UPDATE ON store_locations
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

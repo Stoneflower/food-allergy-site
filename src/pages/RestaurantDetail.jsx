@@ -21,16 +21,23 @@ const {
 
 const RestaurantDetail = () => {
   const { id } = useParams();
-  const { restaurants, allergyOptions } = useRestaurant();
+  const { allergyOptions, selectedAllergies, setSelectedAllergies } = useRestaurant();
   const [activeTab, setActiveTab] = useState('overview');
   const [dbProduct, setDbProduct] = useState(null);
   const [dbMenuItems, setDbMenuItems] = useState([]);
-  const [matrixRows, setMatrixRows] = useState([]); // product_allergies_matrix rows
-  const [storeLocations, setStoreLocations] = useState([]); // 複数住所対応
+  const [matrixRows, setMatrixRows] = useState([]);
+  const [storeLocations, setStoreLocations] = useState([]);
   const [selectedAllergyIds, setSelectedAllergyIds] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const isDbId = typeof id === 'string' && id.startsWith('db_');
+
+  // 初期選択を検索条件から反映
+  useEffect(() => {
+    if (Array.isArray(selectedAllergies) && selectedAllergies.length > 0) {
+      setSelectedAllergyIds(selectedAllergies);
+    }
+  }, [JSON.stringify(selectedAllergies)]);
 
   useEffect(() => {
     if (!isDbId) return;
@@ -87,7 +94,6 @@ const RestaurantDetail = () => {
     return () => { cancelled = true; };
   }, [id, isDbId]);
 
-  const sampleRestaurant = restaurants.find(r => r.id === parseInt(id, 10));
   const resolvedRestaurant = isDbId && dbProduct ? {
     id: `db_${dbProduct.id}`,
     name: dbProduct.name,
@@ -99,7 +105,7 @@ const RestaurantDetail = () => {
     description: dbProduct.description || '共有データ（Supabase）',
     cuisine: dbProduct.category || 'レストラン',
     allergyInfo: {},
-  } : sampleRestaurant;
+  } : null;
 
   if (!resolvedRestaurant) {
     if (loading && isDbId) {
@@ -120,84 +126,52 @@ const RestaurantDetail = () => {
   }
 
   const getAllergyInfo = () => {
-    return allergyOptions.map(allergy => ({
+    return (allergyOptions || []).map(allergy => ({
       ...allergy,
-      isSafe: !(resolvedRestaurant.allergyInfo && resolvedRestaurant.allergyInfo[allergy.id])
+      isSafe: true
     }));
   };
 
   const safeAllergies = getAllergyInfo().filter(a => a.isSafe);
-  const unsafeAllergies = getAllergyInfo().filter(a => !a.isSafe);
+  const unsafeAllergies = [];
 
   // アレルギー選択（メニュー絞り込み）
-  const normalizeId = (id) => (id === 'soy' ? 'soybean' : id);
   const toggleFilter = (id) => {
     setSelectedAllergyIds((prev) => (
       prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
     ));
+    // 左アイコン（検索の選択状態）とも同期
+    if (Array.isArray(selectedAllergies)) {
+      const next = selectedAllergies.includes(id)
+        ? selectedAllergies.filter(x => x !== id)
+        : [...selectedAllergies, id];
+      setSelectedAllergies(next);
+    }
   };
+
   const filteredMenus = (() => {
     if (!isDbId || dbMenuItems.length === 0) return [];
-    
-    console.log('🍽️ メニューフィルタリング開始:', {
-      totalMenus: dbMenuItems.length,
-      selectedAllergies: selectedAllergyIds,
-      menuItems: dbMenuItems.map(item => ({
-        id: item.id,
-        name: item.name,
-        allergies: item.menu_item_allergies?.length || 0
-      }))
-    });
-    
-    if (selectedAllergyIds.length === 0) {
-      // アレルギー選択がない場合は全メニューを表示
+
+    if ((selectedAllergyIds || []).length === 0) {
       return dbMenuItems.map(item => ({
         id: item.id,
         name: item.name,
         allergies: item.menu_item_allergies || []
       }));
     }
-    
-    const needIds = selectedAllergyIds.map(normalizeId);
+
+    const needSlugs = selectedAllergyIds; // slugs で保持（例: 'milk','egg','soy'）
     const filtered = dbMenuItems.filter(menuItem => {
-      if (!menuItem.menu_item_allergies || menuItem.menu_item_allergies.length === 0) {
-        console.log('⚠️ アレルギー情報なし:', menuItem.name);
-        return false; // アレルギー情報がないメニューは除外
-      }
-      
-      const isSafe = needIds.every(allergyId => {
-        const allergyInfo = menuItem.menu_item_allergies.find(
-          allergy => allergy.allergy_item_id === allergyId
-        );
-        
-        if (!allergyInfo) {
-          console.log('⚠️ アレルギー情報が見つからない:', menuItem.name, allergyId);
-          return false; // アレルギー情報が見つからない場合は除外
-        }
-        
-        const isSafeForThisAllergy = allergyInfo.presence_type === 'none' || 
-                                   allergyInfo.presence_type === 'trace';
-        
-        console.log('🔍 アレルギーチェック:', {
-          menuName: menuItem.name,
-          allergyId: allergyId,
-          presenceType: allergyInfo.presence_type,
-          isSafe: isSafeForThisAllergy
-        });
-        
-        return isSafeForThisAllergy;
+      const list = menuItem.menu_item_allergies || [];
+      if (list.length === 0) return false;
+      const isSafe = needSlugs.every(slug => {
+        const rec = list.find(a => (a.allergy_item_slug || a.allergy_item_id) === slug);
+        if (!rec) return false;
+        return rec.presence_type === 'none' || rec.presence_type === 'trace';
       });
-      
-      console.log('✅ メニュー安全性判定:', menuItem.name, isSafe);
       return isSafe;
     });
-    
-    console.log('🎯 フィルタリング結果:', {
-      original: dbMenuItems.length,
-      filtered: filtered.length,
-      filteredNames: filtered.map(f => f.name)
-    });
-    
+
     return filtered.map(item => ({
       id: item.id,
       name: item.name,
@@ -291,7 +265,7 @@ const RestaurantDetail = () => {
                       <div>
                         <h3 className="text-xl font-semibold mb-3">メニューの絞り込み</h3>
                         <div className="flex flex-wrap gap-2 mb-4">
-                          {allergyOptions.map(a => (
+                          {(allergyOptions || []).map(a => (
                             <button
                               key={a.id}
                               onClick={() => toggleFilter(a.id)}
@@ -306,7 +280,7 @@ const RestaurantDetail = () => {
                           <h4 className="font-semibold mb-2 text-gray-900">表示対象のメニュー</h4>
                           {selectedAllergyIds.length === 0 ? (
                             <div>
-                              <p className="text-sm text-gray-600 mb-2">上のアイコンから除外したいアレルギーを選択してください。</p>
+                              <p className="text-sm text-gray-600 mb-2">左のアイコン（上部）で選んだアレルギーが初期反映されています。変更して食べられるメニューを確認できます。</p>
                               <p className="text-sm text-gray-500">現在 {filteredMenus.length} 個のメニューが登録されています。</p>
                             </div>
                           ) : filteredMenus.length > 0 ? (
@@ -315,7 +289,7 @@ const RestaurantDetail = () => {
                                 選択したアレルギーに安全なメニュー: {filteredMenus.length} 個
                               </p>
                               <ul className="list-disc list-inside text-sm text-gray-800 space-y-1 max-h-60 overflow-y-auto">
-                                {filteredMenus.slice(0, 50).map(menu => (
+                                {filteredMenus.slice(0, 100).map(menu => (
                                   <li key={menu.id} className="flex items-center justify-between">
                                     <span>{menu.name}</span>
                                     <span className="text-xs text-green-600 ml-2">✓ 安全</span>
@@ -345,18 +319,6 @@ const RestaurantDetail = () => {
                         {resolvedRestaurant.cuisine}
                       </span>
                     </div>
-
-                    <div>
-                      <h3 className="text-xl font-semibold mb-3">アレルギー対応の特徴</h3>
-                      <div className="grid grid-cols-2 gap-4">
-                        {safeAllergies.slice(0, 4).map(allergy => (
-                          <div key={allergy.id} className="flex items-center space-x-2 text-green-600">
-                            <SafeIcon icon={FiCheck} className="w-5 h-5" />
-                            <span>{allergy.icon} {allergy.name}フリー</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
                   </motion.div>
                 )}
 
@@ -379,34 +341,6 @@ const RestaurantDetail = () => {
                           </div>
                         ))}
                       </div>
-                    </div>
-
-                    {unsafeAllergies.length > 0 && (
-                      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                        <div className="flex items-center space-x-2 mb-3">
-                          <SafeIcon icon={FiX} className="w-5 h-5 text-red-600" />
-                          <h3 className="text-lg font-semibold text-red-800">含まれる可能性のあるアレルギー成分</h3>
-                        </div>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                          {unsafeAllergies.map(allergy => (
-                            <div key={allergy.id} className="flex items-center space-x-2 text-red-700">
-                              <SafeIcon icon={FiX} className="w-4 h-4" />
-                              <span className="text-sm">{allergy.icon} {allergy.name}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <SafeIcon icon={FiInfo} className="w-5 h-5 text-blue-600" />
-                        <h3 className="text-lg font-semibold text-blue-800">ご注意</h3>
-                      </div>
-                      <p className="text-blue-700 text-sm">
-                        アレルギー情報は参考情報です。ご来店の際は必ず店舗に直接ご確認ください。
-                        調理器具の共用や製造工程での混入の可能性もございます。
-                      </p>
                     </div>
                   </motion.div>
                 )}
@@ -433,7 +367,7 @@ const RestaurantDetail = () => {
               <h3 className="text-xl font-semibold mb-4">店舗情報</h3>
               {storeLocations.length > 0 ? (
                 <div className="space-y-6">
-                  {storeLocations.map((location, index) => (
+                  {storeLocations.map((location) => (
                     <div key={location.id} className="border border-gray-200 rounded-lg p-4">
                       {location.branch_name && (
                         <h4 className="font-semibold text-gray-900 mb-3">{location.branch_name}</h4>
@@ -448,7 +382,6 @@ const RestaurantDetail = () => {
                             </div>
                           </div>
                         )}
-                        
                         {location.phone && (
                           <div className="flex items-start space-x-3">
                             <SafeIcon icon={FiPhone} className="w-5 h-5 text-gray-400 mt-0.5" />
@@ -458,7 +391,6 @@ const RestaurantDetail = () => {
                             </div>
                           </div>
                         )}
-                        
                         {(location.hours || location.closed) && (
                           <div className="flex items-start space-x-3">
                             <SafeIcon icon={FiClock} className="w-5 h-5 text-gray-400 mt-0.5" />
@@ -469,7 +401,6 @@ const RestaurantDetail = () => {
                             </div>
                           </div>
                         )}
-                        
                         {location.source_url && (
                           <div className="flex items-start space-x-3">
                             <SafeIcon icon={FiInfo} className="w-5 h-5 text-gray-400 mt-0.5" />
@@ -486,7 +417,6 @@ const RestaurantDetail = () => {
                             </div>
                           </div>
                         )}
-                        
                         {location.store_list_url && (
                           <div className="flex items-start space-x-3">
                             <SafeIcon icon={FiInfo} className="w-5 h-5 text-gray-400 mt-0.5" />
@@ -503,7 +433,6 @@ const RestaurantDetail = () => {
                             </div>
                           </div>
                         )}
-                        
                         {location.notes && (
                           <div className="flex items-start space-x-3">
                             <SafeIcon icon={FiInfo} className="w-5 h-5 text-gray-400 mt-0.5" />

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import SafeIcon from '../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
@@ -19,7 +19,17 @@ const AdvancedSearchPanel = ({ onSearch, initialFilters = {} }) => {
     ...initialFilters
   });
 
-  const { allergyOptions, categories } = useRestaurant();
+  const { allergyOptions, categories, selectedArea, setSelectedArea, selectedCategory, setSelectedCategory } = useRestaurant();
+
+  // 初期表示でカテゴリをレストランに固定
+  useEffect(() => {
+    if (selectedCategory !== 'restaurants') {
+      setSelectedCategory('restaurants');
+      setFilters(prev => ({ ...prev, category: 'restaurants' }));
+      if (onSearch) onSearch({ ...filters, category: 'restaurants' });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const priceRanges = [
     { id: 'all', name: 'すべて', range: '' },
@@ -56,13 +66,15 @@ const AdvancedSearchPanel = ({ onSearch, initialFilters = {} }) => {
     const clearedFilters = {
       keyword: '',
       brand: '',
-      category: 'all',
+      category: 'restaurants',
       containsAllergens: [],
       excludeAllergens: [],
       priceRange: 'all',
       safetyLevel: 'all'
     };
     setFilters(clearedFilters);
+    setSelectedArea('');
+    setSelectedCategory('restaurants');
     if (onSearch) {
       onSearch(clearedFilters);
     }
@@ -72,11 +84,12 @@ const AdvancedSearchPanel = ({ onSearch, initialFilters = {} }) => {
     let count = 0;
     if (filters.keyword) count++;
     if (filters.brand) count++;
-    if (filters.category !== 'all') count++;
+    if (filters.category && filters.category !== 'restaurants') count++;
     if (filters.containsAllergens?.length) count++;
     if (filters.excludeAllergens?.length) count++;
     if (filters.priceRange !== 'all') count++;
     if (filters.safetyLevel !== 'all') count++;
+    if (selectedArea) count++;
     return count;
   };
 
@@ -102,84 +115,19 @@ const AdvancedSearchPanel = ({ onSearch, initialFilters = {} }) => {
             </div>
           </div>
 
-          {/* Brand Search */}
+          {/* Area (Address) Search */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              🏢 ブランド・メーカー名で検索
+              🗾 エリア（都道府県名・住所の一部）
             </label>
             <input
               type="text"
-              placeholder="ブランド名、メーカー名で検索..."
-              value={filters.brand}
-              onChange={(e) => handleFilterChange('brand', e.target.value)}
+              placeholder="例）兵庫県、札幌市、渋谷 など"
+              value={selectedArea}
+              onChange={(e) => setSelectedArea(e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             />
-          </div>
-
-          {/* Contains Allergens Search - 28品目すべて表示 */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              ⚠️ 含まれるアレルギー成分で検索
-            </label>
-            <p className="text-xs text-gray-500 mb-3">
-              指定した成分が含まれている商品を検索します
-            </p>
-            
-            {/* 法定8品目（特定原材料） */}
-            <div className="mb-4">
-              <h4 className="text-sm font-semibold text-red-800 mb-2">
-                表示義務のある8品目（特定原材料）
-              </h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                {allergyOptions.slice(0, 8).map(allergy => (
-                  <button
-                    key={allergy.id}
-                    onClick={() => toggleAllergen(allergy.id, 'containsAllergens')}
-                    className={`p-2 rounded-lg border-2 text-xs transition-all ${
-                      (filters.containsAllergens || []).includes(allergy.id)
-                        ? 'bg-red-500 text-white border-red-500'
-                        : 'bg-white border-gray-200 hover:border-red-300'
-                    }`}
-                  >
-                    <div className="text-center">
-                      <div className="text-lg mb-1">{allergy.icon}</div>
-                      <div className="font-medium">{allergy.name}</div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 推奨20品目（特定原材料に準ずるもの） */}
-            <div className="mb-4">
-              <h4 className="text-sm font-semibold text-orange-800 mb-2">
-                表示が推奨される20品目（特定原材料に準ずるもの）
-              </h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                {allergyOptions.slice(8).map(allergy => (
-                  <button
-                    key={allergy.id}
-                    onClick={() => toggleAllergen(allergy.id, 'containsAllergens')}
-                    className={`p-2 rounded-lg border-2 text-xs transition-all ${
-                      (filters.containsAllergens || []).includes(allergy.id)
-                        ? 'bg-red-500 text-white border-red-500'
-                        : 'bg-white border-gray-200 hover:border-red-300'
-                    }`}
-                  >
-                    <div className="text-center">
-                      <div className="text-lg mb-1">{allergy.icon}</div>
-                      <div className="font-medium">{allergy.name}</div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {(filters.containsAllergens?.length > 0) && (
-              <div className="mt-2 text-xs text-red-700">
-                {filters.containsAllergens.length}個の成分が選択されています
-              </div>
-            )}
+            <p className="text-xs text-gray-500 mt-1">store_locations.address を対象に部分一致で検索します</p>
           </div>
         </div>
 
@@ -212,18 +160,21 @@ const AdvancedSearchPanel = ({ onSearch, initialFilters = {} }) => {
           className="px-4 pb-4 border-t border-gray-200"
         >
           <div className="pt-4 space-y-6">
-            {/* Category Filter */}
+            {/* Category (fixed to restaurants, but allow display as selected) */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                🏷️ カテゴリー
+                🏷️ カテゴリー（固定: レストラン）
               </label>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                 {categories.map(category => (
                   <button
                     key={category.id}
-                    onClick={() => handleFilterChange('category', category.id)}
+                    onClick={() => {
+                      setSelectedCategory(category.id);
+                      handleFilterChange('category', category.id);
+                    }}
                     className={`p-3 rounded-lg border-2 text-sm transition-all ${
-                      filters.category === category.id
+                      (selectedCategory || filters.category) === category.id
                         ? 'border-orange-500 bg-orange-50 text-orange-700'
                         : 'border-gray-200 hover:border-gray-300'
                     }`}
@@ -237,7 +188,70 @@ const AdvancedSearchPanel = ({ onSearch, initialFilters = {} }) => {
               </div>
             </div>
 
-            {/* Exclude Allergens - 28品目すべて表示 */}
+            {/* Contains Allergens */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                ⚠️ 含まれるアレルギー成分で検索
+              </label>
+              <p className="text-xs text-gray-500 mb-3">
+                指定した成分が含まれている商品を検索します
+              </p>
+              <div className="mb-4">
+                <h4 className="text-sm font-semibold text-red-800 mb-2">
+                  表示義務のある8品目（特定原材料）
+                </h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  {allergyOptions.slice(0, 8).map(allergy => (
+                    <button
+                      key={allergy.id}
+                      onClick={() => toggleAllergen(allergy.id, 'containsAllergens')}
+                      className={`p-2 rounded-lg border-2 text-xs transition-all ${
+                        (filters.containsAllergens || []).includes(allergy.id)
+                          ? 'bg-red-500 text-white border-red-500'
+                          : 'bg-white border-gray-200 hover:border-red-300'
+                      }`}
+                    >
+                      <div className="text-center">
+                        <div className="text-lg mb-1">{allergy.icon}</div>
+                        <div className="font-medium">{allergy.name}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <h4 className="text-sm font-semibold text-orange-800 mb-2">
+                  表示が推奨される20品目（特定原材料に準ずるもの）
+                </h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  {allergyOptions.slice(8).map(allergy => (
+                    <button
+                      key={allergy.id}
+                      onClick={() => toggleAllergen(allergy.id, 'containsAllergens')}
+                      className={`p-2 rounded-lg border-2 text-xs transition-all ${
+                        (filters.containsAllergens || []).includes(allergy.id)
+                          ? 'bg-red-500 text-white border-red-500'
+                          : 'bg-white border-gray-200 hover:border-red-300'
+                      }`}
+                    >
+                      <div className="text-center">
+                        <div className="text-lg mb-1">{allergy.icon}</div>
+                        <div className="font-medium">{allergy.name}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {(filters.containsAllergens?.length > 0) && (
+                <div className="mt-2 text-xs text-red-700">
+                  {filters.containsAllergens.length}個の成分が選択されています
+                </div>
+              )}
+            </div>
+
+            {/* Exclude Allergens */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 🚫 除外するアレルギー成分
@@ -245,8 +259,6 @@ const AdvancedSearchPanel = ({ onSearch, initialFilters = {} }) => {
               <p className="text-xs text-gray-500 mb-3">
                 指定した成分が含まれていない商品のみ表示します
               </p>
-
-              {/* 法定8品目（特定原材料） */}
               <div className="mb-4">
                 <h4 className="text-sm font-semibold text-green-800 mb-2">
                   表示義務のある8品目（特定原材料）
@@ -271,7 +283,6 @@ const AdvancedSearchPanel = ({ onSearch, initialFilters = {} }) => {
                 </div>
               </div>
 
-              {/* 推奨20品目（特定原材料に準ずるもの） */}
               <div className="mb-4">
                 <h4 className="text-sm font-semibold text-green-800 mb-2">
                   表示が推奨される20品目（特定原材料に準ずるもの）

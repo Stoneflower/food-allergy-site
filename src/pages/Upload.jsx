@@ -587,77 +587,7 @@ const Upload = () => {
                             if (missingPrefectures.length > 0) {
                                 console.warn('⚠️ 以下の都道府県がCSVに含まれていません:', missingPrefectures.join(', '));
                                 console.warn('これらの都道府県には店舗がない可能性があります。');
-                                
-                                // 既存のstore_locationsから、CSVに含まれていない都道府県の店舗を無効化
-                                console.log('🗑️ 削除処理開始 - 既存のstore_locationsを更新中...');
-                                console.log('削除対象の都道府県:', missingPrefectures);
-                                console.log('削除対象の都道府県数:', missingPrefectures.length);
-                                try {
-                                    console.log('🔍 削除処理の詳細デバッグ開始');
-                                    
-                                    // 削除処理用のSupabase設定を再定義
-                                    const deleteBase = import.meta.env.VITE_SUPABASE_URL;
-                                    const deleteKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-                                    
-                                    console.log('  - base:', deleteBase);
-                                    console.log('  - key:', deleteKey ? 'APIキーあり' : 'APIキーなし');
-                                    
-                                    // 既存のstore_locationsを取得
-                                    const fetchUrl = `${deleteBase}/rest/v1/store_locations?select=id,address,product_id`;
-                                    console.log('  - fetchURL:', fetchUrl);
-                                    
-                                    const existingRes = await fetch(fetchUrl, { 
-                                        headers: { apikey: deleteKey, Authorization: `Bearer ${deleteKey}` } 
-                                    });
-                                    if (existingRes.ok) {
-                                        const existingLocations = await existingRes.json();
-                                        console.log('📋 既存のstore_locations情報:');
-                                        console.log('  - 既存のstore_locations数:', existingLocations.length);
-                                        console.log('  - 既存の都道府県:', [...new Set(existingLocations.map(l => l.address))].sort());
-                                        
-                                        // CSVに含まれていない都道府県の店舗を特定
-                                        const locationsToDeactivate = existingLocations.filter(loc => 
-                                            loc.address && missingPrefectures.includes(loc.address)
-                                        );
-                                        
-                                        console.log('🔍 削除対象の店舗特定:');
-                                        console.log('  - 削除対象の店舗数:', locationsToDeactivate.length);
-                                        console.log('  - 削除対象の都道府県:', locationsToDeactivate.map(l => l.address));
-                                        console.log('  - 削除対象の店舗詳細:', locationsToDeactivate.map(l => ({ id: l.id, address: l.address, product_id: l.product_id })));
-                                        
-                                        if (locationsToDeactivate.length > 0) {
-                                            console.log('🗑️ 削除処理開始:');
-                                            
-                                            // 物理削除（またはactive = falseに設定）
-                                            for (const location of locationsToDeactivate) {
-                                                console.log('削除中:', location.address, '(ID:', location.id, ')');
-                                                const deleteRes = await fetch(`${deleteBase}/rest/v1/store_locations?id=eq.${location.id}`, { 
-                                                    method: 'DELETE', 
-                                                    headers: { apikey: deleteKey, Authorization: `Bearer ${deleteKey}` } 
-                                                });
-                                                if (deleteRes.ok) {
-                                                    console.log('✅ 削除完了:', location.address);
-                                                } else {
-                                                    const errorText = await deleteRes.text();
-                                                    console.warn('❌ 削除失敗:', location.address, deleteRes.status, errorText);
-                                                }
-                                            }
-                                            console.log('🗑️ 削除処理完了');
-                                        } else {
-                                            console.log('削除対象の店舗はありません');
-                                        }
-                                    } else {
-                                        console.error('既存のstore_locations取得エラー:', existingRes.status, await existingRes.text());
-                                    }
-                                } catch (error) {
-                                    console.error('🚨 削除処理中にエラーが発生:', error);
-                                    console.error('  - エラー名:', error.name);
-                                    console.error('  - エラーメッセージ:', error.message);
-                                    console.error('  - スタックトレース:', error.stack);
-                                    
-                                    // エラーが発生しても処理を続行
-                                    console.warn('削除処理でエラーが発生しましたが、CSV取込は続行します');
-                                }
+                                console.log('🗑️ 削除処理はCSV取込完了後に実行されます');
                             } else {
                                 console.log('🔧 削除処理は実行されません');
                                 console.log('  - 理由: missingPrefectures.length = 0');
@@ -896,6 +826,67 @@ const Upload = () => {
                             console.log('- スキップ:', skippedCount);
                             console.log('- エラー:', errorCount);
                             console.log('- 保存された住所数:', processedLocations.size);
+                            
+                            // CSV取込完了後に削除処理を実行
+                            if (missingPrefectures.length > 0) {
+                                console.log('🗑️ CSV取込完了後の削除処理開始');
+                                console.log('削除対象の都道府県:', missingPrefectures);
+                                console.log('削除対象の都道府県数:', missingPrefectures.length);
+                                
+                                try {
+                                    // 既存のstore_locationsから、CSVに含まれていない都道府県の店舗を削除
+                                    const existingRes = await fetch(`${base}/rest/v1/store_locations?select=id,address,product_id`, { 
+                                        headers: { apikey: key, Authorization: `Bearer ${key}` } 
+                                    });
+                                    
+                                    if (existingRes.ok) {
+                                        const existingLocations = await existingRes.json();
+                                        console.log('📋 既存のstore_locations情報:');
+                                        console.log('  - 既存のstore_locations数:', existingLocations.length);
+                                        console.log('  - 既存の都道府県:', [...new Set(existingLocations.map(l => l.address))].sort());
+                                        
+                                        // CSVに含まれていない都道府県の店舗を特定
+                                        const locationsToDelete = existingLocations.filter(loc => 
+                                            loc.address && missingPrefectures.includes(loc.address)
+                                        );
+                                        
+                                        console.log('🔍 削除対象の店舗特定:');
+                                        console.log('  - 削除対象の店舗数:', locationsToDelete.length);
+                                        console.log('  - 削除対象の都道府県:', locationsToDelete.map(l => l.address));
+                                        console.log('  - 削除対象の店舗詳細:', locationsToDelete.map(l => ({ id: l.id, address: l.address, product_id: l.product_id })));
+                                        
+                                        if (locationsToDelete.length > 0) {
+                                            console.log('🗑️ 削除処理開始:');
+                                            
+                                            // 物理削除
+                                            for (const location of locationsToDelete) {
+                                                console.log('削除中:', location.address, '(ID:', location.id, ')');
+                                                const deleteRes = await fetch(`${base}/rest/v1/store_locations?id=eq.${location.id}`, { 
+                                                    method: 'DELETE', 
+                                                    headers: { apikey: key, Authorization: `Bearer ${key}` } 
+                                                });
+                                                if (deleteRes.ok) {
+                                                    console.log('✅ 削除完了:', location.address);
+                                                } else {
+                                                    const errorText = await deleteRes.text();
+                                                    console.warn('❌ 削除失敗:', location.address, deleteRes.status, errorText);
+                                                }
+                                            }
+                                            console.log('🗑️ 削除処理完了');
+                                        } else {
+                                            console.log('削除対象の店舗はありません');
+                                        }
+                                    } else {
+                                        console.error('既存のstore_locations取得エラー:', existingRes.status, await existingRes.text());
+                                    }
+                                } catch (error) {
+                                    console.error('🚨 削除処理中にエラーが発生:', error);
+                                    console.error('  - エラー名:', error.name);
+                                    console.error('  - エラーメッセージ:', error.message);
+                                    console.error('  - スタックトレース:', error.stack);
+                                    console.warn('削除処理でエラーが発生しましたが、CSV取込は完了しています');
+                                }
+                            }
                             
                             // 欠落している都道府県がある場合は警告を表示
                             let alertMessage = `CSV取込が完了しました。\n処理行数: ${processedCount}\n保存された住所数: ${processedLocations.size}`;

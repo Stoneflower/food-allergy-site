@@ -571,33 +571,8 @@ const Upload = () => {
                           }} />
                     <button
                             disabled={!csvFile || csvImporting}
-                            onClick={async () => {
-                            return await handleCsvImportStaging(); /*
-                            try {
-                            if (!csvFile) return;
-                            setCsvImporting(true);
-                            const text = await readFileAsText(csvFile);
-                            const rows = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter(Boolean).map(r => {
-                              // CSVの分割を改善：カンマで分割し、空の要素も保持
-                              const parts = r.split(',');
-                              // 38列に調整（不足分は空文字で埋める）
-                              while (parts.length < 38) {
-                                parts.push('');
-                              }
-                              return parts.map(s => s.replace(/^"|"$/g,'').trim());
-                            });
-                            const header = rows.shift();
-                            // 期待ヘッダー（指定順 + 住所・電話情報 + 店舗リストURL）
-                            const expected = ['店舗名','系列','カテゴリ','住所','電話番号','営業時間','定休日','情報元URL','店舗リストURL','メニュー名','卵','乳','小麦','そば','落花生','えび','かに','くるみ','大豆','牛肉','豚肉','鶏肉','さけ','さば','あわび','いか','いくら','オレンジ','キウイフルーツ','もも','りんご','やまいも','ゼラチン','バナナ','カシューナッツ','ごま','アーモンド','まつたけ'];
-                            if (!header || expected.some((h,i)=>header[i]!==h)) {
-                              alert('ヘッダーが想定と異なります。テンプレートCSVをご利用ください。');
-                              setCsvImporting(false); return;
-                            }
-                            // 日本語→IDマップ
-                            const idMap = { '卵':'egg','乳':'milk','小麦':'wheat','そば':'buckwheat','落花生':'peanut','えび':'shrimp','かに':'crab','くるみ':'walnut','大豆':'soybean','牛肉':'beef','豚肉':'pork','鶏肉':'chicken','さけ':'salmon','さば':'mackerel','あわび':'abalone','いか':'squid','いくら':'salmon_roe','オレンジ':'orange','キウイフルーツ':'kiwi','もも':'peach','りんご':'apple','やまいも':'yam','ゼラチン':'gelatin','バナナ':'banana','カシューナッツ':'cashew','ごま':'sesame','アーモンド':'almond','まつたけ':'matsutake' };
-                            console.log('idMap:', idMap);
-                            console.log('=== CSV取込開始:', new Date().toISOString(), '===');
-                            const toPresence = (mark) => (mark==='●' ? 'direct' : (mark==='△' ? 'trace' : 'none'));
+                            onClick={handleCsvImportStaging}
+                            /* old inline implementation removed in favor of handleCsvImportStaging */
 
                             // 47都道府県の完全なリスト
                             const allPrefectures = [

@@ -594,15 +594,20 @@ const Upload = () => {
                                 console.log('削除対象の都道府県数:', missingPrefectures.length);
                                 try {
                                     console.log('🔍 削除処理の詳細デバッグ開始');
-                                    console.log('  - base:', base);
-                                    console.log('  - key:', key ? 'APIキーあり' : 'APIキーなし');
+                                    
+                                    // 削除処理用のSupabase設定を再定義
+                                    const deleteBase = import.meta.env.VITE_SUPABASE_URL;
+                                    const deleteKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+                                    
+                                    console.log('  - base:', deleteBase);
+                                    console.log('  - key:', deleteKey ? 'APIキーあり' : 'APIキーなし');
                                     
                                     // 既存のstore_locationsを取得
-                                    const fetchUrl = `${base}/rest/v1/store_locations?select=id,address,product_id`;
+                                    const fetchUrl = `${deleteBase}/rest/v1/store_locations?select=id,address,product_id`;
                                     console.log('  - fetchURL:', fetchUrl);
                                     
                                     const existingRes = await fetch(fetchUrl, { 
-                                        headers: { apikey: key, Authorization: `Bearer ${key}` } 
+                                        headers: { apikey: deleteKey, Authorization: `Bearer ${deleteKey}` } 
                                     });
                                     if (existingRes.ok) {
                                         const existingLocations = await existingRes.json();
@@ -626,9 +631,9 @@ const Upload = () => {
                                             // 物理削除（またはactive = falseに設定）
                                             for (const location of locationsToDeactivate) {
                                                 console.log('削除中:', location.address, '(ID:', location.id, ')');
-                                                const deleteRes = await fetch(`${base}/rest/v1/store_locations?id=eq.${location.id}`, { 
+                                                const deleteRes = await fetch(`${deleteBase}/rest/v1/store_locations?id=eq.${location.id}`, { 
                                                     method: 'DELETE', 
-                                                    headers: { apikey: key, Authorization: `Bearer ${key}` } 
+                                                    headers: { apikey: deleteKey, Authorization: `Bearer ${deleteKey}` } 
                                                 });
                                                 if (deleteRes.ok) {
                                                     console.log('✅ 削除完了:', location.address);

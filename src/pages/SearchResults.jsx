@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import AllergyFilter from '../components/AllergyFilter';
 import CategoryFilter from '../components/CategoryFilter';
 import AdvancedSearchPanel from '../components/AdvancedSearchPanel';
+import UnifiedAllergyFilter from '../components/UnifiedAllergyFilter';
 import RestaurantCard from '../components/RestaurantCard';
 import ProductCard from '../components/ProductCard';
 import SupermarketCard from '../components/SupermarketCard';
@@ -29,7 +29,7 @@ const SearchResults = () => {
     safetyLevel: 'all'
   });
 
-  const { getFilteredItems, selectedAllergies, searchKeyword, selectedArea, selectedCategory, categories } = useRestaurant();
+  const { getFilteredItems, selectedAllergies, setSelectedAllergies, searchKeyword, selectedArea, selectedCategory, categories } = useRestaurant();
 
   const filteredItems = getFilteredItems();
 
@@ -282,10 +282,12 @@ const SearchResults = () => {
                 initialFilters={searchFilters}
               />
 
-              <div className="bg-white rounded-xl shadow-md p-6">
-                <h3 className="text-lg font-semibold mb-4">アレルギーフィルター</h3>
-                <AllergyFilter />
-              </div>
+              <UnifiedAllergyFilter 
+                onAllergyChange={(allergies) => {
+                  setSelectedAllergies(allergies);
+                }}
+                selectedAllergies={selectedAllergies}
+              />
 
               {/* Source Statistics */}
               <div className="bg-white rounded-xl shadow-md p-6">

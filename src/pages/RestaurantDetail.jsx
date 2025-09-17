@@ -48,7 +48,15 @@ const RestaurantDetail = () => {
         if (pErr) throw pErr;
         const { data: items, error: mErr } = await supabase
           .from('menu_items')
-          .select('id,name,created_at')
+          .select(`
+            id,
+            name,
+            created_at,
+            menu_item_allergies (
+              *,
+              allergy_items (name, icon)
+            )
+          `)
           .eq('product_id', productId)
           .order('id', { ascending: false });
         if (mErr) throw mErr;
@@ -129,14 +137,72 @@ const RestaurantDetail = () => {
     ));
   };
   const filteredMenus = (() => {
-    if (!isDbId || matrixRows.length === 0) return [];
-    const needIds = selectedAllergyIds.map(normalizeId);
-    return matrixRows.filter(row => {
-      return needIds.every(aid => {
-        const val = row[aid];
-        return val === '－' || val === '-' || val === null || val === undefined;
-      });
+    if (!isDbId || dbMenuItems.length === 0) return [];
+    
+    console.log('🍽️ メニューフィルタリング開始:', {
+      totalMenus: dbMenuItems.length,
+      selectedAllergies: selectedAllergyIds,
+      menuItems: dbMenuItems.map(item => ({
+        id: item.id,
+        name: item.name,
+        allergies: item.menu_item_allergies?.length || 0
+      }))
     });
+    
+    if (selectedAllergyIds.length === 0) {
+      // アレルギー選択がない場合は全メニューを表示
+      return dbMenuItems.map(item => ({
+        id: item.id,
+        name: item.name,
+        allergies: item.menu_item_allergies || []
+      }));
+    }
+    
+    const needIds = selectedAllergyIds.map(normalizeId);
+    const filtered = dbMenuItems.filter(menuItem => {
+      if (!menuItem.menu_item_allergies || menuItem.menu_item_allergies.length === 0) {
+        console.log('⚠️ アレルギー情報なし:', menuItem.name);
+        return false; // アレルギー情報がないメニューは除外
+      }
+      
+      const isSafe = needIds.every(allergyId => {
+        const allergyInfo = menuItem.menu_item_allergies.find(
+          allergy => allergy.allergy_item_id === allergyId
+        );
+        
+        if (!allergyInfo) {
+          console.log('⚠️ アレルギー情報が見つからない:', menuItem.name, allergyId);
+          return false; // アレルギー情報が見つからない場合は除外
+        }
+        
+        const isSafeForThisAllergy = allergyInfo.presence_type === 'none' || 
+                                   allergyInfo.presence_type === 'trace';
+        
+        console.log('🔍 アレルギーチェック:', {
+          menuName: menuItem.name,
+          allergyId: allergyId,
+          presenceType: allergyInfo.presence_type,
+          isSafe: isSafeForThisAllergy
+        });
+        
+        return isSafeForThisAllergy;
+      });
+      
+      console.log('✅ メニュー安全性判定:', menuItem.name, isSafe);
+      return isSafe;
+    });
+    
+    console.log('🎯 フィルタリング結果:', {
+      original: dbMenuItems.length,
+      filtered: filtered.length,
+      filteredNames: filtered.map(f => f.name)
+    });
+    
+    return filtered.map(item => ({
+      id: item.id,
+      name: item.name,
+      allergies: item.menu_item_allergies || []
+    }));
   })();
 
   return (
@@ -239,15 +305,31 @@ const RestaurantDetail = () => {
                         <div className="bg-white rounded-lg border p-4">
                           <h4 className="font-semibold mb-2 text-gray-900">表示対象のメニュー</h4>
                           {selectedAllergyIds.length === 0 ? (
-                            <p className="text-sm text-gray-600">上のアイコンから除外したいアレルギーを選択してください。</p>
+                            <div>
+                              <p className="text-sm text-gray-600 mb-2">上のアイコンから除外したいアレルギーを選択してください。</p>
+                              <p className="text-sm text-gray-500">現在 {filteredMenus.length} 個のメニューが登録されています。</p>
+                            </div>
                           ) : filteredMenus.length > 0 ? (
-                            <ul className="list-disc list-inside text-sm text-gray-800 space-y-1">
-                              {filteredMenus.slice(0, 50).map(row => (
-                                <li key={`${row.product_id}-${row.menu_name}`}>{row.menu_name}</li>
-                              ))}
-                            </ul>
+                            <div>
+                              <p className="text-sm text-gray-600 mb-2">
+                                選択したアレルギーに安全なメニュー: {filteredMenus.length} 個
+                              </p>
+                              <ul className="list-disc list-inside text-sm text-gray-800 space-y-1 max-h-60 overflow-y-auto">
+                                {filteredMenus.slice(0, 50).map(menu => (
+                                  <li key={menu.id} className="flex items-center justify-between">
+                                    <span>{menu.name}</span>
+                                    <span className="text-xs text-green-600 ml-2">✓ 安全</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
                           ) : (
-                            <p className="text-sm text-gray-600">条件を満たすメニューが見つかりませんでした。</p>
+                            <div>
+                              <p className="text-sm text-gray-600">条件を満たすメニューが見つかりませんでした。</p>
+                              <p className="text-xs text-gray-500 mt-1">
+                                アレルギー情報が登録されていないか、選択したアレルギーを含むメニューのみです。
+                              </p>
+                            </div>
                           )}
                         </div>
                       </div>

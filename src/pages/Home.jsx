@@ -20,7 +20,7 @@ const Home = () => {
     getFilteredRestaurants,
     selectedAllergies,
     selectedCategory,
-    products,
+    allItems,
     getRecommendations,
     favorites
   } = useRestaurant();
@@ -357,16 +357,24 @@ const Home = () => {
                     <span>最近共有された商品</span>
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {products.slice(0, 3).map((product, index) => (
-                      <motion.div
-                        key={product.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6, delay: index * 0.1 }}
-                      >
-                        <ProductCard product={product} />
-                      </motion.div>
-                    ))}
+                    {(allItems || []).length > 0 ? (
+                      (allItems || []).slice(0, 3).map((product, index) => (
+                        <motion.div
+                          key={product.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.6, delay: index * 0.1 }}
+                        >
+                          <ProductCard product={product} />
+                        </motion.div>
+                      ))
+                    ) : (
+                      <div className="col-span-full text-center py-12">
+                        <div className="text-gray-400 text-6xl mb-4">📦</div>
+                        <h4 className="text-lg font-medium text-gray-600 mb-2">まだ商品が登録されていません</h4>
+                        <p className="text-gray-500">CSVアップロードで商品情報を登録してください</p>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -377,16 +385,24 @@ const Home = () => {
                     <span>おすすめレストラン</span>
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filteredRestaurants.slice(0, 2).map((restaurant, index) => (
-                      <motion.div
-                        key={restaurant.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6, delay: index * 0.1 }}
-                      >
-                        <RestaurantCard restaurant={restaurant} />
-                      </motion.div>
-                    ))}
+                    {(filteredRestaurants || []).length > 0 ? (
+                      (filteredRestaurants || []).slice(0, 2).map((restaurant, index) => (
+                        <motion.div
+                          key={restaurant.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.6, delay: index * 0.1 }}
+                        >
+                          <RestaurantCard restaurant={restaurant} />
+                        </motion.div>
+                      ))
+                    ) : (
+                      <div className="col-span-full text-center py-12">
+                        <div className="text-gray-400 text-6xl mb-4">🍽️</div>
+                        <h4 className="text-lg font-medium text-gray-600 mb-2">まだレストランが登録されていません</h4>
+                        <p className="text-gray-500">CSVアップロードでレストラン情報を登録してください</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

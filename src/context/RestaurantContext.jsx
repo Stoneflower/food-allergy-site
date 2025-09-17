@@ -186,7 +186,7 @@ export const RestaurantProvider = ({ children }) => {
     // 実際にはここでAPIを呼び出してデータベースを更新
     console.log('商品更新:', productId, updateData);
     // ローカル状態の更新（実際の実装では不要）
-    const updatedProducts = products.map(product => {
+    const updatedProducts = (allItems || []).map(product => {
       if (product.id === productId) {
         return {
           ...product,

@@ -535,35 +535,15 @@ const Upload = () => {
                             console.log('欠落している都道府県:', missingPrefectures);
                             console.log('欠落件数:', missingPrefectures.length);
 
-                            // 欠落している都道府県の行を自動補完
+                            // 自動補完機能を無効化：実際のCSVデータのみを処理
                             const completedRows = [...rows];
-                            for (const missingPref of missingPrefectures) {
-                                // 既存の行から店舗情報を取得（最初の有効な行を使用）
-                                const firstValidRow = rows.find(row => row[0] && row[0].trim() !== '' && !row[0].includes('（乳小麦卵使わないHB•ソイHB用）'));
-                                if (firstValidRow) {
-                                    const [store, brand, category, , , , , sourceUrl, storeListUrl] = firstValidRow;
-                                    // 欠落している都道府県の行を作成（メニュー名は空、アレルギー情報は全て"-"）
-                                    const newRow = [
-                                        store, brand, category, missingPref, '', '', '', sourceUrl, storeListUrl, '',
-                                        ...Array(28).fill('-') // 28個のアレルギー項目を全て"-"で埋める
-                                    ];
-                                    completedRows.push(newRow);
-                                    console.log('自動補完:', missingPref, 'の行を追加');
-                                }
-                            }
-
-                            console.log('補完後の行数:', completedRows.length, '(元:', rows.length, '+ 補完:', completedRows.length - rows.length, ')');
+                            console.log('処理対象行数:', completedRows.length, '(自動補完なし)');
                             
-                            // 補完後の都道府県を確認
-                            const completedPrefectures = new Set();
-                            for (const cols of completedRows) {
-                                const address = cols[3]; // D列（住所）
-                                if (address && allPrefectures.includes(address)) {
-                                    completedPrefectures.add(address);
-                                }
+                            // 欠落している都道府県がある場合は警告を表示
+                            if (missingPrefectures.length > 0) {
+                                console.warn('⚠️ 以下の都道府県がCSVに含まれていません:', missingPrefectures.join(', '));
+                                console.warn('これらの都道府県には店舗がない可能性があります。');
                             }
-                            console.log('補完後の都道府県数:', completedPrefectures.size);
-                            console.log('補完後の都道府県:', Array.from(completedPrefectures).sort());
 
                             // 複数店舗対応：各行で住所情報を個別に保存
                             const processedLocations = new Set(); // 重複住所防止用
@@ -798,7 +778,13 @@ const Upload = () => {
                             console.log('- エラー:', errorCount);
                             console.log('- 保存された住所数:', processedLocations.size);
                             
-                            alert(`CSV取込が完了しました。\n処理行数: ${processedCount}\n保存された住所数: ${processedLocations.size}`);
+                            // 欠落している都道府県がある場合は警告を表示
+                            let alertMessage = `CSV取込が完了しました。\n処理行数: ${processedCount}\n保存された住所数: ${processedLocations.size}`;
+                            if (missingPrefectures.length > 0) {
+                                alertMessage += `\n\n⚠️ 注意: 以下の都道府県がCSVに含まれていません:\n${missingPrefectures.join(', ')}\n\nこれらの都道府県には店舗がない可能性があります。`;
+                            }
+                            
+                            alert(alertMessage);
                             setCsvImporting(false);
                             setCsvFile(null);
                           } catch (err) {

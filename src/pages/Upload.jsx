@@ -555,6 +555,12 @@ const Upload = () => {
                                 const normalizedSourceUrl = normalizeValue(sourceUrl);
                                 const normalizedStoreListUrl = normalizeValue(storeListUrl);
                                 
+                                // 店舗名が空の場合は住所情報のみ保存しない（productsテーブルに不要なレコードを作成しない）
+                                if (!store || store.trim() === '') {
+                                  console.log('店舗名が空のため、住所情報の保存をスキップ');
+                                  continue;
+                                }
+                                
                                 // 住所情報がある場合は保存
                                 const shouldSaveLocation = normalizedAddress || normalizedPhone || normalizedHours || normalizedClosed || normalizedSourceUrl || normalizedStoreListUrl;
                                 if (shouldSaveLocation) {
@@ -597,6 +603,13 @@ const Upload = () => {
                                 continue; 
                               }
                               if (/^[-\s]*$/.test(menuName)) continue; // 空のメニュー名のみスキップ（★で始まるメニュー名は住所情報がある場合は処理を続行）
+                              
+                              // 店舗名が空の場合はスキップ（productsテーブルに不要なレコードを作成しない）
+                              if (!store || store.trim() === '') {
+                                console.log('店舗名が空のため、メニュー情報の保存をスキップ');
+                                continue;
+                              }
+                              
                               const product = { name: (store||'').trim(), brand: (brand||'').trim() || null, category: (category||'').trim() || null, source_url: (sourceUrl||'').trim() || null };
                               console.log('marks:', marks);
                               console.log('expected配列:', expected);

@@ -527,16 +527,44 @@ const Upload = () => {
                                 if (address && allPrefectures.includes(address)) {
                                     csvPrefectures.add(address);
                                     console.log('  - 検出された都道府県:', address);
+                                } else if (address) {
+                                    console.log('  - 無効な住所:', address);
                                 }
                             }
                             console.log('CSV解析完了 - 検出された都道府県数:', csvPrefectures.size);
+                            console.log('検出された都道府県一覧:', Array.from(csvPrefectures).sort());
+                            
+                            // 鳥取県、島根県の存在確認
+                            const hasTottori = csvPrefectures.has('鳥取県');
+                            const hasShimane = csvPrefectures.has('島根県');
+                            console.log('🔍 CSV内の都道府県確認:');
+                            console.log('  - 鳥取県が含まれている:', hasTottori);
+                            console.log('  - 島根県が含まれている:', hasShimane);
+                            
+                            // 鳥取県、島根県が含まれている場合は警告
+                            if (hasTottori || hasShimane) {
+                                console.warn('⚠️ CSVに鳥取県、島根県が含まれています。これらは自動補完機能で追加された可能性があります。');
+                            }
 
                             // 欠落している都道府県を特定
                             const missingPrefectures = allPrefectures.filter(pref => !csvPrefectures.has(pref));
-                            console.log('CSVに含まれている都道府県数:', csvPrefectures.size);
-                            console.log('CSVに含まれている都道府県:', Array.from(csvPrefectures).sort());
-                            console.log('欠落している都道府県:', missingPrefectures);
-                            console.log('欠落件数:', missingPrefectures.length);
+                            console.log('📊 CSV解析結果:');
+                            console.log('  - CSVに含まれている都道府県数:', csvPrefectures.size);
+                            console.log('  - CSVに含まれている都道府県:', Array.from(csvPrefectures).sort());
+                            console.log('  - 欠落している都道府県:', missingPrefectures);
+                            console.log('  - 欠落件数:', missingPrefectures.length);
+                            
+                            // 47都道府県の完全なリストとの比較
+                            console.log('📋 47都道府県の完全なリスト:');
+                            console.log('  - 総数:', allPrefectures.length);
+                            console.log('  - リスト:', allPrefectures.sort());
+                            
+                            // 鳥取県、島根県の詳細確認
+                            console.log('🔍 鳥取県、島根県の詳細確認:');
+                            console.log('  - 鳥取県がCSVに含まれている:', csvPrefectures.has('鳥取県'));
+                            console.log('  - 島根県がCSVに含まれている:', csvPrefectures.has('島根県'));
+                            console.log('  - 鳥取県が欠落リストに含まれている:', missingPrefectures.includes('鳥取県'));
+                            console.log('  - 島根県が欠落リストに含まれている:', missingPrefectures.includes('島根県'));
 
                             // 自動補完機能を無効化：実際のCSVデータのみを処理
                             const completedRows = [...rows];
@@ -546,13 +574,24 @@ const Upload = () => {
                             console.log('🔍 削除処理の条件チェック:');
                             console.log('- missingPrefectures.length:', missingPrefectures.length);
                             console.log('- missingPrefectures:', missingPrefectures);
+                            console.log('- csvPrefectures.size:', csvPrefectures.size);
+                            console.log('- allPrefectures.length:', allPrefectures.length);
+                            
+                            // 削除処理の条件確認
+                            const shouldDelete = missingPrefectures.length > 0;
+                            console.log('🔧 削除処理の条件確認:');
+                            console.log('  - missingPrefectures.length:', missingPrefectures.length);
+                            console.log('  - shouldDelete:', shouldDelete);
+                            console.log('  - 条件: missingPrefectures.length > 0');
                             
                             if (missingPrefectures.length > 0) {
                                 console.warn('⚠️ 以下の都道府県がCSVに含まれていません:', missingPrefectures.join(', '));
                                 console.warn('これらの都道府県には店舗がない可能性があります。');
                                 
                                 // 既存のstore_locationsから、CSVに含まれていない都道府県の店舗を無効化
-                                console.log('既存のstore_locationsを更新中...');
+                                console.log('🗑️ 削除処理開始 - 既存のstore_locationsを更新中...');
+                                console.log('削除対象の都道府県:', missingPrefectures);
+                                console.log('削除対象の都道府県数:', missingPrefectures.length);
                                 try {
                                     // 既存のstore_locationsを取得
                                     const existingRes = await fetch(`${base}/rest/v1/store_locations?select=id,address,product_id`, { 
@@ -560,17 +599,22 @@ const Upload = () => {
                                     });
                                     if (existingRes.ok) {
                                         const existingLocations = await existingRes.json();
-                                        console.log('既存のstore_locations数:', existingLocations.length);
+                                        console.log('📋 既存のstore_locations情報:');
+                                        console.log('  - 既存のstore_locations数:', existingLocations.length);
+                                        console.log('  - 既存の都道府県:', [...new Set(existingLocations.map(l => l.address))].sort());
                                         
                                         // CSVに含まれていない都道府県の店舗を特定
                                         const locationsToDeactivate = existingLocations.filter(loc => 
                                             loc.address && missingPrefectures.includes(loc.address)
                                         );
                                         
+                                        console.log('🔍 削除対象の店舗特定:');
+                                        console.log('  - 削除対象の店舗数:', locationsToDeactivate.length);
+                                        console.log('  - 削除対象の都道府県:', locationsToDeactivate.map(l => l.address));
+                                        console.log('  - 削除対象の店舗詳細:', locationsToDeactivate.map(l => ({ id: l.id, address: l.address, product_id: l.product_id })));
+                                        
                                         if (locationsToDeactivate.length > 0) {
                                             console.log('🗑️ 削除処理開始:');
-                                            console.log('無効化対象の店舗数:', locationsToDeactivate.length);
-                                            console.log('無効化対象の都道府県:', locationsToDeactivate.map(l => l.address));
                                             
                                             // 物理削除（またはactive = falseに設定）
                                             for (const location of locationsToDeactivate) {
@@ -590,10 +634,16 @@ const Upload = () => {
                                         } else {
                                             console.log('削除対象の店舗はありません');
                                         }
+                                    } else {
+                                        console.error('既存のstore_locations取得エラー:', existingRes.status, await existingRes.text());
                                     }
                                 } catch (error) {
                                     console.warn('既存データの更新中にエラー:', error);
                                 }
+                            } else {
+                                console.log('🔧 削除処理は実行されません');
+                                console.log('  - 理由: missingPrefectures.length = 0');
+                                console.log('  - CSVにすべての都道府県が含まれているか、削除対象がない');
                             }
 
                             // 複数店舗対応：各行で住所情報を個別に保存

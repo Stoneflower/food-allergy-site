@@ -555,10 +555,20 @@ const Upload = () => {
                                 const normalizedSourceUrl = normalizeValue(sourceUrl);
                                 const normalizedStoreListUrl = normalizeValue(storeListUrl);
                                 
-                                // 店舗名が空の場合は住所情報のみ保存しない（productsテーブルに不要なレコードを作成しない）
+                                // A列（店舗名）が空の場合は、既存の店舗（びっくりドンキー）に関連付けて住所情報を保存
+                                let targetProductId = null;
                                 if (!store || store.trim() === '') {
-                                  console.log('店舗名が空のため、住所情報の保存をスキップ');
-                                  continue;
+                                  console.log('A列（店舗名）が空のため、既存の店舗に関連付けて住所情報を保存');
+                                  // 既存の店舗（びっくりドンキー）を検索
+                                  const findRes = await fetch(`${base}/rest/v1/products?name=eq.びっくりドンキー&select=id`, { headers:{ apikey:key, Authorization:`Bearer ${key}` }});
+                                  if (findRes.ok) {
+                                    const findJson = await findRes.json();
+                                    targetProductId = findJson[0]?.id;
+                                  }
+                                  if (!targetProductId) {
+                                    console.log('既存の店舗が見つからないため、スキップ');
+                                    continue;
+                                  }
                                 }
                                 
                                 // 住所情報がある場合は保存
@@ -567,15 +577,18 @@ const Upload = () => {
                                   console.log('住所情報のみ保存:', { address: normalizedAddress, phone: normalizedPhone });
                                   
                                   // 店舗情報を取得または作成
-                                  const product = { name: (store||'').trim(), brand: (brand||'').trim() || null, category: (category||'').trim() || null, source_url: (sourceUrl||'').trim() || null };
-                                  const base = import.meta.env.VITE_SUPABASE_URL;
-                                  const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
-                                  
-                                  // 店舗の取得または作成
-                                  const pRes = await fetch(`${base}/rest/v1/products?on_conflict=name,brand`, { method:'POST', headers:{ apikey:key, Authorization:`Bearer ${key}`, 'Content-Type':'application/json', Prefer:'return=representation,resolution=merge-duplicates' }, body: JSON.stringify([product]) });
-                                  if (!pRes.ok) { const t = await pRes.text(); throw new Error(`products作成エラー ${pRes.status}: ${t}`); }
-                                  const pJson = await pRes.json();
-                                  const pid = pJson[0]?.id;
+                                  let pid = targetProductId;
+                                  if (!pid) {
+                                    const product = { name: (store||'').trim(), brand: (brand||'').trim() || null, category: (category||'').trim() || null, source_url: (sourceUrl||'').trim() || null };
+                                    const base = import.meta.env.VITE_SUPABASE_URL;
+                                    const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
+                                    
+                                    // 店舗の取得または作成
+                                    const pRes = await fetch(`${base}/rest/v1/products?on_conflict=name,brand`, { method:'POST', headers:{ apikey:key, Authorization:`Bearer ${key}`, 'Content-Type':'application/json', Prefer:'return=representation,resolution=merge-duplicates' }, body: JSON.stringify([product]) });
+                                    if (!pRes.ok) { const t = await pRes.text(); throw new Error(`products作成エラー ${pRes.status}: ${t}`); }
+                                    const pJson = await pRes.json();
+                                    pid = pJson[0]?.id;
+                                  }
                                   
                                   if (pid) {
                                     // 住所情報の保存
@@ -604,9 +617,9 @@ const Upload = () => {
                               }
                               if (/^[-\s]*$/.test(menuName)) continue; // 空のメニュー名のみスキップ（★で始まるメニュー名は住所情報がある場合は処理を続行）
                               
-                              // 店舗名が空の場合はスキップ（productsテーブルに不要なレコードを作成しない）
+                              // A列（店舗名）が空の場合はスキップ（productsテーブルに不要なレコードを作成しない）
                               if (!store || store.trim() === '') {
-                                console.log('店舗名が空のため、メニュー情報の保存をスキップ');
+                                console.log('A列（店舗名）が空のため、メニュー情報の保存をスキップ');
                                 continue;
                               }
                               

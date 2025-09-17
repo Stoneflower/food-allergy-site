@@ -122,6 +122,15 @@ export const RestaurantProvider = ({ children }) => {
       phone: '03-1234-5678',
       hours: '11:00～22:00',
       closed: '年中無休',
+      storeLocations: [
+        {
+          address: '東京都渋谷区渋谷1-1-1',
+          phone: '03-1234-5678',
+          hours: '11:00～22:00',
+          closed: '年中無休',
+          source_url: 'https://example.com/allergy-info-shibuya'
+        }
+      ],
       source: {
         type: 'official',
         contributor: '店舗公式',
@@ -180,6 +189,15 @@ export const RestaurantProvider = ({ children }) => {
       phone: '03-2345-6789',
       hours: '17:00～23:00',
       closed: '月曜日',
+      storeLocations: [
+        {
+          address: '東京都新宿区新宿2-2-2',
+          phone: '03-2345-6789',
+          hours: '17:00～23:00',
+          closed: '月曜日',
+          source_url: 'https://example.com/allergy-info-shinjuku'
+        }
+      ],
       source: {
         type: 'pdf',
         contributor: 'システム解析',
@@ -376,6 +394,15 @@ export const RestaurantProvider = ({ children }) => {
       hours: '9:00～23:00',
       phone: '03-5456-7890',
       description: 'アレルギー対応商品を豊富に取り揃えているイオンの大型店舗です。',
+      storeLocations: [
+        {
+          address: '東京都渋谷区渋谷2-24-1',
+          phone: '03-5456-7890',
+          hours: '9:00～23:00',
+          closed: '年中無休',
+          source_url: 'https://example.com/allergy-info-aeon'
+        }
+      ],
       source: {
         type: 'community',
         contributor: 'アレルギー情報収集グループ',
@@ -574,6 +601,16 @@ export const RestaurantProvider = ({ children }) => {
       selectedArea,
       searchKeyword
     });
+    
+    // 全アイテムの詳細情報をログ出力
+    console.log('📋 全アイテム一覧:', allItems.map(item => ({
+      id: item.id,
+      name: item.name,
+      category: item.category,
+      area: item.area,
+      isDbData: item.id && item.id.startsWith('db_'),
+      hasStoreLocations: item.storeLocations?.length || 0
+    })));
 
     if (selectedCategory !== 'all') {
       items = items.filter(item => item.category === selectedCategory);
@@ -621,22 +658,41 @@ export const RestaurantProvider = ({ children }) => {
       );
     }
 
-    // エリア検索
+    // エリア検索（store_locationsのaddressカラムを参照）
     if (selectedArea) {
       const beforeAreaFilter = items.length;
       items = items.filter(item => {
-        // Supabaseデータの場合は住所から検索
-        if (item.id && item.id.startsWith('db_')) {
-          const hasMatchingLocation = item.storeLocations && item.storeLocations.some(location => 
-            location.address && location.address.includes(selectedArea)
-          );
-          console.log('📍 エリアマッチ:', item.name, hasMatchingLocation, {
-            locations: item.storeLocations?.map(l => l.address) || []
+        // すべてのデータでstore_locationsのaddressを参照
+        if (item.storeLocations && item.storeLocations.length > 0) {
+          const hasMatchingLocation = item.storeLocations.some(location => {
+            if (!location.address) return false;
+            
+            // 都道府県名での検索（部分一致）
+            const address = location.address.toString();
+            const searchArea = selectedArea.toString();
+            
+            // 都道府県名が含まれているかチェック
+            const matches = address.includes(searchArea);
+            
+            console.log('📍 住所マッチング:', {
+              itemName: item.name,
+              address: address,
+              searchArea: searchArea,
+              matches: matches
+            });
+            
+            return matches;
           });
+          
+          console.log('📍 エリアマッチ結果:', item.name, hasMatchingLocation, {
+            locations: item.storeLocations.map(l => l.address) || []
+          });
+          
           return hasMatchingLocation;
         } else {
-          // サンプルデータの場合は既存のロジック
-          return item.area && item.area.toLowerCase().includes(selectedArea.toLowerCase());
+          // store_locationsがない場合は表示しない（エリア検索が有効な場合）
+          console.log('📍 住所情報なし:', item.name, '→ 非表示');
+          return false;
         }
       });
       console.log('📍 エリアフィルター後:', beforeAreaFilter, '→', items.length, 'items');

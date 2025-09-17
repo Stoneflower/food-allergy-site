@@ -116,29 +116,63 @@ const RestaurantCard = ({ restaurant }) => {
             </div>
 
             {/* 情報源詳細 */}
-            {showSourceDetails && restaurant.source && (
+            {showSourceDetails && (
               <div className="mb-3 p-3 bg-gray-50 rounded-lg border">
-                <div className="text-xs text-gray-600 space-y-1">
-                  {restaurant.source.contributor && (
-                    <div>投稿者: {restaurant.source.contributor}</div>
-                  )}
-                  {restaurant.source.lastUpdated && (
-                    <div>更新: {new Date(restaurant.source.lastUpdated).toLocaleDateString('ja-JP')}</div>
-                  )}
-                  {restaurant.source.confidence && (
-                    <div className="flex items-center space-x-2">
-                      <span>信頼度:</span>
-                      <div className={`px-2 py-1 rounded text-xs ${
-                        restaurant.source.confidence >= 80 ? 'bg-green-100 text-green-800' :
-                        restaurant.source.confidence >= 60 ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
-                        {restaurant.source.confidence}%
-                      </div>
+                <div className="text-xs text-gray-600 space-y-2">
+                  {/* アレルギー情報元 */}
+                  {restaurant.storeLocations && restaurant.storeLocations.length > 0 && (
+                    <div>
+                      <div className="font-semibold text-gray-800 mb-1">アレルギー情報元:</div>
+                      {restaurant.storeLocations
+                        .filter(location => location.source_url)
+                        .map((location, index) => (
+                          <div key={index} className="mb-1">
+                            <a
+                              href={location.source_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:text-blue-800 underline break-all"
+                            >
+                              {location.source_url}
+                            </a>
+                            {location.address && (
+                              <div className="text-gray-500 text-xs mt-1">
+                                住所: {location.address}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      {restaurant.storeLocations.filter(location => location.source_url).length === 0 && (
+                        <div className="text-gray-500">情報元URLが登録されていません</div>
+                      )}
                     </div>
                   )}
-                  {restaurant.source.reviewCount && (
-                    <div>{restaurant.source.reviewCount}人が確認済み</div>
+                  
+                  {/* 既存の情報源情報 */}
+                  {restaurant.source && (
+                    <>
+                      {restaurant.source.contributor && (
+                        <div>投稿者: {restaurant.source.contributor}</div>
+                      )}
+                      {restaurant.source.lastUpdated && (
+                        <div>更新: {new Date(restaurant.source.lastUpdated).toLocaleDateString('ja-JP')}</div>
+                      )}
+                      {restaurant.source.confidence && (
+                        <div className="flex items-center space-x-2">
+                          <span>信頼度:</span>
+                          <div className={`px-2 py-1 rounded text-xs ${
+                            restaurant.source.confidence >= 80 ? 'bg-green-100 text-green-800' :
+                            restaurant.source.confidence >= 60 ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {restaurant.source.confidence}%
+                          </div>
+                        </div>
+                      )}
+                      {restaurant.source.reviewCount && (
+                        <div>{restaurant.source.reviewCount}人が確認済み</div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>

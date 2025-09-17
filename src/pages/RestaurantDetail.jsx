@@ -388,6 +388,23 @@ const RestaurantDetail = () => {
                           </div>
                         )}
                         
+                        {location.source_url && (
+                          <div className="flex items-start space-x-3">
+                            <SafeIcon icon={FiInfo} className="w-5 h-5 text-gray-400 mt-0.5" />
+                            <div>
+                              <p className="font-medium">アレルギー情報元</p>
+                              <a 
+                                href={location.source_url} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:text-blue-800 text-sm underline break-all"
+                              >
+                                {location.source_url}
+                              </a>
+                            </div>
+                          </div>
+                        )}
+                        
                         {location.store_list_url && (
                           <div className="flex items-start space-x-3">
                             <SafeIcon icon={FiInfo} className="w-5 h-5 text-gray-400 mt-0.5" />

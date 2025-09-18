@@ -202,7 +202,7 @@ const CsvExporter = ({ data, onBack }) => {
         .from('import_jobs')
         .insert([{
           id: jobId,
-          status: 'queued'
+          status: 'running'
         }])
         .select()
         .single();

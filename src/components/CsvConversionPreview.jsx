@@ -41,10 +41,16 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
 
   // CSVデータを変換
   useEffect(() => {
-    if (!csvData || !rules) return;
+    if (!csvData || !rules) {
+      console.log('CSV変換開始: csvData =', csvData, 'rules =', rules);
+      return;
+    }
 
+    console.log('CSV変換開始: 総行数 =', csvData.length, 'rules =', rules);
+    
     // ヘッダー行を除外（1行目をスキップ）
     const dataRows = csvData.slice(1);
+    console.log('データ行数:', dataRows.length);
 
     // 手動追加された記号をルールに追加
     const allSymbolMappings = { ...rules.symbolMappings };
@@ -57,6 +63,7 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
     }
 
     // outputLabelsのデフォルト値を設定
+    console.log('rules.outputLabels:', rules.outputLabels);
     const outputLabels = {
       direct: 'ふくむ',
       none: 'ふくまない',
@@ -66,8 +73,14 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
     };
 
     console.log('使用するoutputLabels:', outputLabels);
+    console.log('outputLabels.direct:', outputLabels.direct);
+    console.log('outputLabels.none:', outputLabels.none);
+    console.log('使用するallSymbolMappings:', allSymbolMappings);
     
     const converted = dataRows.map((row, rowIndex) => {
+      if (rowIndex < 5) { // 最初の5行のみデバッグ
+        console.log(`行${rowIndex + 1}処理開始:`, row);
+      }
       const convertedRow = {
         rowIndex: rowIndex + 1, // 元の行番号を保持
         original: row,
@@ -80,11 +93,18 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
         // 商品名列（1列目）は記号検出から除外
         if (cellIndex === 0) return;
         
+        if (rowIndex < 5 && cellIndex < 5) { // 最初の5行5列のみデバッグ
+          console.log(`  セル[${rowIndex + 1},${cellIndex + 1}]: "${cell}"`);
+        }
+        
         if (typeof cell === 'string' && cell.trim()) {
           // 商品名に含まれる記号を除外してから記号を検出して変換（手動追加された記号も含む）
           const cleanCell = cell.replace(/【|】|／|（|）|＊|・/g, '');
           const symbolMatches = cleanCell.match(/[●○◎△▲\-▯◇◆□■※★☆]/g);
           if (symbolMatches) {
+            if (rowIndex < 5 && cellIndex < 5) {
+              console.log(`    記号検出: "${symbolMatches}"`);
+            }
             symbolMatches.forEach(symbol => {
               const mappedValue = allSymbolMappings[symbol];
               console.log(`記号変換: 行${rowIndex + 1}, 列${cellIndex + 1}, 記号: "${symbol}", マッピング値: "${mappedValue}"`);
@@ -96,6 +116,8 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
                   const outputValue = outputLabels[mappedValue] || mappedValue;
                   convertedRow.converted[allergenSlug] = outputValue;
                   console.log(`変換完了: 行${rowIndex + 1}, アレルギー: "${allergenSlug}", 値: "${outputValue}", マッピング値: "${mappedValue}"`);
+                  console.log(`  outputLabels["${mappedValue}"] = "${outputLabels[mappedValue]}"`);
+                  console.log(`  fallback値 = "${mappedValue}"`);
                 }
               }
             });
@@ -112,6 +134,9 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
       return convertedRow;
     });
 
+    console.log('変換完了: 総行数 =', converted.length);
+    console.log('変換結果サンプル (最初の3行):', converted.slice(0, 3));
+    
     setConvertedData(converted);
     updateStats(converted);
   }, [csvData, rules]);

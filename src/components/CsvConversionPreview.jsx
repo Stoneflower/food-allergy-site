@@ -58,7 +58,7 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
       row.forEach((cell, cellIndex) => {
         if (typeof cell === 'string' && cell.trim()) {
           // 記号を検出して変換
-          const symbolMatches = cell.match(/[●○〇※△▲×-・]/g);
+          const symbolMatches = cell.match(/[●○◎△-▯◇◆□■※★☆]/g);
           if (symbolMatches) {
             symbolMatches.forEach(symbol => {
               const mappedValue = rules.symbolMappings[symbol];
@@ -70,8 +70,8 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
                 }
               }
             });
-          } else if (cell.trim() === '-' || cell.trim() === '－' || cell.trim() === '・') {
-            // ハイフン記号とドット記号も処理
+          } else if (cell.trim() === '-') {
+            // ハイフン記号も処理
             const allergenSlug = detectAllergenFromContext(row, cellIndex, standardAllergens);
             if (allergenSlug) {
               convertedRow.converted[allergenSlug] = rules.outputLabels.none || 'none';

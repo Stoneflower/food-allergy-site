@@ -215,10 +215,10 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
                   onChange={(e) => handleSymbolMappingChange(symbol, e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 >
-                  <option value="direct">direct (含有)</option>
-                  <option value="trace">trace (コンタミ)</option>
-                  <option value="none">none (不使用)</option>
-                  <option value="unused">unused (未使用)</option>
+                  <option value="direct">含有</option>
+                  <option value="trace">コンタミ</option>
+                  <option value="none">含まない</option>
+                  <option value="unused">未使用</option>
                 </select>
               </div>
               <button
@@ -271,7 +271,7 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 {type === 'direct' && '含有'}
                 {type === 'trace' && 'コンタミ'}
-                {type === 'none' && '不使用'}
+                {type === 'none' && '含まない'}
                 {type === 'unused' && '未使用'}
               </label>
               <input

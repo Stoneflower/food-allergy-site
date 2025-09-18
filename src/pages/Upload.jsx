@@ -406,117 +406,42 @@ const Upload = () => {
               </p>
             </div>
 
-            {/* Upload Type Selection */}
-            <div className="mb-8">
-              <div className="flex space-x-1 bg-gray-100 rounded-lg p-1 max-w-md mx-auto">
-                <button
-                  onClick={() => setUploadType('image')}
-                  className={`flex-1 py-3 px-4 rounded-md text-sm font-medium transition-colors flex items-center justify-center space-x-2 ${
-                    uploadType === 'image'
-                      ? 'bg-white text-gray-900 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  <SafeIcon icon={FiCamera} className="w-4 h-4" />
-                  <span>商品撮影</span>
-                </button>
-                {/* PDF解析は廃止 */}
-                <button
-                  onClick={() => setUploadType('csv')}
-                  className={`flex-1 py-3 px-4 rounded-md text-sm font-medium transition-colors flex items-center justify-center space-x-2 ${
-                    uploadType === 'csv'
-                      ? 'bg-white text-gray-900 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  <SafeIcon icon={FiFileText} className="w-4 h-4" />
-                  <span>CSV取込</span>
-                </button>
-              </div>
-            </div>
 
             {!capturedImage && !isProcessing && (
               <div className="space-y-4">
-                {uploadType === 'image' ? (
-                  <>
-                    {/* カメラ撮影ボタン */}
-                    <button
-                      onClick={() => cameraInputRef.current?.click()}
-                      className="w-full flex items-center justify-center space-x-3 bg-gradient-to-r from-orange-500 to-red-500 text-white py-4 px-6 rounded-lg hover:from-orange-600 hover:to-red-600 transition-colors shadow-md"
-                    >
-                      <SafeIcon icon={FiCamera} className="w-6 h-6" />
-                      <span className="text-lg font-semibold">カメラで撮影する</span>
-                    </button>
+                {/* カメラ撮影ボタン */}
+                <button
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="w-full flex items-center justify-center space-x-3 bg-gradient-to-r from-orange-500 to-red-500 text-white py-4 px-6 rounded-lg hover:from-orange-600 hover:to-red-600 transition-colors shadow-md"
+                >
+                  <SafeIcon icon={FiCamera} className="w-6 h-6" />
+                  <span className="text-lg font-semibold">カメラで撮影する</span>
+                </button>
 
-                    {/* ファイルアップロードボタン */}
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="w-full flex items-center justify-center space-x-3 bg-gray-100 text-gray-700 py-4 px-6 rounded-lg hover:bg-gray-200 transition-colors border-2 border-dashed border-gray-300"
-                    >
-                      <SafeIcon icon={FiUpload} className="w-6 h-6" />
-                      <span className="text-lg font-semibold">写真をアップロード</span>
-                    </button>
+                {/* ファイルアップロードボタン */}
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full flex items-center justify-center space-x-3 bg-gray-100 text-gray-700 py-4 px-6 rounded-lg hover:bg-gray-200 transition-colors border-2 border-dashed border-gray-300"
+                >
+                  <SafeIcon icon={FiUpload} className="w-6 h-6" />
+                  <span className="text-lg font-semibold">写真をアップロード</span>
+                </button>
 
-                    <input
-                      ref={cameraInputRef}
-                      type="file"
-                      accept="image/*"
-                      capture="environment"
-                      onChange={handleCameraCapture}
-                      className="hidden"
-                    />
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFileUpload}
-                      className="hidden"
-                    />
-                  </>
-                ) : (
-                  <>
-                    {/* CSVアップロード */}
-                    <div className="space-y-4">
-                      <div className="bg-white rounded-lg p-4 border">
-                        <h3 className="font-semibold mb-2">CSVアップロード（店舗名＋メニュー＋28品目）</h3>
-                        <div className="flex items-center gap-3">
-                          <input type="file" accept=".csv" onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (!file) return;
-                            setCsvFile(file);
-                          }} />
-                          <button
-                            disabled={!csvFile || csvImporting}
-                            onClick={handleCsvImportStaging}
-                            className={`px-4 py-2 rounded ${csvFile ? 'bg-orange-500 text-white hover:bg-orange-600' : 'bg-gray-300 text-gray-600 cursor-not-allowed'}`}
-                          >{csvImporting ? '取り込み中...' : 'CSVを取り込む'}</button>
-                          <a
-                            onClick={(e)=>{
-                              // テンプレCSV生成（指定順 + 住所・電話情報 + 店舗リストURL）
-                              const headers = ['店舗名','系列','カテゴリ','住所','電話番号','営業時間','定休日','情報元URL','店舗リストURL','メニュー名','卵','乳','小麦','そば','落花生','えび','かに','くるみ','大豆','牛肉','豚肉','鶏肉','さけ','さば','あわび','いか','いくら','オレンジ','キウイフルーツ','もも','りんご','やまいも','ゼラチン','バナナ','カシューナッツ','ごま','アーモンド','まつたけ'];
-                              const samples = [
-                                ['びっくりドンキー','ハンバーグレストラン','レストラン・店舗','東京都渋谷区宇田川町1-1','03-1234-5678','11:00-23:00','年中無休','https://example.com/allergy-info','https://www.bikkuri-donkey.com/store/','レギュラーバーグディッシュ', '－','－','－','－','－','－','－','－','－','●','●','－','－','－','－','－','－','－','－','－','－','－','－','－','－','－','－'],
-                                ['びっくりドンキー','ハンバーグレストラン','レストラン・店舗','東京都新宿区新宿3-1-1','03-2345-6789','10:00-24:00','火曜日','https://example.com/allergy-info','https://www.bikkuri-donkey.com/store/','チキンバーグディッシュ', '－','－','－','－','－','－','－','－','－','－','●','－','－','－','－','－','－','－','－','－','－','－','－','－','－','－','－'],
-                                ['びっくりドンキー','ハンバーグレストラン','レストラン・店舗','大阪府大阪市北区梅田1-1-1','06-3456-7890','11:00-22:00','水曜日','https://example.com/allergy-info','https://www.bikkuri-donkey.com/store/','フィッシュバーグディッシュ', '－','－','－','－','－','－','－','－','－','－','－','－','－','－','－','－','－','－','－','－','－','－','－','－','－','－','－']
-                              ];
-                              const csv = [headers, ...samples].map(r=>r.join(',')).join('\n');
-                              const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
-                              const a = document.createElement('a');
-                              a.href = URL.createObjectURL(blob);
-                              a.download = 'アレルギー取込テンプレート.csv';
-                              a.click();
-                              URL.revokeObjectURL(a.href);
-                              e.preventDefault();
-                            }}
-                            href="#"
-                            className="text-blue-600 hover:text-blue-800 text-sm underline"
-                          >テンプレートをダウンロード</a>
-                        </div>
-                        <p className="text-xs text-gray-500 mt-2">記号: ●=含有, △=工場由来(微量), －=不含</p>
-                      </div>
-                    </div>
-                  </>
-                )}
+                <input
+                  ref={cameraInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handleCameraCapture}
+                  className="hidden"
+                />
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
 
                 {/* 撮影のコツ */}
                 <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -531,7 +456,7 @@ const Upload = () => {
                       <li>• 原材料名の部分を中心に撮影してください</li>
                       <li>• 明るい場所で撮影し、影が入らないようにしてください</li>
                       <li>• 文字がぼけないよう、ピントを合わせてください</li>
-                      <li>• パッケージ全体ではなく、成分表示部分を大きく撮影してください</li>
+                      <li>• パッケージ全体と、成分表示部分を大きく撮影してください</li>
                     </ul>
                   ) : (
                     <ul className="text-sm text-blue-700 space-y-1">

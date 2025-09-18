@@ -45,6 +45,16 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
 
     // ヘッダー行を除外（1行目をスキップ）
     const dataRows = csvData.slice(1);
+
+    // 手動追加された記号をルールに追加
+    const allSymbolMappings = { ...rules.symbolMappings };
+    if (rules.manualSymbols) {
+      rules.manualSymbols.forEach(symbol => {
+        if (!allSymbolMappings[symbol]) {
+          allSymbolMappings[symbol] = 'none'; // デフォルト値
+        }
+      });
+    }
     
     const converted = dataRows.map((row, rowIndex) => {
       const convertedRow = {
@@ -57,11 +67,11 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
       // 各行を処理
       row.forEach((cell, cellIndex) => {
         if (typeof cell === 'string' && cell.trim()) {
-          // 記号を検出して変換
+          // 記号を検出して変換（手動追加された記号も含む）
           const symbolMatches = cell.match(/[●○◎△▲\-▯◇◆□■※★☆]/g);
           if (symbolMatches) {
             symbolMatches.forEach(symbol => {
-              const mappedValue = rules.symbolMappings[symbol];
+              const mappedValue = allSymbolMappings[symbol];
               if (mappedValue) {
                 // アレルギー項目を特定
                 const allergenSlug = detectAllergenFromContext(row, cellIndex, standardAllergens);

@@ -6,6 +6,8 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
   const [localRules, setLocalRules] = useState(rules);
   const [detectedSymbols, setDetectedSymbols] = useState(new Set());
   const [detectedAllergens, setDetectedAllergens] = useState([]);
+  const [manualSymbols, setManualSymbols] = useState(new Set());
+  const [newSymbolInput, setNewSymbolInput] = useState('');
 
   // 標準アレルギー項目
   const standardAllergens = [
@@ -89,12 +91,8 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
       });
     }
 
-    // 検出された記号にデフォルト記号を追加（テスト用）
-    const allPossibleSymbols = new Set([...symbols, '△', '▲', '※', '○', '◎']);
-    
     console.log('検出された記号:', Array.from(symbols));
-    console.log('利用可能な記号（テスト用）:', Array.from(allPossibleSymbols));
-    setDetectedSymbols(allPossibleSymbols);
+    setDetectedSymbols(symbols);
     setDetectedAllergens(allergens);
   }, [csvData]);
 
@@ -116,6 +114,23 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
       allergenOrder: newOrder
     }));
   };
+
+  const handleAddManualSymbol = () => {
+    if (newSymbolInput.trim() && !detectedSymbols.has(newSymbolInput.trim()) && !manualSymbols.has(newSymbolInput.trim())) {
+      const newManualSymbols = new Set([...manualSymbols, newSymbolInput.trim()]);
+      setManualSymbols(newManualSymbols);
+      setNewSymbolInput('');
+    }
+  };
+
+  const handleRemoveManualSymbol = (symbol) => {
+    const newManualSymbols = new Set(manualSymbols);
+    newManualSymbols.delete(symbol);
+    setManualSymbols(newManualSymbols);
+  };
+
+  // 表示する記号（検出された記号 + 手動追加記号）
+  const allDisplaySymbols = new Set([...detectedSymbols, ...manualSymbols]);
 
   const handleOutputLabelChange = (type, value) => {
     setLocalRules(prev => ({
@@ -152,7 +167,12 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
   };
 
   const handleSave = () => {
-    onRulesChange(localRules);
+    // 手動追加された記号もルールに含める
+    const updatedRules = {
+      ...localRules,
+      manualSymbols: Array.from(manualSymbols)
+    };
+    onRulesChange(updatedRules);
     onNext();
   };
 
@@ -171,15 +191,58 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
         </p>
       </div>
 
+      {/* 手動記号追加 */}
+      <div className="bg-blue-50 rounded-lg border border-blue-200 p-4">
+        <h3 className="text-lg font-semibold text-blue-900 mb-3">➕ 手動で記号を追加</h3>
+        <div className="flex gap-2 mb-3">
+          <input
+            type="text"
+            value={newSymbolInput}
+            onChange={(e) => setNewSymbolInput(e.target.value)}
+            placeholder="記号を入力（例：△、※）"
+            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+            maxLength={1}
+          />
+          <button
+            onClick={handleAddManualSymbol}
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex items-center gap-1 text-sm"
+          >
+            <FiPlus className="w-4 h-4" />
+            追加
+          </button>
+        </div>
+        {manualSymbols.size > 0 && (
+          <div>
+            <p className="text-xs text-blue-600 mb-2">手動追加された記号:</p>
+            <div className="flex flex-wrap gap-2">
+              {Array.from(manualSymbols).map(symbol => (
+                <span
+                  key={symbol}
+                  className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm"
+                >
+                  {symbol}
+                  <button
+                    onClick={() => handleRemoveManualSymbol(symbol)}
+                    className="text-blue-600 hover:text-blue-800"
+                  >
+                    <FiTrash2 className="w-3 h-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* 検出された記号とアレルギー項目 */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <h3 className="text-lg font-semibold text-blue-900 mb-3">
             🔍 検出された記号
           </h3>
-          {detectedSymbols.size > 0 ? (
+          {allDisplaySymbols.size > 0 ? (
             <div className="flex flex-wrap gap-2">
-              {Array.from(detectedSymbols).map(symbol => (
+              {Array.from(allDisplaySymbols).map(symbol => (
                 <span key={symbol} className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
                   {symbol}
                 </span>

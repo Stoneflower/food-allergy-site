@@ -590,20 +590,16 @@ const CsvExporter = ({ data, onBack }) => {
             finalNames.push(name);
           });
 
-          // 連番を維持して一括挿入（100件チャンク）
-          const batchSizeInsert = 100;
-          for (let i = 0; i < finalNames.length; i += batchSizeInsert) {
-            const slice = finalNames.slice(i, i + batchSizeInsert);
-            const payload = slice.map(n => ({ product_id: pid, name: n, active: false }));
-            const { error: insertErr } = await supabase
-              .from('menu_items')
-              .insert(payload);
-            if (insertErr) {
-              console.error('❌ menu_items 一括INSERTエラー:', insertErr);
-              break;
-            }
+          // 単発リクエストで一括挿入（202件規模は1回で十分）
+          const payload = finalNames.map(n => ({ product_id: pid, name: n, active: false }));
+          const { error: insertErr } = await supabase
+            .from('menu_items')
+            .insert(payload);
+          if (insertErr) {
+            console.error('❌ menu_items 一括INSERTエラー:', insertErr);
+          } else {
+            console.log('✅ menu_items 置換INSERT 完了:', finalNames.length, '件');
           }
-          console.log('✅ menu_items 置換INSERT 完了:', finalNames.length, '件');
         }
       } catch (menuFallbackError) {
         console.error('❌ menu_itemsフォールバック処理エラー:', menuFallbackError);

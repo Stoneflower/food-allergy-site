@@ -27,6 +27,21 @@ const CsvExporter = ({ data, onBack }) => {
     '熊本県', '大分県', '宮崎県', '鹿児島県', '沖縄県'
   ];
 
+  // プレフィックス重複を正す
+  const normalizeAddress = (prefecture, detailed) => {
+    const base = (detailed || '').trim();
+    if (!base) return prefecture;
+    let normalized = base;
+    // 先頭に同じ県名が二重以上付いている場合は一つに圧縮
+    while (normalized.startsWith(prefecture + prefecture)) {
+      normalized = normalized.slice(prefecture.length);
+    }
+    if (normalized.startsWith(prefecture)) {
+      return normalized;
+    }
+    return `${prefecture}${normalized}`;
+  };
+
   // 標準アレルギー項目
   const standardAllergens = [
     { slug: 'egg', name: '卵' },
@@ -133,10 +148,7 @@ const CsvExporter = ({ data, onBack }) => {
     
     selectedPrefectures.forEach(prefecture => {
       const detailedAddress = detailedAddresses[prefecture] || '';
-      // 重複防止: 詳細が県名で始まる場合はそのまま、そうでなければ県名を前置
-      const fullAddress = detailedAddress
-        ? (detailedAddress.startsWith(prefecture) ? detailedAddress : `${prefecture}${detailedAddress}`)
-        : prefecture;
+      const fullAddress = normalizeAddress(prefecture, detailedAddress);
       
       data.forEach(row => {
         const csvRow = [];
@@ -391,36 +403,57 @@ const CsvExporter = ({ data, onBack }) => {
         // 選択された都道府県から住所を生成
         const addresses = selectedPrefectures.map(prefecture => {
           const detailedAddress = detailedAddresses[prefecture] || '';
-          return detailedAddress
-            ? (detailedAddress.startsWith(prefecture) ? detailedAddress : `${prefecture}${detailedAddress}`)
-            : prefecture;
+          return normalizeAddress(prefecture, detailedAddress);
         });
         
         console.log('📍 生成された住所:', addresses);
         
-        // store_locationsにデータを挿入
-        for (const address of addresses) {
-          console.log('🔄 住所を挿入中:', address);
-          
-          const { data: insertData, error: insertError } = await supabase
-            .from('store_locations')
-            .upsert({
-              product_id: productId,
-              branch_name: null,
-              address: address,
-              source_url: defaultSourceUrl,
-              store_list_url: defaultStoreListUrl
-            }, {
-              onConflict: 'product_id,address'
-            })
-            .select();
-          
-          if (insertError) {
-            console.error('❌ store_locations挿入エラー:', insertError);
-            console.error('エラー詳細:', JSON.stringify(insertError, null, 2));
-          } else {
-            console.log('✅ store_locations挿入完了:', address, insertData);
+        // 既存店舗を取得して差分を取り、存在しない住所は削除（上書き運用）
+        const { data: existingStores, error: fetchExistingError } = await supabase
+          .from('store_locations')
+          .select('address')
+          .eq('product_id', productId);
+
+        if (fetchExistingError) {
+          console.error('❌ 既存店舗取得エラー:', fetchExistingError);
+        } else {
+          const existingAddresses = new Set((existingStores || []).map(r => r.address));
+          const newAddressSet = new Set(addresses);
+          const toDelete = [...existingAddresses].filter(a => !newAddressSet.has(a));
+          console.log('🧹 削除対象住所:', toDelete);
+          if (toDelete.length > 0) {
+            const { error: deleteError } = await supabase
+              .from('store_locations')
+              .delete()
+              .eq('product_id', productId)
+              .in('address', toDelete);
+            if (deleteError) {
+              console.error('❌ 店舗削除エラー:', deleteError);
+            } else {
+              console.log('🧹 既存店舗を削除完了:', toDelete.length, '件');
+            }
           }
+        }
+
+        // 挿入・更新を一括upsert（URL等の更新も反映）
+        const upsertPayload = addresses.map(address => ({
+          product_id: productId,
+          branch_name: null,
+          address,
+          source_url: defaultSourceUrl,
+          store_list_url: defaultStoreListUrl
+        }));
+
+        const { data: upsertData, error: upsertError } = await supabase
+          .from('store_locations')
+          .upsert(upsertPayload, { onConflict: 'product_id,address' })
+          .select();
+
+        if (upsertError) {
+          console.error('❌ store_locations一括upsertエラー:', upsertError);
+          console.error('エラー詳細:', JSON.stringify(upsertError, null, 2));
+        } else {
+          console.log('✅ store_locations一括upsert完了:', upsertData?.length || 0, '件');
         }
         
         // 挿入結果を確認

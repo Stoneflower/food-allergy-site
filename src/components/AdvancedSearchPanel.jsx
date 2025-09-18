@@ -24,8 +24,7 @@ const AdvancedSearchPanel = ({ onSearch, initialFilters = {} }) => {
       setFilters(prev => ({ ...prev, category: 'restaurants' }));
       if (onSearch) onSearch({ ...filters, category: 'restaurants' });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [onSearch]);
 
   const handleFilterChange = (key, value) => {
     const newFilters = { ...filters, [key]: value };

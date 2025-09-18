@@ -123,8 +123,7 @@ const ConversionPreview = ({ rawText, pdfItems, rules, rows, onRowsChange }) => 
 
   useEffect(() => {
     if (parsed.rows.length > 0 && onRowsChange) onRowsChange(parsed.rows);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [parsed.headers.join(','), parsed.rows.length]);
+  }, [parsed.headers.join(','), parsed.rows.length, onRowsChange]);
 
   const headers = parsed.headers.length ? parsed.headers : (rows[0] ? Object.keys(rows[0]) : []);
   const tableRows = rows && rows.length ? rows : parsed.rows;

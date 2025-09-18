@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FiEdit3, FiSave, FiRotateCcw, FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
+import { FiEdit3, FiSave, FiRotateCcw, FiCheckCircle, FiAlertCircle, FiTrash2 } from 'react-icons/fi';
 
 const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
   const [convertedData, setConvertedData] = useState([]);
@@ -156,6 +156,16 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
     setEditingCell(null);
   };
 
+  const handleDeleteRow = (rowIndex) => {
+    if (window.confirm('この行を削除しますか？')) {
+      setConvertedData(prev => {
+        const newData = prev.filter((_, index) => index !== rowIndex);
+        updateStats(newData);
+        return newData;
+      });
+    }
+  };
+
   const getCellValue = (rowIndex, allergenSlug) => {
     const row = convertedData[rowIndex];
     if (!row) return '';
@@ -239,6 +249,9 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
       {/* 変換テーブル */}
       <div className="bg-white border rounded-lg overflow-hidden">
         <div className="max-h-96 overflow-auto overflow-x-auto">
+          <div className="mb-2 text-sm text-gray-600">
+            データ行 {convertedData.length} 行表示中 (CSV総行数: {csvData.length}行、ヘッダー行3行を除外済み)
+          </div>
           <table className="min-w-full divide-y divide-gray-200" style={{ minWidth: '1200px' }}>
             <thead className="bg-gray-50 sticky top-0">
               <tr>
@@ -247,6 +260,9 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
                 </th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   商品名
+                </th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  操作
                 </th>
                 {rules.allergenOrder.map(slug => {
                   const allergen = standardAllergens.find(a => a.slug === slug);
@@ -259,13 +275,22 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {convertedData.slice(0, 20).map((row, rowIndex) => (
+              {convertedData.map((row, rowIndex) => (
                 <tr key={rowIndex} className="hover:bg-gray-50">
                   <td className="px-3 py-2 text-sm text-gray-900">
                     {rowIndex + 1}
                   </td>
                   <td className="px-3 py-2 text-sm text-gray-900 max-w-xs truncate">
                     {row.original[0] || '商品名なし'}
+                  </td>
+                  <td className="px-3 py-2 text-sm">
+                    <button
+                      onClick={() => handleDeleteRow(rowIndex)}
+                      className="p-1 text-red-500 hover:bg-red-50 rounded"
+                      title="行を削除"
+                    >
+                      <FiTrash2 className="w-4 h-4" />
+                    </button>
                   </td>
                   {rules.allergenOrder.map(slug => {
                     const value = getCellValue(rowIndex, slug);
@@ -316,11 +341,6 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
             </tbody>
           </table>
         </div>
-        {convertedData.length > 20 && (
-          <div className="bg-gray-50 px-3 py-2 text-sm text-gray-500 text-center">
-            他 {convertedData.length - 20} 行... (ヘッダー行3行を除外済み)
-          </div>
-        )}
       </div>
 
       {/* アクションボタン */}

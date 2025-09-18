@@ -352,97 +352,9 @@ const Upload = () => {
     });
   };
 
+  // CSV取込機能は /csv-converter ページに移動
   const handleCsvImportStaging = async () => {
-    try {
-      if (!csvFile) return;
-      setCsvImporting(true);
-      const text = await readFileAsText(csvFile);
-      const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter(r => r.length > 0);
-      const toCells = (r) => {
-        const parts = r.split(',');
-        while (parts.length < 38) parts.push('');
-        return parts.map(s => s.replace(/^"|"$/g,'').trim());
-      };
-      const rows = lines.map(toCells);
-      const header = rows.shift();
-      const expected = ['店舗名','系列','カテゴリ','住所','電話番号','営業時間','定休日','情報元URL','店舗リストURL','メニュー名','卵','乳','小麦','そば','落花生','えび','かに','くるみ','大豆','牛肉','豚肉','鶏肉','さけ','さば','あわび','いか','いくら','オレンジ','キウイフルーツ','もも','りんご','やまいも','ゼラチン','バナナ','カシューナッツ','ごま','アーモンド','まつたけ'];
-      if (!header || expected.some((h,i)=>header[i]!==h)) {
-        alert('ヘッダーが想定と異なります。テンプレートCSVをご利用ください。');
-        setCsvImporting(false); return;
-      }
-
-      const slugMap = { '卵':'egg','乳':'milk','小麦':'wheat','そば':'buckwheat','落花生':'peanut','えび':'shrimp','かに':'crab','くるみ':'walnut','大豆':'soy','牛肉':'beef','豚肉':'pork','鶏肉':'chicken','さけ':'salmon','さば':'mackerel','あわび':'abalone','いか':'squid','いくら':'salmon_roe','オレンジ':'orange','キウイフルーツ':'kiwi','もも':'peach','りんご':'apple','やまいも':'yam','ゼラチン':'gelatin','バナナ':'banana','カシューナッツ':'cashew','ごま':'sesame','アーモンド':'almond','まつたけ':'matsutake' };
-
-      const batchId = (crypto?.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`);
-      console.log('開始: import_jobs作成 batchId=', batchId);
-      const { error: jobErr } = await supabase.from('import_jobs').insert({ id: batchId, source_file_name: csvFile.name, status: 'running' });
-      if (jobErr) throw jobErr;
-
-      const stagingRaw = rows.map((cols, idx) => {
-        const obj = {
-          import_batch_id: batchId,
-          row_no: idx + 1,
-          raw_product_name: cols[0] || null,
-          raw_category: cols[2] || null,
-          raw_source_url: cols[7] || null,
-          raw_branch_name: cols[1] || null,
-          raw_address: cols[3] || null,
-          raw_phone: cols[4] || null,
-          raw_hours: cols[5] || null,
-          raw_closed: cols[6] || null,
-          raw_store_list_url: cols[8] || null,
-          raw_notes: null,
-          raw_menu_name: cols[9] || null,
-        };
-        expected.slice(10).forEach((jp, i) => {
-          const slug = slugMap[jp];
-          if (!slug) return;
-          const mark = cols[10 + i] || '';
-          obj[slug] = (mark || '');
-        });
-        // 念のため不要キーを排除
-        delete obj.soybean;
-        return obj;
-      });
-
-      // 許可カラムのみ抽出
-      const allowed = new Set(['import_batch_id','row_no','raw_product_name','raw_category','raw_source_url','raw_branch_name','raw_address','raw_phone','raw_hours','raw_closed','raw_store_list_url','raw_notes','raw_menu_name','egg','milk','wheat','buckwheat','peanut','shrimp','crab','walnut','almond','abalone','squid','salmon_roe','orange','cashew','kiwi','beef','gelatin','sesame','salmon','mackerel','soy','chicken','banana','pork','matsutake','peach','yam','apple']);
-      const staging = stagingRaw.map(r => {
-        const o = {};
-        for (const k in r) if (allowed.has(k)) o[k] = r[k];
-        return o;
-      });
-
-      const chunk = (arr, size) => arr.length <= size ? [arr] : Array.from({length: Math.ceil(arr.length/size)}, (_,i)=>arr.slice(i*size,(i+1)*size));
-      const chunks = chunk(staging, 500);
-      for (const [i, part] of chunks.entries()) {
-        const { error: stgErr } = await supabase.from('staging_imports').insert(part, { returning: 'minimal' });
-        if (stgErr) throw stgErr;
-        console.log(`staging_imports 進捗 ${i+1}/${chunks.length} (${part.length}件)`);
-      }
-
-      console.log('RPC: process_import_batch 実行', batchId);
-      const { error: rpcErr } = await supabase.rpc('process_import_batch', { p_batch_id: batchId });
-      if (rpcErr) throw rpcErr;
-
-      let tries = 0; let status = 'running';
-      while (tries < 20 && status === 'running') {
-        await new Promise(r => setTimeout(r, 500));
-        const { data: jobRows } = await supabase.from('import_jobs').select('status,finished_at').eq('id', batchId).maybeSingle();
-        status = jobRows?.status || status;
-        tries++;
-      }
-
-      const { count: countSL } = await supabase.from('store_locations').select('*', { count: 'exact', head: true });
-      alert(`CSV取込が完了しました。\nバッチID: ${batchId}\nstore_locations 件数: ${countSL ?? 'N/A'}`);
-      setCsvImporting(false);
-      setCsvFile(null);
-      // 取り込み結果を即時反映（Context再読込のため）
-      window.location.reload();
-    } catch (err) {
-      setCsvImporting(false);
-      alert(err.message || 'CSV取り込み中にエラーが発生しました');
-    }
+    alert('CSV取込機能は /csv-converter ページに移動しました。\nURL: #/csv-converter');
   };
 
   return (

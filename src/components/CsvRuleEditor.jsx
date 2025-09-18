@@ -89,8 +89,12 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
       });
     }
 
+    // 検出された記号にデフォルト記号を追加（テスト用）
+    const allPossibleSymbols = new Set([...symbols, '△', '▲', '※', '○', '◎']);
+    
     console.log('検出された記号:', Array.from(symbols));
-    setDetectedSymbols(symbols);
+    console.log('利用可能な記号（テスト用）:', Array.from(allPossibleSymbols));
+    setDetectedSymbols(allPossibleSymbols);
     setDetectedAllergens(allergens);
   }, [csvData]);
 

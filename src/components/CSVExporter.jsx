@@ -197,9 +197,11 @@ const CsvExporter = ({ data, onBack }) => {
     
     try {
       // 1. import_jobsテーブルにジョブを作成
+      const jobId = crypto.randomUUID();
       const { data: jobData, error: jobError } = await supabase
         .from('import_jobs')
         .insert([{
+          id: jobId,
           status: 'pending'
         }])
         .select()
@@ -212,7 +214,6 @@ const CsvExporter = ({ data, onBack }) => {
       }
       
       console.log('ジョブ作成完了:', jobData);
-      const jobId = jobData.id;
       
       // 2. staging_importsテーブルにデータを挿入
       const csvData = generateCsvData();

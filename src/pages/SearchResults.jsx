@@ -122,7 +122,13 @@ const SearchResults = () => {
       if (typeof window !== 'undefined' && window.innerWidth < 640 && buttonAnchorRef.current) {
         buttonAnchorRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
-    } catch (_) {}
+    } catch (_) {
+      // 画面スクロールアンカー取得に失敗しても致命的ではない
+      if (process && process.env && process.env.NODE_ENV !== 'production') {
+        // eslint-disable-next-line no-console
+        console.debug('button anchor scroll failed');
+      }
+    }
   }, [searchFilters, selectedAllergies, selectedArea, selectedCategory]);
 
   const getSearchSummary = () => {

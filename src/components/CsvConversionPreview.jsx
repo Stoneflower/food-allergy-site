@@ -64,8 +64,11 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
         errors: []
       };
 
-      // 各行を処理
+      // 各行を処理（商品名列は除外）
       row.forEach((cell, cellIndex) => {
+        // 商品名列（1列目）は記号検出から除外
+        if (cellIndex === 0) return;
+        
         if (typeof cell === 'string' && cell.trim()) {
           // 記号を検出して変換（手動追加された記号も含む）
           const symbolMatches = cell.match(/[●○◎△▲\-▯◇◆□■※★☆]/g);

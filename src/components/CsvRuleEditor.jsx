@@ -48,9 +48,12 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
     const symbols = new Set();
     const allergens = [];
 
-    // 最初の数行から記号を検出
+    // 最初の数行から記号を検出（商品名列は除外）
     csvData.slice(0, 10).forEach((row, rowIndex) => {
       row.forEach((cell, cellIndex) => {
+        // 商品名列（1列目）は記号検出から除外
+        if (cellIndex === 0) return;
+        
         if (typeof cell === 'string') {
           // 記号パターンを検出
           const symbolMatches = cell.match(/[●○◎△▲\-▯◇◆□■※★☆]/g);

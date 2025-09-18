@@ -58,7 +58,7 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
       row.forEach((cell, cellIndex) => {
         if (typeof cell === 'string' && cell.trim()) {
           // 記号を検出して変換
-          const symbolMatches = cell.match(/[●○◎△-▯◇◆□■※★☆]/g);
+          const symbolMatches = cell.match(/[●○◎△\-▯◇◆□■※★☆]/g);
           if (symbolMatches) {
             symbolMatches.forEach(symbol => {
               const mappedValue = rules.symbolMappings[symbol];

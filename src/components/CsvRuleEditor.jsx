@@ -51,7 +51,7 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
       row.forEach((cell, cellIndex) => {
         if (typeof cell === 'string') {
           // 記号パターンを検出
-          const symbolMatches = cell.match(/[●○◎△-▯◇◆□■※★☆]/g);
+          const symbolMatches = cell.match(/[●○◎△\-▯◇◆□■※★☆]/g);
           if (symbolMatches) {
             symbolMatches.forEach(symbol => {
               symbols.add(symbol);

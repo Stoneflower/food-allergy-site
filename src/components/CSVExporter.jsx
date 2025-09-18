@@ -584,6 +584,46 @@ const CsvExporter = ({ data, onBack }) => {
               console.log('✅ menu_items upsert完了:', payload.length, '件');
             }
           }
+
+          // 差分削除: 今回のユニーク名に含まれない既存メニューは削除
+          const toDelete = [...existingSet].filter(n => !uniqueNames.includes(n));
+          if (toDelete.length > 0) {
+            console.log('🧹 menu_items差分削除 予定:', toDelete.length, '件');
+            // 先に子テーブル(menu_item_allergies)がある場合はFKのON DELETE CASCADEが必要。
+            // 無い場合は関連レコードを手動削除する（存在しない場合は無視される）。
+            try {
+              const { data: rowsForDelete, error: fetchIdsErr } = await supabase
+                .from('menu_items')
+                .select('id,name')
+                .eq('product_id', pid)
+                .in('name', toDelete);
+              if (fetchIdsErr) {
+                console.error('❌ 削除対象ID取得エラー:', fetchIdsErr);
+              } else {
+                const deleteIds = (rowsForDelete || []).map(r => r.id);
+                if (deleteIds.length > 0) {
+                  // 子の削除（FKにより不要ならスキップされる）
+                  await supabase
+                    .from('menu_item_allergies')
+                    .delete()
+                    .in('menu_item_id', deleteIds);
+                  // 親の削除
+                  const { error: delErr } = await supabase
+                    .from('menu_items')
+                    .delete()
+                    .eq('product_id', pid)
+                    .in('id', deleteIds);
+                  if (delErr) {
+                    console.error('❌ menu_items削除エラー:', delErr);
+                  } else {
+                    console.log('✅ menu_items差分削除 完了:', deleteIds.length, '件');
+                  }
+                }
+              }
+            } catch (e) {
+              console.error('❌ menu_items差分削除 例外:', e);
+            }
+          }
         }
       } catch (menuFallbackError) {
         console.error('❌ menu_itemsフォールバック処理エラー:', menuFallbackError);

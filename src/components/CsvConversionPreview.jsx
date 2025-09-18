@@ -64,6 +64,9 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
 
     // outputLabelsのデフォルト値を設定
     console.log('rules.outputLabels:', rules.outputLabels);
+    console.log('rules.outputLabelsの型:', typeof rules.outputLabels);
+    console.log('rules.outputLabelsの内容:', JSON.stringify(rules.outputLabels));
+    
     const outputLabels = {
       direct: 'ふくむ',
       none: 'ふくまない',
@@ -75,10 +78,12 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
     console.log('使用するoutputLabels:', outputLabels);
     console.log('outputLabels.direct:', outputLabels.direct);
     console.log('outputLabels.none:', outputLabels.none);
+    console.log('outputLabelsの型:', typeof outputLabels);
+    console.log('outputLabelsの内容:', JSON.stringify(outputLabels));
     console.log('使用するallSymbolMappings:', allSymbolMappings);
     
     const converted = dataRows.map((row, rowIndex) => {
-      if (rowIndex < 5) { // 最初の5行のみデバッグ
+      if (rowIndex < 5 || (rowIndex >= 70 && rowIndex <= 100)) { // 最初の5行と行70-100をデバッグ
         console.log(`行${rowIndex + 1}処理開始:`, row);
       }
       const convertedRow = {
@@ -93,7 +98,7 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
         // 商品名列（1列目）は記号検出から除外
         if (cellIndex === 0) return;
         
-        if (rowIndex < 5 && cellIndex < 5) { // 最初の5行5列のみデバッグ
+        if ((rowIndex < 5 && cellIndex < 5) || (rowIndex >= 70 && rowIndex <= 100)) { // 最初の5行5列と行70-100をデバッグ
           console.log(`  セル[${rowIndex + 1},${cellIndex + 1}]: "${cell}"`);
         }
         

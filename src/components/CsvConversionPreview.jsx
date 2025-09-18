@@ -76,11 +76,15 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
           if (symbolMatches) {
             symbolMatches.forEach(symbol => {
               const mappedValue = allSymbolMappings[symbol];
+              console.log(`記号変換: 行${rowIndex + 1}, 列${cellIndex + 1}, 記号: "${symbol}", マッピング値: "${mappedValue}"`);
               if (mappedValue) {
                 // アレルギー項目を特定
                 const allergenSlug = detectAllergenFromContext(row, cellIndex, standardAllergens);
+                console.log(`アレルギー特定: 行${rowIndex + 1}, 列${cellIndex + 1}, アレルギー: "${allergenSlug}"`);
                 if (allergenSlug) {
-                  convertedRow.converted[allergenSlug] = rules.outputLabels[mappedValue] || mappedValue;
+                  const outputValue = rules.outputLabels[mappedValue] || mappedValue;
+                  convertedRow.converted[allergenSlug] = outputValue;
+                  console.log(`変換完了: 行${rowIndex + 1}, アレルギー: "${allergenSlug}", 値: "${outputValue}"`);
                 }
               }
             });

@@ -193,6 +193,40 @@ const SearchResults = () => {
     return false;
   };
 
+  // 選択アレルギーのうち、コンタミ（trace）があるスラッグ名リストを返す
+  const getTraceAllergenNames = (menuItem) => {
+    if (!Array.isArray(selectedAllergies) || selectedAllergies.length === 0) return [];
+
+    // 1) menu_item_allergies から取得
+    const list = menuItem.menu_item_allergies || [];
+    const hasList = Array.isArray(list) && list.length > 0;
+    const slugToName = (slug) => (allergyOptions.find(a => a.id === slug)?.name || slug);
+
+    const traces = new Set();
+    if (hasList) {
+      for (const s of selectedAllergies) {
+        const rec = list.find(a => (a.allergy_item_slug || a.allergy_item_id) === s);
+        if ((rec?.presence_type) === 'trace') traces.add(slugToName(s));
+      }
+    }
+
+    // 2) 親の matrix から補完
+    const parent = menuItem.__parentProduct;
+    const matrixRows = parent?.allergyMatrix || [];
+    if (Array.isArray(matrixRows) && matrixRows.length > 0) {
+      const rowsForMenu = matrixRows.filter(r => (r.menu_name || '') === (menuItem.name || ''));
+      const slugToCol = (s) => (s === 'soy' ? 'soybean' : s);
+      for (const r of rowsForMenu) {
+        for (const s of selectedAllergies) {
+          const v = (r[slugToCol(s)] || '').toString().toLowerCase();
+          if (v === 't') traces.add(slugToName(s));
+        }
+      }
+    }
+
+    return Array.from(traces);
+  };
+
   const restaurantsOnly = sortedItems.filter(i => i.category === 'restaurants');
   const restaurantsWithEdible = restaurantsOnly.map(item => {
     const menus = Array.isArray(item.menuItems) ? item.menuItems : [];
@@ -478,9 +512,17 @@ const SearchResults = () => {
                         <div className="px-4 pb-3">
                           {edible.length > 0 ? (
                             <ul className="list-disc list-inside text-sm text-gray-800 space-y-1">
-                              {edible.map(mi => (
-                                <li key={mi.id}>{mi.name}</li>
-                              ))}
+                              {edible.map(mi => {
+                                const traces = getTraceAllergenNames({ ...mi, __parentProduct: item });
+                                return (
+                                  <li key={mi.id}>
+                                    {mi.name}
+                                    {traces.length > 0 && (
+                                      <span className="ml-1 text-xs text-yellow-700">（{traces.join('、')}、コンタミネーションあり）</span>
+                                    )}
+                                  </li>
+                                );
+                              })}
                             </ul>
                           ) : (
                             <p className="text-sm text-gray-500">該当するメニューはありません</p>

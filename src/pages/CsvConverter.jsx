@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import CsvUpload from '../components/CsvUpload';
 import CsvRuleEditor from '../components/CsvRuleEditor';
 import CsvConversionPreview from '../components/CsvConversionPreview';
-import CsvExporter from '../components/CsvExporter';
+import CsvExporter from '../components/CSVExporter';
 
 const CsvConverter = () => {
   const [csvData, setCsvData] = useState(null);

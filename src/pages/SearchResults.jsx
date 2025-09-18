@@ -153,19 +153,57 @@ const SearchResults = () => {
   const toggleExpand = (pid) => setExpanded(prev => ({ ...prev, [pid]: !prev[pid] }));
 
   const isMenuSafe = (menuItem) => {
-    const list = menuItem.menu_item_allergies || [];
     if (!Array.isArray(selectedAllergies) || selectedAllergies.length === 0) return false;
-    return selectedAllergies.every(slug => {
-      const rec = list.find(a => (a.allergy_item_slug || a.allergy_item_id) === slug);
-      const presence = (rec?.presence_type) || 'direct'; // レコードが無ければ安全不明→除外
-      return presence === 'none' || presence === 'trace';
-    });
+
+    // 1) product_allergies_matrix を優先（高カバレッジ）
+    try {
+      // この関数のクロージャから現在のitem(=レストラン)の行は直接参照できないため、
+      // menuItem.parent を事前に付与していない場合は fallback に移行
+    } catch {}
+
+    // 2) menu_item_allergies ベース（既存）
+    const list = menuItem.menu_item_allergies || [];
+    const hasList = Array.isArray(list) && list.length > 0;
+    if (hasList) {
+      const ok = selectedAllergies.every(slug => {
+        const rec = list.find(a => (a.allergy_item_slug || a.allergy_item_id) === slug);
+        const presence = (rec?.presence_type) || 'direct';
+        return presence === 'none' || presence === 'trace';
+      });
+      if (ok) return true;
+    }
+
+    // 3) 親アイテムの matrix から判定（parentに格納してから判定）
+    const parent = menuItem.__parentProduct;
+    const matrixRows = parent?.allergyMatrix || [];
+    if (Array.isArray(matrixRows) && matrixRows.length > 0) {
+      const slugToCol = (s) => (s === 'soy' ? 'soybean' : s);
+      const rowsForMenu = matrixRows.filter(r => (r.menu_name || '') === (menuItem.name || ''));
+      if (rowsForMenu.length === 0) return false;
+      // いずれかの行で全スラッグが 'd' でない（= none/trace）ならOK
+      for (const r of rowsForMenu) {
+        let ok = true;
+        for (const s of selectedAllergies) {
+          const col = slugToCol(s);
+          const v = (r[col] || '').toString().toLowerCase(); // 'd'|'t'|'n'
+          if (v === 'd') { ok = false; break; }
+        }
+        if (ok) return true;
+      }
+      return false;
+    }
+
+    return false;
   };
 
   const restaurantsOnly = sortedItems.filter(i => i.category === 'restaurants');
   const restaurantsWithEdible = restaurantsOnly.map(item => {
     const menus = Array.isArray(item.menuItems) ? item.menuItems : [];
-    const edible = menus.filter(isMenuSafe);
+    // 子へ親参照を付与しつつ判定
+    const edible = menus.filter(m => {
+      const mi = { ...m, __parentProduct: item };
+      return isMenuSafe(mi);
+    });
     // URLは source_url のみ（NULLは無視）
     const locs = Array.isArray(item.storeLocations) ? item.storeLocations : [];
     const primaryUrl = (locs.find(l => l.source_url)?.source_url) || null;

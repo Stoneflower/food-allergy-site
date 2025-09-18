@@ -534,9 +534,13 @@ const SearchResults = () => {
                             <ul className="list-disc list-inside text-sm text-gray-800 space-y-1">
                               {edible.map(mi => {
                                 const traces = getTraceAllergenNames({ ...mi, __parentProduct: item });
+                                const cleanName = String(mi.name || '')
+                                  .replace(/[●〇◎△※★☆◇◆□■▯-]+/g, ' ')
+                                  .replace(/\s+/g, ' ')
+                                  .trim();
                                 return (
                                   <li key={mi.id}>
-                                    {mi.name}
+                                    {cleanName}
                                     {traces.length > 0 && (
                                       <span className="ml-1 text-xs text-yellow-700">（{traces.join('、')}、コンタミネーションあり）</span>
                                     )}

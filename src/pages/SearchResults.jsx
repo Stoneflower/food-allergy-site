@@ -90,6 +90,31 @@ const SearchResults = () => {
     }
   });
 
+  // お店アンカーへスクロール
+  const scrollToRestaurant = () => {
+    try {
+      const list = shouldShowGrouped
+        ? restaurantsWithEdible.map(x => x.item)
+        : sortedItems.filter(i => i.category === 'restaurants');
+      if (!list || list.length === 0) return;
+
+      // キーワードに一致する店舗を優先、なければ先頭
+      let target = list[0];
+      if (searchFilters.keyword) {
+        const kw = searchFilters.keyword.toLowerCase();
+        const found = list.find(it => (it.name || '').toLowerCase().includes(kw));
+        if (found) target = found;
+      }
+      const anchorId = `restaurant-${target.id}`;
+      const el = document.getElementById(anchorId);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    } catch (_) {
+      // noop
+    }
+  };
+
   const getSearchSummary = () => {
     const parts = [];
     if (searchFilters.keyword) parts.push(`"${searchFilters.keyword}"`);
@@ -346,6 +371,17 @@ const SearchResults = () => {
           </div>
         </div>
 
+        {/* モバイル向け: お店を見るボタン（アンカーへジャンプ） */}
+        <div className="mb-4 sm:hidden">
+          <button
+            type="button"
+            onClick={scrollToRestaurant}
+            className="w-full inline-flex items-center justify-center px-4 py-3 rounded-lg bg-orange-500 text-white font-medium shadow hover:bg-orange-600"
+          >
+            お店を見る
+          </button>
+        </div>
+
         {/* Category Filter */}
         <div className="mb-8">
           <CategoryFilter />
@@ -503,7 +539,7 @@ const SearchResults = () => {
               restaurantsWithEdible.length > 0 ? (
                 <div className="space-y-3">
                   {restaurantsWithEdible.map(({ item, edible, primaryUrl }) => (
-                    <div key={item.id} className="bg-white rounded-lg border shadow-sm">
+                    <div key={item.id} id={`restaurant-${item.id}`} className="bg-white rounded-lg border shadow-sm">
                       <div className="flex items-center justify-between">
                         <button
                           onClick={() => toggleExpand(item.id)}
@@ -575,7 +611,13 @@ const SearchResults = () => {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.3, delay: index * 0.05 }}
                       >
-                        {renderCard(item)}
+                        {item.category === 'restaurants' ? (
+                          <div id={`restaurant-${item.id}`}>
+                            {renderCard(item)}
+                          </div>
+                        ) : (
+                          renderCard(item)
+                        )}
                       </motion.div>
                     ))}
                   </motion.div>

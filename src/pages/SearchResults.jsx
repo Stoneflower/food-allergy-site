@@ -168,8 +168,8 @@ const SearchResults = () => {
         .replace(/^（([^）]+)）$/, '$1')
         .replace(/^\(([^)]+)\)$/, '$1');
       s = strip(s);
-      // 記号をスペースへ
-      s = s.replace(/[●〇◎△※★☆◇◆□■▯-]+/g, ' ');
+      // 表示用の黒丸だけ無視（データ照合時）
+      s = s.replace(/[●]+/g, ' ');
       // 連続空白を1つに
       s = s.replace(/\s+/g, ' ').trim();
       return s;
@@ -535,7 +535,8 @@ const SearchResults = () => {
                               {edible.map(mi => {
                                 const traces = getTraceAllergenNames({ ...mi, __parentProduct: item });
                                 const cleanName = String(mi.name || '')
-                                  .replace(/[●〇◎△※★☆◇◆□■▯-]+/g, ' ')
+                                  // 表示では黒丸だけ除去し、それ以外の記号・英字は保持
+                                  .replace(/[●]+/g, ' ')
                                   .replace(/\s+/g, ' ')
                                   .trim();
                                 return (

@@ -80,7 +80,7 @@ const CsvExporter = ({ data, onBack }) => {
     const t = String(text).trim();
     if (t === '') return true;
     // 代表的な記号のみで構成される場合
-    return /^[●〇◎△※★☆◇◆□■▯\-]+$/.test(t);
+    return /^[●〇◎△※★☆◇◆□■▯-]+$/.test(t);
   };
 
   // 括弧を外して中身だけ取り出す（全角・半角）
@@ -108,8 +108,8 @@ const CsvExporter = ({ data, onBack }) => {
     return t;
   };
 
-  // original配列からメニュー名を抽出（見出し【…】も内容として取り込む）
-  const extractMenuName = (originalRow) => {
+  // original配列からメニュー名を複数抽出（【…】や（…）は別商品として扱う）
+  const extractMenuNames = (originalRow) => {
     const cells = Array.isArray(originalRow) ? originalRow : [originalRow];
     const parts = [];
     cells.forEach((cell) => {
@@ -120,21 +120,27 @@ const CsvExporter = ({ data, onBack }) => {
         .filter(Boolean)
         .forEach(s => parts.push(s));
     });
-    // 各行を正規化して結合。見出し【…】や（…）も中身を取り込む。
-    const body = parts
-      .map(stripBrackets)
-      .map(p => p.replace(/[●〇◎△※★☆◇◆□■▯-]+/g, ' '))
-      .map(p => p.replace(/\s+/g, ' ').trim())
-      .filter(p => p.length > 0 && !isSymbolsOnly(p));
+    // そのままの行も使って、括弧/見出しを検出
+    const rawLines = parts.map(s => s.trim()).filter(Boolean);
+    // 括弧や【】はデータとして保持（stripしない）
+    const bracketLines = rawLines.filter(s => /^【.+】$/.test(s));
+    const parenLines = rawLines.filter(s => /^[（(].+[）)]$/.test(s));
 
-    if (body.length === 0) return '';
-    const name = body.join(' ')
-      // 末尾・先頭の記号や余分なスペースを除去
-      .replace(/\s*[●〇◎△※★☆◇◆□■▯-]+\s*$/g, '')
-      .replace(/^\s*[●〇◎△※★☆◇◆□■▯-]+\s*/g, '')
-      .replace(/\s+/g, ' ')
-      .trim();
-    return name;
+    const normalize = (p) => String(p || '')
+      .replace(/\s+/g, ' ').trim();
+
+    let names = [];
+    if (bracketLines.length > 0 || parenLines.length > 0) {
+      names = [...bracketLines, ...parenLines].map(normalize).filter(n => n && !isSymbolsOnly(n));
+    } else {
+      // 括弧・見出しが無い場合は、すべて候補化 → 先頭の妥当な1件を採用
+      const others = rawLines
+        .map(normalize)
+        .filter(n => n && !isSymbolsOnly(n));
+      if (others.length > 0) names = [others[0]];
+    }
+
+    return names;
   };
 
   // 都道府県選択のヘルパー関数
@@ -214,41 +220,43 @@ const CsvExporter = ({ data, onBack }) => {
       const fullAddress = normalizeAddress(prefecture, detailedAddress);
       
       data.forEach(row => {
-        const csvRow = [];
-        
         // 元データから基本情報を抽出
         const original = row.original || [];
-        const menuName = extractMenuName(original);
-        if (!menuName) {
-          return; // 見出し・空行はスキップ
+        const menuNames = extractMenuNames(original);
+        if (!menuNames || menuNames.length === 0) {
+          return; // 空行・記号行のみはスキップ
         }
-        csvRow.push(productName); // raw_product_name (products.name)
-        csvRow.push(productCategory); // raw_category (products.category)
-        csvRow.push(defaultSourceUrl); // raw_source_url
-        csvRow.push(productBrand); // raw_branch_name (products.brand)
-        csvRow.push(fullAddress); // raw_address (都道府県 + 詳細住所)
-        csvRow.push(''); // raw_phone
-        csvRow.push(''); // raw_hours
-        csvRow.push(''); // raw_closed
-        csvRow.push(defaultStoreListUrl); // raw_store_list_url
-        csvRow.push(''); // raw_notes
-        csvRow.push(menuName); // raw_menu_name
-        
-        // アレルギー情報を追加（日本語ラベルを英語に変換）
-        standardAllergens.forEach(allergen => {
-          const value = row.converted[allergen.slug] || '';
-          let englishValue = '';
-          switch (value) {
-            case 'ふくむ': englishValue = 'direct'; break;
-            case 'ふくまない': englishValue = 'none'; break;
-            case 'コンタミ': englishValue = 'trace'; break;
-            case '未使用': englishValue = 'unused'; break;
-            default: englishValue = value;
-          }
-          csvRow.push(englishValue);
-        });
 
-        allRows.push(csvRow);
+        menuNames.forEach(menuName => {
+          const csvRow = [];
+          csvRow.push(productName); // raw_product_name (products.name)
+          csvRow.push(productCategory); // raw_category (products.category)
+          csvRow.push(defaultSourceUrl); // raw_source_url
+          csvRow.push(productBrand); // raw_branch_name (products.brand)
+          csvRow.push(fullAddress); // raw_address (都道府県 + 詳細住所)
+          csvRow.push(''); // raw_phone
+          csvRow.push(''); // raw_hours
+          csvRow.push(''); // raw_closed
+          csvRow.push(defaultStoreListUrl); // raw_store_list_url
+          csvRow.push(''); // raw_notes
+          csvRow.push(menuName); // raw_menu_name（記号は文字として保存）
+          
+          // アレルギー情報を追加（日本語ラベルを英語に変換）
+          standardAllergens.forEach(allergen => {
+            const value = row.converted[allergen.slug] || '';
+            let englishValue = '';
+            switch (value) {
+              case 'ふくむ': englishValue = 'direct'; break;
+              case 'ふくまない': englishValue = 'none'; break;
+              case 'コンタミ': englishValue = 'trace'; break;
+              case '未使用': englishValue = 'unused'; break;
+              default: englishValue = value;
+            }
+            csvRow.push(englishValue);
+          });
+
+          allRows.push(csvRow);
+        });
       });
     });
 

@@ -439,18 +439,18 @@ const CsvExporter = ({ data, onBack }) => {
       
       // 3. バッチ処理を実行
       console.log('🔄 バッチ処理開始:', jobId);
+      let processOk = true;
       const { data: processData, error: processError } = await supabase
         .rpc('process_import_batch', { p_batch_id: jobId });
       
       if (processError) {
-        console.error('❌ バッチ処理エラー:', processError);
-        console.error('エラー詳細:', JSON.stringify(processError, null, 2));
-        setUploadStatus('error');
-        return;
+        processOk = false;
+        console.warn('⚠️ バッチ処理スキップ（フォールバック継続）:', processError);
+        console.warn('エラー詳細:', JSON.stringify(processError, null, 2));
+      } else {
+        console.log('✅ バッチ処理完了:', processData);
+        console.log('📊 処理結果:', JSON.stringify(processData, null, 2));
       }
-      
-      console.log('✅ バッチ処理完了:', processData);
-      console.log('📊 処理結果:', JSON.stringify(processData, null, 2));
       
       // 4. store_locationsデータを手動で作成（バッチ処理が失敗した場合のフォールバック）
       console.log('🔄 store_locationsデータ作成開始');

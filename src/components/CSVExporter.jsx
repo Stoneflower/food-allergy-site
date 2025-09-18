@@ -74,6 +74,35 @@ const CsvExporter = ({ data, onBack }) => {
     { slug: 'matsutake', name: 'まつたけ' }
   ];
 
+  // 見出し/説明のみの行を除外する判定
+  const isHeadingLike = (text) => {
+    if (!text) return true;
+    const t = String(text).trim();
+    if (t === '') return true;
+    // 【見出し】や（見出し）、記号のみ
+    if (/^[【（(].*[】）)]$/.test(t)) return true;
+    if (/^[★☆※◇◆□■\-]+$/.test(t)) return true;
+    return false;
+  };
+
+  // original配列からメニュー名を抽出
+  const extractMenuName = (originalRow) => {
+    const cells = Array.isArray(originalRow) ? originalRow : [originalRow];
+    const parts = [];
+    cells.forEach((cell) => {
+      if (!cell) return;
+      String(cell)
+        .split('\n')
+        .map(s => s.trim())
+        .filter(Boolean)
+        .forEach(s => parts.push(s));
+    });
+    for (const part of parts) {
+      if (!isHeadingLike(part)) return part;
+    }
+    return '';
+  };
+
   // 都道府県選択のヘルパー関数
   const handlePrefectureToggle = (prefecture) => {
     setSelectedPrefectures(prev => {
@@ -155,6 +184,10 @@ const CsvExporter = ({ data, onBack }) => {
         
         // 元データから基本情報を抽出
         const original = row.original || [];
+        const menuName = extractMenuName(original);
+        if (!menuName) {
+          return; // 見出し・空行はスキップ
+        }
         csvRow.push(productName); // raw_product_name (products.name)
         csvRow.push(productCategory); // raw_category (products.category)
         csvRow.push(defaultSourceUrl); // raw_source_url
@@ -165,7 +198,7 @@ const CsvExporter = ({ data, onBack }) => {
         csvRow.push(''); // raw_closed
         csvRow.push(defaultStoreListUrl); // raw_store_list_url
         csvRow.push(''); // raw_notes
-        csvRow.push(original[0] || ''); // raw_menu_name (商品名と同じ)
+        csvRow.push(menuName); // raw_menu_name
         
         // アレルギー情報を追加（日本語ラベルを英語に変換）
         standardAllergens.forEach(allergen => {

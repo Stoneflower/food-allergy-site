@@ -537,15 +537,11 @@ const CsvExporter = ({ data, onBack }) => {
         }
         const pid = prodRow.id;
 
-        // 今回バッチのstaging_importsから行順で名前を収集（重複も保持）
-        const { data: stagingNames, error: stagingNamesError } = await supabase
-          .from('staging_imports')
-          .select('row_no, raw_menu_name')
-          .eq('import_batch_id', jobId)
-          .order('row_no', { ascending: true });
-        if (stagingNamesError) {
-          console.error('❌ staging_imports取得エラー:', stagingNamesError);
-        } else {
+        // 今回の行データはローカルのstagingDataを利用（タイムアウト回避）
+        const stagingNames = (Array.isArray(stagingData) ? stagingData : [])
+          .map(r => ({ row_no: r.row_no, raw_menu_name: r.raw_menu_name }))
+          .sort((a, b) => (a.row_no || 0) - (b.row_no || 0));
+        {
           // 既存menu_itemsを丸ごと削除（対象商品）
           const { data: allMenus, error: fetchAllErr } = await supabase
             .from('menu_items')

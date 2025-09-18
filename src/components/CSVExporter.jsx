@@ -326,16 +326,88 @@ const CsvExporter = ({ data, onBack }) => {
       }
       
       // 3. バッチ処理を実行
+      console.log('🔄 バッチ処理開始:', jobId);
       const { data: processData, error: processError } = await supabase
         .rpc('process_import_batch', { p_batch_id: jobId });
       
       if (processError) {
-        console.error('バッチ処理エラー:', processError);
+        console.error('❌ バッチ処理エラー:', processError);
+        console.error('エラー詳細:', JSON.stringify(processError, null, 2));
         setUploadStatus('error');
         return;
       }
       
-      console.log('バッチ処理完了:', processData);
+      console.log('✅ バッチ処理完了:', processData);
+      console.log('📊 処理結果:', JSON.stringify(processData, null, 2));
+      
+      // 4. store_locationsデータを手動で作成（バッチ処理が失敗した場合のフォールバック）
+      console.log('🔄 store_locationsデータ作成開始');
+      try {
+        // 商品IDを動的に取得
+        const { data: productData, error: productError } = await supabase
+          .from('products')
+          .select('id')
+          .eq('name', productName)
+          .single();
+        
+        if (productError || !productData) {
+          console.error('❌ 商品ID取得エラー:', productError);
+          console.error('商品名:', productName);
+          return;
+        }
+        
+        const productId = productData.id;
+        console.log('📦 商品ID:', productId);
+        
+        // 選択された都道府県から住所を生成
+        const addresses = selectedPrefectures.map(prefecture => {
+          const detailedAddress = detailedAddresses[prefecture] || '';
+          return detailedAddress ? `${prefecture}${detailedAddress}` : prefecture;
+        });
+        
+        console.log('📍 生成された住所:', addresses);
+        
+        // store_locationsにデータを挿入
+        for (const address of addresses) {
+          console.log('🔄 住所を挿入中:', address);
+          
+          const { data: insertData, error: insertError } = await supabase
+            .from('store_locations')
+            .upsert({
+              product_id: productId,
+              branch_name: productBrand,
+              address: address,
+              source_url: defaultSourceUrl,
+              store_list_url: defaultStoreListUrl
+            }, {
+              onConflict: 'product_id,branch_name,address'
+            })
+            .select();
+          
+          if (insertError) {
+            console.error('❌ store_locations挿入エラー:', insertError);
+            console.error('エラー詳細:', JSON.stringify(insertError, null, 2));
+          } else {
+            console.log('✅ store_locations挿入完了:', address, insertData);
+          }
+        }
+        
+        // 挿入結果を確認
+        const { data: verifyData, error: verifyError } = await supabase
+          .from('store_locations')
+          .select('*')
+          .eq('product_id', productId);
+        
+        if (verifyError) {
+          console.error('❌ store_locations確認エラー:', verifyError);
+        } else {
+          console.log('✅ store_locations確認完了:', verifyData.length, '件');
+        }
+        
+      } catch (fallbackError) {
+        console.error('❌ store_locations作成フォールバックエラー:', fallbackError);
+        console.error('エラー詳細:', JSON.stringify(fallbackError, null, 2));
+      }
       setUploadStatus('completed');
       
       // 成功メッセージを表示してからアプリケーションのデータを再読み込み

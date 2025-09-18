@@ -49,7 +49,7 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
     const allergens = [];
 
     // 最初の数行から記号を検出（商品名列は除外）
-    csvData.slice(0, 10).forEach((row, rowIndex) => {
+    csvData.slice(0, 20).forEach((row, rowIndex) => {
       row.forEach((cell, cellIndex) => {
         // 商品名列（1列目）は記号検出から除外
         if (cellIndex === 0) return;
@@ -66,6 +66,10 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
             // 記号が含まれている可能性があるセルをログ出力
             if (cell.includes('△') || cell.includes('●') || cell.includes('○') || cell.includes('◎') || cell.includes('※') || cell.includes('▲')) {
               console.log(`記号候補: 行${rowIndex + 1}, 列${cellIndex + 1}, セル内容: "${cell}"`);
+            }
+            // すべてのセルの内容をログ出力（デバッグ用）
+            if (cell.includes('※')) {
+              console.log(`※記号発見: 行${rowIndex + 1}, 列${cellIndex + 1}, セル内容: "${cell}"`);
             }
           }
         }

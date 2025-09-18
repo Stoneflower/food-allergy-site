@@ -67,17 +67,29 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
     console.log('rules.outputLabelsの型:', typeof rules.outputLabels);
     console.log('rules.outputLabelsの内容:', JSON.stringify(rules.outputLabels));
     
-    const outputLabels = {
+    // デフォルト値を先に設定し、rules.outputLabelsで上書き
+    const defaultOutputLabels = {
       direct: 'ふくむ',
       none: 'ふくまない',
       trace: 'コンタミ',
-      unused: '未使用',
-      ...rules.outputLabels
+      unused: '未使用'
     };
+    
+    // rules.outputLabelsが存在し、有効な値を持つ場合のみ上書き
+    const outputLabels = { ...defaultOutputLabels };
+    if (rules.outputLabels && typeof rules.outputLabels === 'object') {
+      Object.keys(rules.outputLabels).forEach(key => {
+        if (rules.outputLabels[key] && typeof rules.outputLabels[key] === 'string') {
+          outputLabels[key] = rules.outputLabels[key];
+        }
+      });
+    }
 
+    console.log('デフォルトoutputLabels:', defaultOutputLabels);
     console.log('使用するoutputLabels:', outputLabels);
     console.log('outputLabels.direct:', outputLabels.direct);
     console.log('outputLabels.none:', outputLabels.none);
+    console.log('outputLabels.trace:', outputLabels.trace);
     console.log('outputLabelsの型:', typeof outputLabels);
     console.log('outputLabelsの内容:', JSON.stringify(outputLabels));
     console.log('使用するallSymbolMappings:', allSymbolMappings);

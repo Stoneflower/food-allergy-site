@@ -57,7 +57,8 @@ const CsvUpload = ({ onUpload }) => {
           console.log(`生テキスト行${index + 1}:`, {
             content: line,
             length: line.length,
-            hasCommas: line.includes(',')
+            hasCommas: line.includes(','),
+            rawContent: JSON.stringify(line)
           });
         }
       });

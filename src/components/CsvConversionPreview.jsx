@@ -104,8 +104,25 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
           if (rowIndex >= 70 && rowIndex <= 100) {
             console.log(`  行${rowIndex + 1}を分割:`, processedRow);
           }
+        } else if (row[0].includes('\n')) {
+          // 改行を含む場合は、改行で分割して最初の行を商品名として使用
+          const lines = row[0].split('\n');
+          const productName = lines.join(' '); // 改行をスペースに置換
+          if (rowIndex >= 70 && rowIndex <= 100) {
+            console.log(`  行${rowIndex + 1}の改行を処理:`, {
+              original: row[0],
+              productName: productName,
+              lines: lines
+            });
+          }
+          // 商品名のみの行として処理
+          const convertedRow = {
+            original: row,
+            converted: {}
+          };
+          return convertedRow;
         } else {
-          // カンマを含まない場合は商品名のみの行としてスキップ
+          // カンマも改行も含まない場合は商品名のみの行としてスキップ
           if (rowIndex >= 70 && rowIndex <= 100) {
             console.log(`  行${rowIndex + 1}は商品名のみの行としてスキップ:`, row[0]);
           }
@@ -116,6 +133,39 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
           };
           return convertedRow;
         }
+      }
+      
+      // 複数行の商品名を1つにまとめる処理
+      if (rowIndex > 0 && processedRow.length === 1 && typeof processedRow[0] === 'string' && !processedRow[0].includes(',')) {
+        // 前の行が商品名のみで、現在の行も商品名のみの場合
+        const prevRow = dataRows[rowIndex - 1];
+        if (prevRow && prevRow.length === 1 && typeof prevRow[0] === 'string' && !prevRow[0].includes(',')) {
+          // 前の行と現在の行を結合
+          const combinedName = `${prevRow[0]} ${processedRow[0]}`;
+          if (rowIndex >= 70 && rowIndex <= 100) {
+            console.log(`  行${rowIndex + 1}を前の行と結合: "${combinedName}"`);
+          }
+          // 前の行のデータを更新（この処理は後で実装）
+          // 現在の行はスキップ
+          const convertedRow = {
+            original: row,
+            converted: {}
+          };
+          return convertedRow;
+        }
+      }
+      
+      // 商品名のみの行をスキップ（アレルギー記号がない場合）
+      if (processedRow.length === 1 && typeof processedRow[0] === 'string' && !processedRow[0].includes(',')) {
+        if (rowIndex >= 70 && rowIndex <= 100) {
+          console.log(`  行${rowIndex + 1}は商品名のみの行としてスキップ:`, processedRow[0]);
+        }
+        // 商品名のみの行は未設定として処理
+        const convertedRow = {
+          original: row,
+          converted: {}
+        };
+        return convertedRow;
       }
       
       // 行210-211のデバッグ情報を追加

@@ -234,19 +234,26 @@ const CsvExporter = ({ data, onBack }) => {
   };
 
   const handleUpload = async () => {
-    console.log('Supabaseアップロード開始:', { data: data, dataLength: data?.length });
+    console.log('=== Supabaseアップロード開始 ===');
+    console.log('データ:', data);
+    console.log('データ長:', data?.length);
+    console.log('選択都道府県:', selectedPrefectures);
+    console.log('詳細住所:', detailedAddresses);
     
     if (!data || data.length === 0) {
-      console.error('データがありません');
+      console.error('❌ データがありません');
       setUploadStatus('error');
       return;
     }
     
+    console.log('✅ データ検証完了、アップロード開始');
     setUploadStatus('uploading');
     
     try {
       // 1. import_jobsテーブルにジョブを作成
       const jobId = crypto.randomUUID();
+      console.log('🔄 ジョブ作成開始:', jobId);
+      
       const { data: jobData, error: jobError } = await supabase
         .from('import_jobs')
         .insert([{
@@ -257,16 +264,21 @@ const CsvExporter = ({ data, onBack }) => {
         .single();
       
       if (jobError) {
-        console.error('ジョブ作成エラー:', jobError);
+        console.error('❌ ジョブ作成エラー:', jobError);
+        console.error('エラー詳細:', JSON.stringify(jobError, null, 2));
         setUploadStatus('error');
         return;
       }
       
-      console.log('ジョブ作成完了:', jobData);
+      console.log('✅ ジョブ作成完了:', jobData);
       
       // 2. staging_importsテーブルにデータを挿入
+      console.log('🔄 CSVデータ生成開始');
       const csvData = generateCsvData();
+      console.log('✅ CSVデータ生成完了:', csvData.length, '行');
+      
       const rows = csvData.slice(1); // ヘッダー行を除外
+      console.log('📊 データ行数:', rows.length);
       
       const stagingData = rows.map((row, index) => {
         const stagingRow = {
@@ -326,10 +338,11 @@ const CsvExporter = ({ data, onBack }) => {
       console.log('バッチ処理完了:', processData);
       setUploadStatus('completed');
       
-      // アプリケーションのデータを再読み込み
+      // 成功メッセージを表示してからアプリケーションのデータを再読み込み
       setTimeout(() => {
+        alert('✅ アップロードが正常に完了しました！\n\nデータがSupabaseに正常に登録されました。\nアプリケーションで確認できます。');
         window.location.reload();
-      }, 2000);
+      }, 3000);
       
     } catch (error) {
       console.error('アップロードエラー:', error);
@@ -608,11 +621,19 @@ const CsvExporter = ({ data, onBack }) => {
             {getUploadStatusIcon()}
             <span className="font-medium">{getUploadStatusText()}</span>
           </div>
-          {uploadStatus === 'completed' && (
-            <p className="text-sm mt-2">
-              データが正常にSupabaseにアップロードされました。アプリケーションで確認できます。
-            </p>
-          )}
+           {uploadStatus === 'completed' && (
+             <div className="text-sm mt-2">
+               <p className="font-semibold text-green-800">
+                 ✅ アップロードが正常に完了しました！
+               </p>
+               <p className="mt-1">
+                 データがSupabaseに正常に登録されました。アプリケーションで確認できます。
+               </p>
+               <p className="mt-1 text-xs text-gray-600">
+                 3秒後にアプリケーションが再読み込みされます...
+               </p>
+             </div>
+           )}
           {uploadStatus === 'error' && (
             <p className="text-sm mt-2">
               アップロード中にエラーが発生しました。コンソールログを確認してください。

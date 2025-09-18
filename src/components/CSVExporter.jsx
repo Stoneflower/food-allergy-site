@@ -219,9 +219,10 @@ const CsvExporter = ({ data, onBack }) => {
       const csvData = generateCsvData();
       const rows = csvData.slice(1); // ヘッダー行を除外
       
-      const stagingData = rows.map(row => {
+      const stagingData = rows.map((row, index) => {
         const stagingRow = {
-          job_id: jobId,
+          import_batch_id: jobId,
+          row_no: index + 1,
           raw_product_name: row[0] || '',
           raw_category: row[1] || '',
           raw_source_url: row[2] || '',

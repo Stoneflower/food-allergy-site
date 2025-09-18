@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FiUpload, FiFile, FiAlertCircle, FiCheckCircle } from 'react-icons/fi';
+import Papa from 'papaparse';
 
 const CsvUpload = ({ onUpload }) => {
   const [dragActive, setDragActive] = useState(false);
@@ -47,6 +48,20 @@ const CsvUpload = ({ onUpload }) => {
 
     try {
       const text = await readFileAsText(file);
+      
+      // デバッグ: 生のテキストの一部を確認
+      console.log('=== 生のCSVテキスト（行70-90） ===');
+      const lines = text.split('\n');
+      lines.forEach((line, index) => {
+        if (index >= 70 && index <= 90) {
+          console.log(`生テキスト行${index + 1}:`, {
+            content: line,
+            length: line.length,
+            hasCommas: line.includes(',')
+          });
+        }
+      });
+      
       const parsed = parseCSV(text);
       
       if (parsed.length === 0) {
@@ -72,29 +87,31 @@ const CsvUpload = ({ onUpload }) => {
   };
 
   const parseCSV = (text) => {
-    const lines = text.split('\n').filter(line => line.trim());
-    return lines.map(line => {
-      // Simple CSV parsing - handles quoted fields
-      const result = [];
-      let current = '';
-      let inQuotes = false;
-      
-      for (let i = 0; i < line.length; i++) {
-        const char = line[i];
-        
-        if (char === '"') {
-          inQuotes = !inQuotes;
-        } else if (char === ',' && !inQuotes) {
-          result.push(current.trim());
-          current = '';
-        } else {
-          current += char;
-        }
-      }
-      result.push(current.trim());
-      
-      return result;
+    // Papa Parseを使用してより確実なCSVパース
+    const result = Papa.parse(text, {
+      header: false,
+      skipEmptyLines: true,
+      encoding: 'UTF-8'
     });
+    
+    if (result.errors.length > 0) {
+      console.warn('CSVパースエラー:', result.errors);
+    }
+    
+    // デバッグ: 各行の詳細をログ出力
+    console.log('=== CSVパース結果 ===');
+    result.data.forEach((row, index) => {
+      if (index >= 70 && index <= 90) { // 問題のある行を重点的に確認
+        console.log(`行${index + 1}:`, {
+          length: row.length,
+          content: row,
+          firstCell: row[0],
+          hasCommas: row[0]?.includes(',')
+        });
+      }
+    });
+    
+    return result.data;
   };
 
   const handleUpload = () => {

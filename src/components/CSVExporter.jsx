@@ -114,31 +114,10 @@ const CsvExporter = ({ data, onBack }) => {
         .filter(Boolean)
         .forEach(s => parts.push(s));
     });
-    // そのままの行も使って、括弧/見出しを検出
+    // そのままの行をすべて採用（特別扱いなし）
     const rawLines = parts.map(s => s.trim()).filter(Boolean);
-    // 括弧や【】はデータとして保持（stripしない）
-    const bracketLines = rawLines.filter(s => /^【.+】$/.test(s));
-    const parenLines = rawLines.filter(s => /^[（(].+[）)]$/.test(s));
-
-    const normalize = (p) => String(p || '')
-      .replace(/\s+/g, ' ').trim();
-
-    let names = [];
-    // 3行構成（【…】 + 本体行 + （…））は1商品として結合
-    if (bracketLines.length > 0 && parenLines.length > 0) {
-      const middle = rawLines.find(s => !/^【.+】$/.test(s) && !/^[（(].+[）)]$/.test(s)) || '';
-      const joined = normalize(`${bracketLines[0]} ${middle} ${parenLines[0]}`);
-      if (joined) names = [joined];
-    } else if (bracketLines.length > 0 || parenLines.length > 0) {
-      // どちらか一方のみなら、単体の商品としてそれぞれ採用
-      names = [...bracketLines, ...parenLines].map(normalize).filter(n => n);
-    } else {
-      // 括弧・見出しが無い場合は、すべて候補化 → 先頭の妥当な1件を採用
-      const others = rawLines
-        .map(normalize)
-        .filter(n => n);
-      if (others.length > 0) names = [others[0]];
-    }
+    const normalize = (p) => String(p || '').replace(/\s+/g, ' ').trim();
+    const names = rawLines.map(normalize).filter(n => n);
 
     return names;
   };

@@ -8,12 +8,24 @@ const CsvExporter = ({ data, onBack }) => {
   const [downloadStatus, setDownloadStatus] = useState('ready');
   const [uploadStatus, setUploadStatus] = useState('ready');
   const [fileName, setFileName] = useState('converted_allergy_data.csv');
-  const [defaultAddress, setDefaultAddress] = useState('兵庫県');
+  const [selectedPrefectures, setSelectedPrefectures] = useState(['兵庫県']);
+  const [detailedAddresses, setDetailedAddresses] = useState({});
   const [defaultSourceUrl, setDefaultSourceUrl] = useState('https://example.com');
   const [defaultStoreListUrl, setDefaultStoreListUrl] = useState('https://example.com/stores');
   const [productName, setProductName] = useState('びっくりドンキー');
   const [productBrand, setProductBrand] = useState('ハンバーグレストラン');
   const [productCategory, setProductCategory] = useState('レストラン');
+
+  // 47都道府県リスト
+  const prefectures = [
+    '北海道', '青森県', '岩手県', '宮城県', '秋田県', '山形県', '福島県',
+    '茨城県', '栃木県', '群馬県', '埼玉県', '千葉県', '東京都', '神奈川県',
+    '新潟県', '富山県', '石川県', '福井県', '山梨県', '長野県', '岐阜県',
+    '静岡県', '愛知県', '三重県', '滋賀県', '京都府', '大阪府', '兵庫県',
+    '奈良県', '和歌山県', '鳥取県', '島根県', '岡山県', '広島県', '山口県',
+    '徳島県', '香川県', '愛媛県', '高知県', '福岡県', '佐賀県', '長崎県',
+    '熊本県', '大分県', '宮崎県', '鹿児島県', '沖縄県'
+  ];
 
   // 標準アレルギー項目
   const standardAllergens = [
@@ -47,6 +59,30 @@ const CsvExporter = ({ data, onBack }) => {
     { slug: 'matsutake', name: 'まつたけ' }
   ];
 
+  // 都道府県選択のヘルパー関数
+  const handlePrefectureToggle = (prefecture) => {
+    setSelectedPrefectures(prev => 
+      prev.includes(prefecture) 
+        ? prev.filter(p => p !== prefecture)
+        : [...prev, prefecture]
+    );
+  };
+
+  const handleSelectAll = () => {
+    setSelectedPrefectures([...prefectures]);
+  };
+
+  const handleSelectNone = () => {
+    setSelectedPrefectures([]);
+  };
+
+  const handleDetailedAddressChange = (prefecture, address) => {
+    setDetailedAddresses(prev => ({
+      ...prev,
+      [prefecture]: address
+    }));
+  };
+
   const generateCsvData = () => {
     if (!data || data.length === 0) return [];
 
@@ -66,42 +102,49 @@ const CsvExporter = ({ data, onBack }) => {
       ...standardAllergens.map(a => a.slug)
     ];
 
-    // データ行を作成
-    const rows = data.map(row => {
-      const csvRow = [];
+    // 選択された都道府県ごとにデータ行を作成
+    const allRows = [];
+    
+    selectedPrefectures.forEach(prefecture => {
+      const detailedAddress = detailedAddresses[prefecture] || '';
+      const fullAddress = detailedAddress ? `${prefecture}${detailedAddress}` : prefecture;
       
-      // 元データから基本情報を抽出
-      const original = row.original || [];
-      csvRow.push(productName); // raw_product_name (products.name)
-      csvRow.push(productCategory); // raw_category (products.category)
-      csvRow.push(defaultSourceUrl); // raw_source_url
-      csvRow.push(productBrand); // raw_branch_name (products.brand)
-      csvRow.push(defaultAddress); // raw_address
-      csvRow.push(''); // raw_phone
-      csvRow.push(''); // raw_hours
-      csvRow.push(''); // raw_closed
-      csvRow.push(defaultStoreListUrl); // raw_store_list_url
-      csvRow.push(''); // raw_notes
-      csvRow.push(original[0] || ''); // raw_menu_name (商品名と同じ)
-      
-      // アレルギー情報を追加（日本語ラベルを英語に変換）
-      standardAllergens.forEach(allergen => {
-        const value = row.converted[allergen.slug] || '';
-        let englishValue = '';
-        switch (value) {
-          case 'ふくむ': englishValue = 'direct'; break;
-          case 'ふくまない': englishValue = 'none'; break;
-          case 'コンタミ': englishValue = 'trace'; break;
-          case '未使用': englishValue = 'unused'; break;
-          default: englishValue = value;
-        }
-        csvRow.push(englishValue);
-      });
+      data.forEach(row => {
+        const csvRow = [];
+        
+        // 元データから基本情報を抽出
+        const original = row.original || [];
+        csvRow.push(productName); // raw_product_name (products.name)
+        csvRow.push(productCategory); // raw_category (products.category)
+        csvRow.push(defaultSourceUrl); // raw_source_url
+        csvRow.push(productBrand); // raw_branch_name (products.brand)
+        csvRow.push(fullAddress); // raw_address (都道府県 + 詳細住所)
+        csvRow.push(''); // raw_phone
+        csvRow.push(''); // raw_hours
+        csvRow.push(''); // raw_closed
+        csvRow.push(defaultStoreListUrl); // raw_store_list_url
+        csvRow.push(''); // raw_notes
+        csvRow.push(original[0] || ''); // raw_menu_name (商品名と同じ)
+        
+        // アレルギー情報を追加（日本語ラベルを英語に変換）
+        standardAllergens.forEach(allergen => {
+          const value = row.converted[allergen.slug] || '';
+          let englishValue = '';
+          switch (value) {
+            case 'ふくむ': englishValue = 'direct'; break;
+            case 'ふくまない': englishValue = 'none'; break;
+            case 'コンタミ': englishValue = 'trace'; break;
+            case '未使用': englishValue = 'unused'; break;
+            default: englishValue = value;
+          }
+          csvRow.push(englishValue);
+        });
 
-      return csvRow;
+        allRows.push(csvRow);
+      });
     });
 
-    return [headers, ...rows];
+    return [headers, ...allRows];
   };
 
   const handleDownload = () => {
@@ -233,7 +276,7 @@ const CsvExporter = ({ data, onBack }) => {
           raw_category: productCategory, // products.category
           raw_source_url: row[2] || defaultSourceUrl,
           raw_branch_name: productBrand, // products.brand
-          raw_address: row[4] || defaultAddress,
+          raw_address: row[4] || '', // 都道府県 + 詳細住所
           raw_phone: row[5] || '',
           raw_hours: row[6] || '',
           raw_closed: row[7] || '',
@@ -415,16 +458,68 @@ const CsvExporter = ({ data, onBack }) => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              デフォルト住所
+              都道府県選択 ({selectedPrefectures.length}/47)
             </label>
-            <input
-              type="text"
-              value={defaultAddress}
-              onChange={(e) => setDefaultAddress(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              placeholder="兵庫県"
-            />
+            
+            {/* 一括選択ボタン */}
+            <div className="flex space-x-2 mb-3">
+              <button
+                type="button"
+                onClick={handleSelectAll}
+                className="px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+              >
+                全選択
+              </button>
+              <button
+                type="button"
+                onClick={handleSelectNone}
+                className="px-3 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600"
+              >
+                全解除
+              </button>
+            </div>
+
+            {/* 都道府県チェックボックス */}
+            <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3">
+              {prefectures.map(prefecture => (
+                <label key={prefecture} className="flex items-center space-x-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={selectedPrefectures.includes(prefecture)}
+                    onChange={() => handlePrefectureToggle(prefecture)}
+                    className="rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                  />
+                  <span className="text-gray-700">{prefecture}</span>
+                </label>
+              ))}
+            </div>
           </div>
+
+          {/* 選択された都道府県の詳細住所入力 */}
+          {selectedPrefectures.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                詳細住所（任意）
+              </label>
+              <div className="space-y-2">
+                {selectedPrefectures.map(prefecture => (
+                  <div key={prefecture} className="flex items-center space-x-2">
+                    <span className="text-sm text-gray-600 w-20 flex-shrink-0">{prefecture}:</span>
+                    <input
+                      type="text"
+                      value={detailedAddresses[prefecture] || ''}
+                      onChange={(e) => handleDetailedAddressChange(prefecture, e.target.value)}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
+                      placeholder="例: 神戸市中央区三宮町1-1-1"
+                    />
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                各都道府県に続けて詳細住所を入力できます（例: 兵庫県神戸市中央区三宮町1-1-1）
+              </p>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">

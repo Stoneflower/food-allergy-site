@@ -183,8 +183,16 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
     // 手動追加された記号もルールに含める
     const updatedRules = {
       ...localRules,
-      manualSymbols: Array.from(manualSymbols)
+      manualSymbols: Array.from(manualSymbols),
+      // 確実に日本語ラベルを保存
+      outputLabels: {
+        direct: 'ふくむ',
+        none: 'ふくまない',
+        trace: 'コンタミ',
+        unused: '未使用'
+      }
     };
+    console.log('保存するルール:', updatedRules);
     onRulesChange(updatedRules);
     onNext();
   };

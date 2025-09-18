@@ -75,10 +75,15 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
       unused: '未使用'
     };
     
-    // 強制的にデフォルト値を使用（確実に日本語ラベルを適用）
-    const outputLabels = { ...defaultOutputLabels };
+    // 完全にハードコード（確実に日本語ラベルを適用）
+    const outputLabels = {
+      direct: 'ふくむ',
+      none: 'ふくまない',
+      trace: 'コンタミ',
+      unused: '未使用'
+    };
     
-    console.log('=== 最終的なoutputLabels ===');
+    console.log('=== ハードコードされたoutputLabels ===');
     console.log('direct:', outputLabels.direct);
     console.log('none:', outputLabels.none);
     console.log('trace:', outputLabels.trace);
@@ -92,10 +97,24 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
       
       // CSVの行が文字列として1つのセルになっている場合、カンマで分割
       let processedRow = row;
-      if (row.length === 1 && typeof row[0] === 'string' && row[0].includes(',')) {
-        processedRow = row[0].split(',');
-        if (rowIndex >= 70 && rowIndex <= 100) {
-          console.log(`  行${rowIndex + 1}を分割:`, processedRow);
+      if (row.length === 1 && typeof row[0] === 'string') {
+        if (row[0].includes(',')) {
+          // カンマを含む場合は分割
+          processedRow = row[0].split(',');
+          if (rowIndex >= 70 && rowIndex <= 100) {
+            console.log(`  行${rowIndex + 1}を分割:`, processedRow);
+          }
+        } else {
+          // カンマを含まない場合は商品名のみの行としてスキップ
+          if (rowIndex >= 70 && rowIndex <= 100) {
+            console.log(`  行${rowIndex + 1}は商品名のみの行としてスキップ:`, row[0]);
+          }
+          // 商品名のみの行は未設定として処理
+          const convertedRow = {
+            original: row,
+            converted: {}
+          };
+          return convertedRow;
         }
       }
       
@@ -144,7 +163,15 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
                 const allergenSlug = detectAllergenFromContext(processedRow, cellIndex, standardAllergens);
                 console.log(`アレルギー特定: 行${rowIndex + 1}, 列${cellIndex + 1}, アレルギー: "${allergenSlug}"`);
                 if (allergenSlug) {
-                  const outputValue = outputLabels[mappedValue];
+                  // 直接日本語ラベルを設定
+                  let outputValue;
+                  switch (mappedValue) {
+                    case 'direct': outputValue = 'ふくむ'; break;
+                    case 'none': outputValue = 'ふくまない'; break;
+                    case 'trace': outputValue = 'コンタミ'; break;
+                    case 'unused': outputValue = '未使用'; break;
+                    default: outputValue = mappedValue;
+                  }
                   convertedRow.converted[allergenSlug] = outputValue;
                   console.log(`変換完了: 行${rowIndex + 1}, アレルギー: "${allergenSlug}", 値: "${outputValue}"`);
                 }
@@ -154,8 +181,8 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
             // ハイフン記号も処理
             const allergenSlug = detectAllergenFromContext(processedRow, cellIndex, standardAllergens);
             if (allergenSlug) {
-              convertedRow.converted[allergenSlug] = outputLabels.none;
-              console.log(`変換完了 (ハイフン): 行${rowIndex + 1}, アレルギー: "${allergenSlug}", 値: "${outputLabels.none}"`);
+              convertedRow.converted[allergenSlug] = 'ふくまない';
+              console.log(`変換完了 (ハイフン): 行${rowIndex + 1}, アレルギー: "${allergenSlug}", 値: "ふくまない"`);
             }
           }
         }

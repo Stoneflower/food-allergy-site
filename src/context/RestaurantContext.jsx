@@ -388,9 +388,11 @@ export const RestaurantProvider = ({ children }) => {
 
     if (selectedAllergies.length > 0) {
       const beforeAllergyFilter = items.length;
+      // 安全候補が空集合なら、ユーザーに結果ゼロを避けるため一旦フィルタをスキップ
+      const shouldApply = safeProductIds && safeProductIds.size > 0;
       items = items.filter(item => {
         if (!(item.id && typeof item.id === 'string' && item.id.startsWith('db_'))) return false;
-        if (safeProductIds === null) return true;
+        if (!shouldApply) return true;
         const pid = Number(item.id.slice(3));
         return safeProductIds.has(pid);
       });

@@ -126,11 +126,19 @@ const CsvExporter = ({ data, onBack }) => {
     const body = parts
       .filter(p => !isHeadingLike(p))
       .map(stripBrackets)
+      // メニュー名に混入した記号群（● 〇 ◎ △ など）をスペースに置換
+      .map(p => p.replace(/[●〇◎△※★☆◇◆□■▯-]+/g, ' '))
       .map(p => p.replace(/\s+/g, ' ').trim())
       .filter(Boolean);
 
     if (body.length === 0) return '';
-    return body.join(' ');
+    const name = body.join(' ')
+      // 末尾・先頭の記号や余分なスペースを除去
+      .replace(/\s*[●〇◎△※★☆◇◆□■▯-]+\s*$/g, '')
+      .replace(/^\s*[●〇◎△※★☆◇◆□■▯-]+\s*/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    return name;
   };
 
   // 都道府県選択のヘルパー関数

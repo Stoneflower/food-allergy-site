@@ -194,7 +194,9 @@ const SearchResults = () => {
 
         <div className="flex items-center justify-between flex-wrap gap-4 mb-8">
           <p className="text-sm text-gray-500">
-            {shouldShowGrouped ? restaurantsWithEdible.length : sortedItems.length}件のアイテムが見つかりました
+            {(shouldShowGrouped && restaurantsWithEdible.length > 0)
+              ? restaurantsWithEdible.length
+              : sortedItems.length}件のアイテムが見つかりました
           </p>
           <div className="flex items-center space-x-4">
             {/* Sort */}
@@ -451,17 +453,40 @@ const SearchResults = () => {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-16">
-                  <div className="w-24 h-24 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
-                    <SafeIcon icon={FiMapPin} className="w-12 h-12 text-gray-400" />
+                // グルーピングが空でも通常リストにフォールバック
+                sortedItems.length > 0 ? (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className={viewMode === 'grid'
+                      ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6'
+                      : 'space-y-4'
+                    }
+                  >
+                    {sortedItems.map((item, index) => (
+                      <motion.div
+                        key={`${item.category}-${item.id}`}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3, delay: index * 0.05 }}
+                      >
+                        {renderCard(item)}
+                      </motion.div>
+                    ))}
+                  </motion.div>
+                ) : (
+                  <div className="text-center py-16">
+                    <div className="w-24 h-24 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
+                      <SafeIcon icon={FiMapPin} className="w-12 h-12 text-gray-400" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                      条件に合う店舗が見つかりませんでした
+                    </h3>
+                    <p className="text-gray-600 mb-4">
+                      エリアやアレルギー条件を調整して再度お試しください
+                    </p>
                   </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                    条件に合う店舗が見つかりませんでした
-                  </h3>
-                  <p className="text-gray-600 mb-4">
-                    エリアやアレルギー条件を調整して再度お試しください
-                  </p>
-                </div>
+                )
               )
             ) : (
               sortedItems.length > 0 ? (

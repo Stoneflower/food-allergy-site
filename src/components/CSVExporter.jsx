@@ -74,14 +74,8 @@ const CsvExporter = ({ data, onBack }) => {
     { slug: 'matsutake', name: 'まつたけ' }
   ];
 
-  // 記号だけの行を弾く（文字が残らない場合のみ除外）
-  const isSymbolsOnly = (text) => {
-    if (!text) return true;
-    const t = String(text).trim();
-    if (t === '') return true;
-    // 代表的な記号のみで構成される場合
-    return /^[●〇◎△※★☆◇◆□■▯-]+$/.test(t);
-  };
+  // 記号のみの行も商品名として許容するため、除外判定は行わない
+  const isSymbolsOnly = () => false;
 
   // 括弧を外して中身だけ取り出す（全角・半角）
   const stripBrackets = (text) => {
@@ -130,13 +124,19 @@ const CsvExporter = ({ data, onBack }) => {
       .replace(/\s+/g, ' ').trim();
 
     let names = [];
-    if (bracketLines.length > 0 || parenLines.length > 0) {
-      names = [...bracketLines, ...parenLines].map(normalize).filter(n => n && !isSymbolsOnly(n));
+    // 3行構成（【…】 + 本体行 + （…））は1商品として結合
+    if (bracketLines.length > 0 && parenLines.length > 0) {
+      const middle = rawLines.find(s => !/^【.+】$/.test(s) && !/^[（(].+[）)]$/.test(s)) || '';
+      const joined = normalize(`${bracketLines[0]} ${middle} ${parenLines[0]}`);
+      if (joined) names = [joined];
+    } else if (bracketLines.length > 0 || parenLines.length > 0) {
+      // どちらか一方のみなら、単体の商品としてそれぞれ採用
+      names = [...bracketLines, ...parenLines].map(normalize).filter(n => n);
     } else {
       // 括弧・見出しが無い場合は、すべて候補化 → 先頭の妥当な1件を採用
       const others = rawLines
         .map(normalize)
-        .filter(n => n && !isSymbolsOnly(n));
+        .filter(n => n);
       if (others.length > 0) names = [others[0]];
     }
 

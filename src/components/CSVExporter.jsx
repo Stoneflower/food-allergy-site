@@ -380,7 +380,7 @@ const CsvExporter = ({ data, onBack }) => {
               source_url: defaultSourceUrl,
               store_list_url: defaultStoreListUrl
             }, {
-              onConflict: 'product_id,branch_name,address'
+              onConflict: 'product_id,address'
             })
             .select();
           

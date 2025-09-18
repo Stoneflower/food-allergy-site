@@ -85,6 +85,31 @@ const CsvExporter = ({ data, onBack }) => {
     return false;
   };
 
+  // 括弧を外して中身だけ取り出す（全角・半角）
+  const stripBrackets = (text) => {
+    if (!text) return '';
+    let t = String(text).trim();
+    // 先頭と末尾が対応する括弧で囲まれている場合は外す（繰り返し）
+    // 全角カッコ・角括弧・丸括弧
+    const patterns = [
+      [/^【([^】]+)】$/, '$1'],
+      [/^\[([^\]]+)\]$/, '$1'],
+      [/^（([^）]+)）$/, '$1'],
+      [/^\(([^)]+)\)$/,'$1']
+    ];
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const [re, rep] of patterns) {
+        if (re.test(t)) {
+          t = t.replace(re, rep).trim();
+          changed = true;
+        }
+      }
+    }
+    return t;
+  };
+
   // original配列からメニュー名を抽出
   const extractMenuName = (originalRow) => {
     const cells = Array.isArray(originalRow) ? originalRow : [originalRow];
@@ -97,10 +122,15 @@ const CsvExporter = ({ data, onBack }) => {
         .filter(Boolean)
         .forEach(s => parts.push(s));
     });
-    for (const part of parts) {
-      if (!isHeadingLike(part)) return part;
-    }
-    return '';
+    // 見出し行（【…】など）は除外し、残りをスペースで結合して1行名へ
+    const body = parts
+      .filter(p => !isHeadingLike(p))
+      .map(stripBrackets)
+      .map(p => p.replace(/\s+/g, ' ').trim())
+      .filter(Boolean);
+
+    if (body.length === 0) return '';
+    return body.join(' ');
   };
 
   // 都道府県選択のヘルパー関数

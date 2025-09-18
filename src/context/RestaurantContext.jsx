@@ -246,34 +246,43 @@ export const RestaurantProvider = ({ children }) => {
           return;
         }
 
+        // product_allergies_matrix（ワイド表）から安全判定
+        const columns = [
+          'product_id','menu_name','egg','milk','wheat','buckwheat','peanut','shrimp','crab','walnut','almond','abalone','squid','salmon_roe','orange','cashew','kiwi','beef','gelatin','sesame','salmon','mackerel','soybean','chicken','banana','pork','matsutake','peach','yam','apple'
+        ];
         const { data, error } = await supabase
-          .from('v_product_allergies_long')
-          .select('product_id,menu_name,allergy_item_slug,presence_type')
-          .in('product_id', pidList)
-          .in('allergy_item_slug', selectedAllergies)
-          .in('presence_type', ['none', 'trace']);
+          .from('product_allergies_matrix')
+          .select(columns.join(','))
+          .in('product_id', pidList);
         if (error) throw error;
 
-        const byProduct = new Map();
-        for (const r of data || []) {
-          let byMenu = byProduct.get(r.product_id);
-          if (!byMenu) { byMenu = new Map(); byProduct.set(r.product_id, byMenu); }
-          let slugSet = byMenu.get(r.menu_name);
-          if (!slugSet) { slugSet = new Set(); byMenu.set(r.menu_name, slugSet); }
-          slugSet.add(r.allergy_item_slug);
+        // slug→列名のマップ（大豆はsoy→soybean）
+        const slugToColumn = (slug) => slug === 'soy' ? 'soybean' : slug;
+
+        const needSlugs = selectedAllergies.map(slugToColumn);
+        const byProduct = new Map(); // pid -> array of rows
+        for (const row of data || []) {
+          const arr = byProduct.get(row.product_id) || [];
+          arr.push(row);
+          byProduct.set(row.product_id, arr);
         }
 
-        const need = new Set(selectedAllergies);
         const okProducts = new Set();
-        for (const [pid, byMenu] of byProduct.entries()) {
-          for (const slugSet of byMenu.values()) {
-            let allOk = true;
-            for (const s of need) { if (!slugSet.has(s)) { allOk = false; break; } }
-            if (allOk) { okProducts.add(pid); break; }
+        for (const [pid, rows] of byProduct.entries()) {
+          let productOk = false;
+          for (const r of rows) {
+            let menuOk = true;
+            for (const c of needSlugs) {
+              const v = (r[c] || '').toString().toLowerCase(); // 'd' | 't' | 'n'
+              if (v === 'd') { menuOk = false; break; }
+            }
+            if (menuOk) { productOk = true; break; }
           }
+          if (productOk) okProducts.add(pid);
         }
+
         setSafeProductIds(okProducts);
-        console.log('✅ safeProductIds computed:', okProducts.size);
+        console.log('✅ safeProductIds computed via matrix:', okProducts.size);
       } catch (e) {
         console.warn('safeProductIds compute failed:', e.message);
         setSafeProductIds(new Set());

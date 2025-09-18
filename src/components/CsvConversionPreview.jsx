@@ -86,19 +86,42 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
       if (rowIndex < 5 || (rowIndex >= 70 && rowIndex <= 100)) { // 最初の5行と行70-100をデバッグ
         console.log(`行${rowIndex + 1}処理開始:`, row);
       }
+      
+      // CSVの行が文字列として1つのセルになっている場合、カンマで分割
+      let processedRow = row;
+      if (row.length === 1 && typeof row[0] === 'string' && row[0].includes(',')) {
+        processedRow = row[0].split(',');
+        if (rowIndex >= 70 && rowIndex <= 100) {
+          console.log(`  行${rowIndex + 1}を分割:`, processedRow);
+        }
+      }
+      
+      // 行210-211のデバッグ情報を追加
+      if (rowIndex >= 209 && rowIndex <= 212) {
+        console.log(`行${rowIndex + 1}詳細:`, {
+          originalRow: row,
+          processedRow: processedRow,
+          rowLength: row.length,
+          processedRowLength: processedRow.length,
+          firstCell: row[0],
+          isString: typeof row[0] === 'string',
+          hasComma: row[0] && row[0].includes(',')
+        });
+      }
+      
       const convertedRow = {
         rowIndex: rowIndex + 1, // 元の行番号を保持
-        original: row,
+        original: processedRow,
         converted: {},
         errors: []
       };
 
       // 各行を処理（商品名列は除外）
-      row.forEach((cell, cellIndex) => {
+      processedRow.forEach((cell, cellIndex) => {
         // 商品名列（1列目）は記号検出から除外
         if (cellIndex === 0) return;
         
-        if ((rowIndex < 5 && cellIndex < 5) || (rowIndex >= 70 && rowIndex <= 100)) { // 最初の5行5列と行70-100をデバッグ
+        if ((rowIndex < 5 && cellIndex < 5) || (rowIndex >= 70 && rowIndex <= 100) || (rowIndex >= 209 && rowIndex <= 212)) { // 最初の5行5列、行70-100、行209-212をデバッグ
           console.log(`  セル[${rowIndex + 1},${cellIndex + 1}]: "${cell}"`);
         }
         
@@ -115,7 +138,7 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
               console.log(`記号変換: 行${rowIndex + 1}, 列${cellIndex + 1}, 記号: "${symbol}", マッピング値: "${mappedValue}"`);
               if (mappedValue) {
                 // アレルギー項目を特定
-                const allergenSlug = detectAllergenFromContext(row, cellIndex, standardAllergens);
+                const allergenSlug = detectAllergenFromContext(processedRow, cellIndex, standardAllergens);
                 console.log(`アレルギー特定: 行${rowIndex + 1}, 列${cellIndex + 1}, アレルギー: "${allergenSlug}"`);
                 if (allergenSlug) {
                   const outputValue = outputLabels[mappedValue] || mappedValue;
@@ -128,7 +151,7 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
             });
           } else if (cell.trim() === '-') {
             // ハイフン記号も処理
-            const allergenSlug = detectAllergenFromContext(row, cellIndex, standardAllergens);
+            const allergenSlug = detectAllergenFromContext(processedRow, cellIndex, standardAllergens);
             if (allergenSlug) {
               convertedRow.converted[allergenSlug] = outputLabels.none || 'none';
             }

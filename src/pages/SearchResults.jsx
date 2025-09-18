@@ -157,7 +157,7 @@ const SearchResults = () => {
     if (!Array.isArray(selectedAllergies) || selectedAllergies.length === 0) return false;
     return selectedAllergies.every(slug => {
       const rec = list.find(a => (a.allergy_item_slug || a.allergy_item_id) === slug);
-      const presence = (rec?.presence_type) || 'none'; // レコードが無ければ none 扱い
+      const presence = (rec?.presence_type) || 'direct'; // レコードが無ければ安全不明→除外
       return presence === 'none' || presence === 'trace';
     });
   };

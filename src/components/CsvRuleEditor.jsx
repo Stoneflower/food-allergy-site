@@ -51,12 +51,17 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
       row.forEach((cell, cellIndex) => {
         if (typeof cell === 'string') {
           // 記号パターンを検出
-          const symbolMatches = cell.match(/[●○◎△\-▯◇◆□■※★☆]/g);
+          const symbolMatches = cell.match(/[●○◎△▲\-▯◇◆□■※★☆]/g);
           if (symbolMatches) {
             symbolMatches.forEach(symbol => {
               symbols.add(symbol);
               console.log(`記号検出: 行${rowIndex + 1}, 列${cellIndex + 1}, セル内容: "${cell}", 記号: "${symbol}"`);
             });
+          } else {
+            // 記号が含まれている可能性があるセルをログ出力
+            if (cell.includes('△') || cell.includes('●') || cell.includes('○') || cell.includes('◎') || cell.includes('※') || cell.includes('▲')) {
+              console.log(`記号候補: 行${rowIndex + 1}, 列${cellIndex + 1}, セル内容: "${cell}"`);
+            }
           }
         }
       });

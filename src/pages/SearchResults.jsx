@@ -38,7 +38,10 @@ const SearchResults = () => {
       try {
         const y = window.scrollY || document.documentElement.scrollTop || 0;
         setShowBackToTop(y > 400);
-      } catch (_) {}
+      } catch (e) {
+        // ignore
+        void e;
+      }
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
@@ -147,17 +150,14 @@ const SearchResults = () => {
         setTimeout(() => {
           try {
             window.scrollBy({ top: -140, left: 0, behavior: 'smooth' });
-          } catch (_) {
-            /* noop */
+          } catch (e) {
+            void e;
           }
         }, 60);
       }
-    } catch (_) {
+    } catch (e) {
       // 画面スクロールアンカー取得に失敗しても致命的ではない
-      if (process && process.env && process.env.NODE_ENV !== 'production') {
-        // eslint-disable-next-line no-console
-        console.debug('button anchor scroll failed');
-      }
+      void e;
     }
   }, [searchFilters, selectedAllergies, selectedArea, selectedCategory]);
 

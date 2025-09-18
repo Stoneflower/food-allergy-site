@@ -156,10 +156,7 @@ const SearchResults = () => {
     if (!Array.isArray(selectedAllergies) || selectedAllergies.length === 0) return false;
 
     // 1) product_allergies_matrix を優先（高カバレッジ）
-    try {
-      // この関数のクロージャから現在のitem(=レストラン)の行は直接参照できないため、
-      // menuItem.parent を事前に付与していない場合は fallback に移行
-    } catch {}
+    // → 親参照が無い場合はこのステップはスキップ
 
     // 2) menu_item_allergies ベース（既存）
     const list = menuItem.menu_item_allergies || [];

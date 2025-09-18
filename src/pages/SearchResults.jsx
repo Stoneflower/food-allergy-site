@@ -31,6 +31,28 @@ const SearchResults = () => {
 
   const { getFilteredItems, selectedAllergies, setSelectedAllergies, selectedArea, selectedCategory, categories, allergyOptions } = useRestaurant();
 
+  // フローティング「一番上へ」ボタン表示制御
+  const [showBackToTop, setShowBackToTop] = useState(false);
+  React.useEffect(() => {
+    const onScroll = () => {
+      try {
+        const y = window.scrollY || document.documentElement.scrollTop || 0;
+        setShowBackToTop(y > 400);
+      } catch (_) {}
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    try {
+      window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+    } catch (_) {
+      window.scrollTo(0, 0);
+    }
+  };
+
   const filteredItems = getFilteredItems();
 
   // 検索フィルターを適用
@@ -121,6 +143,14 @@ const SearchResults = () => {
     try {
       if (typeof window !== 'undefined' && window.innerWidth < 640 && buttonAnchorRef.current) {
         buttonAnchorRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // ボタンより少し上（注意書きが見える位置）までオフセット
+        setTimeout(() => {
+          try {
+            window.scrollBy({ top: -140, left: 0, behavior: 'smooth' });
+          } catch (_) {
+            /* noop */
+          }
+        }, 60);
       }
     } catch (_) {
       // 画面スクロールアンカー取得に失敗しても致命的ではない
@@ -689,6 +719,18 @@ const SearchResults = () => {
           </div>
         </div>
       </div>
+      {/* フローティング: 一番上へ */}
+      {showBackToTop && (
+        <button
+          type="button"
+          onClick={scrollToTop}
+          className="fixed bottom-6 right-4 sm:right-6 z-40 rounded-full shadow-lg bg-orange-500 text-white w-12 h-12 flex items-center justify-center hover:bg-orange-600"
+          aria-label="一番上へ"
+          title="一番上へ"
+        >
+          ↑
+        </button>
+      )}
     </div>
   );
 };

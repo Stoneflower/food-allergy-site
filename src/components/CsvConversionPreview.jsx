@@ -75,22 +75,22 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
       unused: '未使用'
     };
     
-    // 強制的にデフォルト値を使用（デバッグ用）
+    // 強制的にデフォルト値を使用（問題解決のため）
     const outputLabels = { ...defaultOutputLabels };
     
     // デバッグ: rules.outputLabelsの内容を確認
-    if (rules.outputLabels && typeof rules.outputLabels === 'object') {
-      console.log('rules.outputLabelsのキー:', Object.keys(rules.outputLabels));
-      Object.keys(rules.outputLabels).forEach(key => {
-        console.log(`rules.outputLabels[${key}]:`, rules.outputLabels[key], typeof rules.outputLabels[key]);
-        if (rules.outputLabels[key] && typeof rules.outputLabels[key] === 'string') {
-          outputLabels[key] = rules.outputLabels[key];
-          console.log(`outputLabels[${key}]を更新:`, outputLabels[key]);
-        }
-      });
-    } else {
-      console.log('rules.outputLabelsが無効または存在しません');
-    }
+    console.log('=== outputLabels デバッグ情報 ===');
+    console.log('rules.outputLabels:', rules.outputLabels);
+    console.log('rules.outputLabelsの型:', typeof rules.outputLabels);
+    console.log('rules.outputLabelsの内容:', JSON.stringify(rules.outputLabels));
+    console.log('デフォルトoutputLabels:', defaultOutputLabels);
+    console.log('使用するoutputLabels:', outputLabels);
+    console.log('outputLabels.direct:', outputLabels.direct);
+    console.log('outputLabels.none:', outputLabels.none);
+    console.log('outputLabels.trace:', outputLabels.trace);
+    console.log('outputLabelsの型:', typeof outputLabels);
+    console.log('outputLabelsの内容:', JSON.stringify(outputLabels));
+    console.log('=== デバッグ情報終了 ===');
 
     console.log('=== outputLabels デバッグ情報 ===');
     console.log('rules.outputLabels:', rules.outputLabels);

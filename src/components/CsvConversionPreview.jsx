@@ -75,35 +75,14 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
       unused: '未使用'
     };
     
-    // 強制的にデフォルト値を使用（問題解決のため）
+    // 強制的にデフォルト値を使用（確実に日本語ラベルを適用）
     const outputLabels = { ...defaultOutputLabels };
     
-    // デバッグ: rules.outputLabelsの内容を確認
-    console.log('=== outputLabels デバッグ情報 ===');
-    console.log('rules.outputLabels:', rules.outputLabels);
-    console.log('rules.outputLabelsの型:', typeof rules.outputLabels);
-    console.log('rules.outputLabelsの内容:', JSON.stringify(rules.outputLabels));
-    console.log('デフォルトoutputLabels:', defaultOutputLabels);
-    console.log('使用するoutputLabels:', outputLabels);
-    console.log('outputLabels.direct:', outputLabels.direct);
-    console.log('outputLabels.none:', outputLabels.none);
-    console.log('outputLabels.trace:', outputLabels.trace);
-    console.log('outputLabelsの型:', typeof outputLabels);
-    console.log('outputLabelsの内容:', JSON.stringify(outputLabels));
-    console.log('=== デバッグ情報終了 ===');
-
-    console.log('=== outputLabels デバッグ情報 ===');
-    console.log('rules.outputLabels:', rules.outputLabels);
-    console.log('rules.outputLabelsの型:', typeof rules.outputLabels);
-    console.log('rules.outputLabelsの内容:', JSON.stringify(rules.outputLabels));
-    console.log('デフォルトoutputLabels:', defaultOutputLabels);
-    console.log('使用するoutputLabels:', outputLabels);
-    console.log('outputLabels.direct:', outputLabels.direct);
-    console.log('outputLabels.none:', outputLabels.none);
-    console.log('outputLabels.trace:', outputLabels.trace);
-    console.log('outputLabelsの型:', typeof outputLabels);
-    console.log('outputLabelsの内容:', JSON.stringify(outputLabels));
-    console.log('=== デバッグ情報終了 ===');
+    console.log('=== 最終的なoutputLabels ===');
+    console.log('direct:', outputLabels.direct);
+    console.log('none:', outputLabels.none);
+    console.log('trace:', outputLabels.trace);
+    console.log('unused:', outputLabels.unused);
     console.log('使用するallSymbolMappings:', allSymbolMappings);
     
     const converted = dataRows.map((row, rowIndex) => {
@@ -165,11 +144,9 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
                 const allergenSlug = detectAllergenFromContext(processedRow, cellIndex, standardAllergens);
                 console.log(`アレルギー特定: 行${rowIndex + 1}, 列${cellIndex + 1}, アレルギー: "${allergenSlug}"`);
                 if (allergenSlug) {
-                  const outputValue = outputLabels[mappedValue] || mappedValue;
+                  const outputValue = outputLabels[mappedValue];
                   convertedRow.converted[allergenSlug] = outputValue;
-                  console.log(`変換完了: 行${rowIndex + 1}, アレルギー: "${allergenSlug}", 値: "${outputValue}", マッピング値: "${mappedValue}"`);
-                  console.log(`  outputLabels["${mappedValue}"] = "${outputLabels[mappedValue]}"`);
-                  console.log(`  fallback値 = "${mappedValue}"`);
+                  console.log(`変換完了: 行${rowIndex + 1}, アレルギー: "${allergenSlug}", 値: "${outputValue}"`);
                 }
               }
             });
@@ -177,7 +154,8 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
             // ハイフン記号も処理
             const allergenSlug = detectAllergenFromContext(processedRow, cellIndex, standardAllergens);
             if (allergenSlug) {
-              convertedRow.converted[allergenSlug] = outputLabels.none || 'none';
+              convertedRow.converted[allergenSlug] = outputLabels.none;
+              console.log(`変換完了 (ハイフン): 行${rowIndex + 1}, アレルギー: "${allergenSlug}", 値: "${outputLabels.none}"`);
             }
           }
         }
@@ -280,10 +258,14 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
 
   const getCellColor = (value) => {
     switch (value) {
-      case 'direct': return 'bg-red-100 text-red-800';
-      case 'trace': return 'bg-yellow-100 text-yellow-800';
-      case 'none': return 'bg-green-100 text-green-800';
-      case 'unused': return 'bg-gray-100 text-gray-800';
+      case 'direct':
+      case 'ふくむ': return 'bg-red-100 text-red-800';
+      case 'trace':
+      case 'コンタミ': return 'bg-yellow-100 text-yellow-800';
+      case 'none':
+      case 'ふくまない': return 'bg-green-100 text-green-800';
+      case 'unused':
+      case '未使用': return 'bg-gray-100 text-gray-800';
       default: return 'bg-gray-50 text-gray-600';
     }
   };
@@ -413,10 +395,10 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
                               autoFocus
                             >
                               <option value="">選択</option>
-                              <option value="direct">direct</option>
-                              <option value="trace">trace</option>
-                              <option value="none">none</option>
-                              <option value="unused">unused</option>
+                              <option value="ふくむ">ふくむ</option>
+                              <option value="コンタミ">コンタミ</option>
+                              <option value="ふくまない">ふくまない</option>
+                              <option value="未使用">未使用</option>
                             </select>
                             <button
                               onClick={handleCellSave}

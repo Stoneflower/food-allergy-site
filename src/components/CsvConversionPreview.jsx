@@ -55,6 +55,17 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
         }
       });
     }
+
+    // outputLabelsのデフォルト値を設定
+    const outputLabels = {
+      direct: 'ふくむ',
+      none: 'ふくまない',
+      trace: 'コンタミ',
+      unused: '未使用',
+      ...rules.outputLabels
+    };
+
+    console.log('使用するoutputLabels:', outputLabels);
     
     const converted = dataRows.map((row, rowIndex) => {
       const convertedRow = {
@@ -82,9 +93,9 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
                 const allergenSlug = detectAllergenFromContext(row, cellIndex, standardAllergens);
                 console.log(`アレルギー特定: 行${rowIndex + 1}, 列${cellIndex + 1}, アレルギー: "${allergenSlug}"`);
                 if (allergenSlug) {
-                  const outputValue = rules.outputLabels[mappedValue] || mappedValue;
+                  const outputValue = outputLabels[mappedValue] || mappedValue;
                   convertedRow.converted[allergenSlug] = outputValue;
-                  console.log(`変換完了: 行${rowIndex + 1}, アレルギー: "${allergenSlug}", 値: "${outputValue}"`);
+                  console.log(`変換完了: 行${rowIndex + 1}, アレルギー: "${allergenSlug}", 値: "${outputValue}", マッピング値: "${mappedValue}"`);
                 }
               }
             });
@@ -92,7 +103,7 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
             // ハイフン記号も処理
             const allergenSlug = detectAllergenFromContext(row, cellIndex, standardAllergens);
             if (allergenSlug) {
-              convertedRow.converted[allergenSlug] = rules.outputLabels.none || 'none';
+              convertedRow.converted[allergenSlug] = outputLabels.none || 'none';
             }
           }
         }

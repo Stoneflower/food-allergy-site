@@ -597,35 +597,40 @@ const CsvExporter = ({ data, onBack }) => {
           const toDelete = [...existingSet].filter(n => !uniqueNames.includes(n));
           if (toDelete.length > 0) {
             console.log('🧹 menu_items差分削除 予定:', toDelete.length, '件');
-            // 先に子テーブル(menu_item_allergies)がある場合はFKのON DELETE CASCADEが必要。
-            // 無い場合は関連レコードを手動削除する（存在しない場合は無視される）。
             try {
-              const { data: rowsForDelete, error: fetchIdsErr } = await supabase
+              // まず対象商品の全メニューを取得 → JS側で名前一致してID抽出（URL長の制限を回避）
+              const { data: allMenus, error: fetchAllErr } = await supabase
                 .from('menu_items')
                 .select('id,name')
-                .eq('product_id', pid)
-                .in('name', toDelete);
-              if (fetchIdsErr) {
-                console.error('❌ 削除対象ID取得エラー:', fetchIdsErr);
+                .eq('product_id', pid);
+              if (fetchAllErr) {
+                console.error('❌ 削除対象取得エラー:', fetchAllErr);
               } else {
-                const deleteIds = (rowsForDelete || []).map(r => r.id);
-                if (deleteIds.length > 0) {
-                  // 子の削除（FKにより不要ならスキップされる）
-                  await supabase
-                    .from('menu_item_allergies')
-                    .delete()
-                    .in('menu_item_id', deleteIds);
-                  // 親の削除
-                  const { error: delErr } = await supabase
-                    .from('menu_items')
-                    .delete()
-                    .eq('product_id', pid)
-                    .in('id', deleteIds);
-                  if (delErr) {
-                    console.error('❌ menu_items削除エラー:', delErr);
-                  } else {
-                    console.log('✅ menu_items差分削除 完了:', deleteIds.length, '件');
+                const deleteIdList = (allMenus || [])
+                  .filter(r => toDelete.includes(r.name))
+                  .map(r => r.id);
+                if (deleteIdList.length > 0) {
+                  // バッチで削除（100件ずつ）
+                  const chunk = 100;
+                  for (let i = 0; i < deleteIdList.length; i += chunk) {
+                    const ids = deleteIdList.slice(i, i + chunk);
+                    // 子の削除（FK無ければ明示削除）
+                    await supabase
+                      .from('menu_item_allergies')
+                      .delete()
+                      .in('menu_item_id', ids);
+                    // 親の削除
+                    const { error: delErr } = await supabase
+                      .from('menu_items')
+                      .delete()
+                      .eq('product_id', pid)
+                      .in('id', ids);
+                    if (delErr) {
+                      console.error('❌ menu_items削除エラー:', delErr);
+                      break;
+                    }
                   }
+                  console.log('✅ menu_items差分削除 完了:', deleteIdList.length, '件');
                 }
               }
             } catch (e) {

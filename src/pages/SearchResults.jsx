@@ -170,7 +170,7 @@ const SearchResults = () => {
     const locs = Array.isArray(item.storeLocations) ? item.storeLocations : [];
     const primaryUrl = (locs.find(l => l.source_url)?.source_url) || null;
     return { item, edible, primaryUrl };
-  }).filter(x => x.edible.length > 0);
+  });
 
   const shouldShowGrouped = selectedAllergies.length > 0 && selectedCategory === 'restaurants';
 
@@ -441,11 +441,15 @@ const SearchResults = () => {
                       </div>
                       {expanded[item.id] && (
                         <div className="px-4 pb-3">
-                          <ul className="list-disc list-inside text-sm text-gray-800 space-y-1">
-                            {edible.map(mi => (
-                              <li key={mi.id}>{mi.name}</li>
-                            ))}
-                          </ul>
+                          {edible.length > 0 ? (
+                            <ul className="list-disc list-inside text-sm text-gray-800 space-y-1">
+                              {edible.map(mi => (
+                                <li key={mi.id}>{mi.name}</li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="text-sm text-gray-500">該当するメニューはありません</p>
+                          )}
                         </div>
                       )}
                     </div>

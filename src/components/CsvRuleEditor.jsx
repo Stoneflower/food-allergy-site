@@ -47,33 +47,44 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
     const allergens = [];
 
     // 最初の数行から記号を検出
-    csvData.slice(0, 10).forEach(row => {
-      row.forEach(cell => {
+    csvData.slice(0, 10).forEach((row, rowIndex) => {
+      row.forEach((cell, cellIndex) => {
         if (typeof cell === 'string') {
           // 記号パターンを検出
-          const symbolMatches = cell.match(/[●○〇※△▲×-]/g);
+          const symbolMatches = cell.match(/[●○〇※△▲×-・]/g);
           if (symbolMatches) {
-            symbolMatches.forEach(symbol => symbols.add(symbol));
+            symbolMatches.forEach(symbol => {
+              symbols.add(symbol);
+              console.log(`記号検出: 行${rowIndex + 1}, 列${cellIndex + 1}, セル内容: "${cell}", 記号: "${symbol}"`);
+            });
           }
         }
       });
     });
 
-    // ヘッダー行からアレルギー項目を検出
+    // 1行目（ヘッダー行）からアレルギー項目を検出
     if (csvData.length > 0) {
-      const headerRow = csvData[0];
+      const headerRow = csvData[0]; // 1行目
       headerRow.forEach((header, index) => {
         if (typeof header === 'string') {
           const allergen = standardAllergens.find(a => 
-            header.includes(a.name) || a.name.includes(header)
+            header.includes(a.name) || a.name.includes(header) ||
+            // カタカナ表記も対応
+            (header.includes('ｵﾚﾝｼﾞ') && a.slug === 'orange') ||
+            (header.includes('ｷｳｲﾌﾙｰﾂ') && a.slug === 'kiwi') ||
+            (header.includes('ｾﾞﾗﾁﾝ') && a.slug === 'gelatin') ||
+            (header.includes('ｶｼｭｰﾅｯﾂ') && a.slug === 'cashew') ||
+            (header.includes('ｱｰﾓﾝﾄﾞ') && a.slug === 'almond')
           );
           if (allergen) {
             allergens.push({ ...allergen, columnIndex: index });
+            console.log(`アレルギー項目検出: 列${index + 1}, ヘッダー: "${header}", 項目: ${allergen.name}`);
           }
         }
       });
     }
 
+    console.log('検出された記号:', Array.from(symbols));
     setDetectedSymbols(symbols);
     setDetectedAllergens(allergens);
   }, [csvData]);
@@ -215,9 +226,9 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
                   onChange={(e) => handleSymbolMappingChange(symbol, e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 >
-                  <option value="direct">含有</option>
+                  <option value="direct">ふくむ</option>
                   <option value="trace">コンタミ</option>
-                  <option value="none">含まない</option>
+                  <option value="none">ふくまない</option>
                   <option value="unused">未使用</option>
                 </select>
               </div>
@@ -269,9 +280,9 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
           {Object.entries(localRules.outputLabels).map(([type, value]) => (
             <div key={type}>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                {type === 'direct' && '含有'}
+                {type === 'direct' && 'ふくむ'}
                 {type === 'trace' && 'コンタミ'}
-                {type === 'none' && '含まない'}
+                {type === 'none' && 'ふくまない'}
                 {type === 'unused' && '未使用'}
               </label>
               <input

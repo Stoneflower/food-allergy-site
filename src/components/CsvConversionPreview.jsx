@@ -43,12 +43,12 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
   useEffect(() => {
     if (!csvData || !rules) return;
 
-    // ヘッダー行と説明行を除外（最初の3行をスキップ）
-    const dataRows = csvData.slice(3);
+    // ヘッダー行を除外（1行目をスキップ）
+    const dataRows = csvData.slice(1);
     
     const converted = dataRows.map((row, rowIndex) => {
       const convertedRow = {
-        rowIndex: rowIndex + 3, // 元の行番号を保持
+        rowIndex: rowIndex + 1, // 元の行番号を保持
         original: row,
         converted: {},
         errors: []
@@ -58,7 +58,7 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
       row.forEach((cell, cellIndex) => {
         if (typeof cell === 'string' && cell.trim()) {
           // 記号を検出して変換
-          const symbolMatches = cell.match(/[●○〇※△▲×-]/g);
+          const symbolMatches = cell.match(/[●○〇※△▲×-・]/g);
           if (symbolMatches) {
             symbolMatches.forEach(symbol => {
               const mappedValue = rules.symbolMappings[symbol];
@@ -70,8 +70,8 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
                 }
               }
             });
-          } else if (cell.trim() === '-' || cell.trim() === '－') {
-            // ハイフン記号も処理
+          } else if (cell.trim() === '-' || cell.trim() === '－' || cell.trim() === '・') {
+            // ハイフン記号とドット記号も処理
             const allergenSlug = detectAllergenFromContext(row, cellIndex, standardAllergens);
             if (allergenSlug) {
               convertedRow.converted[allergenSlug] = rules.outputLabels.none || 'none';
@@ -88,9 +88,9 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
   }, [csvData, rules]);
 
   const detectAllergenFromContext = (row, cellIndex, allergens) => {
-    // 3行目のヘッダー行からアレルギー項目を特定
-    if (csvData.length > 2) {
-      const headerRow = csvData[2]; // 3行目（0ベースなので2）
+    // 1行目のヘッダー行からアレルギー項目を特定
+    if (csvData.length > 0) {
+      const headerRow = csvData[0]; // 1行目
       if (headerRow[cellIndex]) {
         const header = headerRow[cellIndex].toString().trim();
         
@@ -250,7 +250,7 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
       <div className="bg-white border rounded-lg overflow-hidden">
         <div className="max-h-96 overflow-auto overflow-x-auto">
           <div className="mb-2 text-sm text-gray-600">
-            データ行 {convertedData.length} 行表示中 (CSV総行数: {csvData.length}行、ヘッダー行3行を除外済み)
+            データ行 {convertedData.length} 行表示中 (CSV総行数: {csvData.length}行、ヘッダー行1行を除外済み)
           </div>
           <table className="min-w-full divide-y divide-gray-200" style={{ minWidth: '1200px' }}>
             <thead className="bg-gray-50 sticky top-0">

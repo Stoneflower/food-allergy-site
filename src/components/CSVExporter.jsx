@@ -81,7 +81,7 @@ const CsvExporter = ({ data, onBack }) => {
     if (t === '') return true;
     // 【見出し】や（見出し）、記号のみ
     if (/^[【（(].*[】）)]$/.test(t)) return true;
-    if (/^[★☆※◇◆□■\-]+$/.test(t)) return true;
+    if (/^[★☆※◇◆□■-]+$/.test(t)) return true;
     return false;
   };
 

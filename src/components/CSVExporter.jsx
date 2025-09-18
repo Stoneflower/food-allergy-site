@@ -74,15 +74,13 @@ const CsvExporter = ({ data, onBack }) => {
     { slug: 'matsutake', name: 'まつたけ' }
   ];
 
-  // 見出し/説明のみの行を除外する判定
-  const isHeadingLike = (text) => {
+  // 記号だけの行を弾く（文字が残らない場合のみ除外）
+  const isSymbolsOnly = (text) => {
     if (!text) return true;
     const t = String(text).trim();
     if (t === '') return true;
-    // 【見出し】や（見出し）、記号のみ
-    if (/^[【（(].*[】）)]$/.test(t)) return true;
-    if (/^[★☆※◇◆□■-]+$/.test(t)) return true;
-    return false;
+    // 代表的な記号のみで構成される場合
+    return /^[●〇◎△※★☆◇◆□■▯\-]+$/.test(t);
   };
 
   // 括弧を外して中身だけ取り出す（全角・半角）
@@ -110,7 +108,7 @@ const CsvExporter = ({ data, onBack }) => {
     return t;
   };
 
-  // original配列からメニュー名を抽出
+  // original配列からメニュー名を抽出（見出し【…】も内容として取り込む）
   const extractMenuName = (originalRow) => {
     const cells = Array.isArray(originalRow) ? originalRow : [originalRow];
     const parts = [];
@@ -122,14 +120,12 @@ const CsvExporter = ({ data, onBack }) => {
         .filter(Boolean)
         .forEach(s => parts.push(s));
     });
-    // 見出し行（【…】など）は除外し、残りをスペースで結合して1行名へ
+    // 各行を正規化して結合。見出し【…】や（…）も中身を取り込む。
     const body = parts
-      .filter(p => !isHeadingLike(p))
       .map(stripBrackets)
-      // メニュー名に混入した記号群（● 〇 ◎ △ など）をスペースに置換
       .map(p => p.replace(/[●〇◎△※★☆◇◆□■▯-]+/g, ' '))
       .map(p => p.replace(/\s+/g, ' ').trim())
-      .filter(Boolean);
+      .filter(p => p.length > 0 && !isSymbolsOnly(p));
 
     if (body.length === 0) return '';
     const name = body.join(' ')

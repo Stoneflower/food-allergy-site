@@ -413,23 +413,16 @@ const CsvExporter = ({ data, onBack }) => {
       });
       
       console.log('ステージングデータ準備完了:', stagingData.length, '行');
-      
-      // バッチで挿入（100行ずつ）
-      const batchSize = 100;
-      for (let i = 0; i < stagingData.length; i += batchSize) {
-        const batch = stagingData.slice(i, i + batchSize);
-        const { error: insertError } = await supabase
-          .from('staging_imports')
-          .insert(batch);
-        
-        if (insertError) {
-          console.error('ステージングデータ挿入エラー:', insertError);
-          setUploadStatus('error');
-          return;
-        }
-        
-        console.log(`バッチ ${i + 1}-${Math.min(i + batchSize, stagingData.length)} 挿入完了`);
+      // 一括挿入（202件規模なら一発で投入）
+      const { error: insertError } = await supabase
+        .from('staging_imports')
+        .insert(stagingData);
+      if (insertError) {
+        console.error('ステージングデータ挿入エラー:', insertError);
+        setUploadStatus('error');
+        return;
       }
+      console.log('✅ staging_imports 一括挿入完了:', stagingData.length, '行');
       
       // 3. バッチ処理を実行
       console.log('🔄 バッチ処理開始:', jobId);

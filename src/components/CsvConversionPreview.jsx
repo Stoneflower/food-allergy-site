@@ -242,7 +242,7 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
   const updateStats = (data) => {
     const total = data.length;
     const converted = data.filter(row => Object.keys(row.converted).length > 0).length;
-    const errors = data.filter(row => row.errors.length > 0).length;
+    const errors = data.filter(row => row.errors && row.errors.length > 0).length;
     setStats({ total, converted, errors });
   };
 

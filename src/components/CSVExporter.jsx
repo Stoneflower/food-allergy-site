@@ -61,19 +61,45 @@ const CsvExporter = ({ data, onBack }) => {
 
   // 都道府県選択のヘルパー関数
   const handlePrefectureToggle = (prefecture) => {
-    setSelectedPrefectures(prev => 
-      prev.includes(prefecture) 
-        ? prev.filter(p => p !== prefecture)
-        : [...prev, prefecture]
-    );
+    setSelectedPrefectures(prev => {
+      const isSelected = prev.includes(prefecture);
+      const next = isSelected ? prev.filter(p => p !== prefecture) : [...prev, prefecture];
+      // 自動入力: 選択時に詳細住所へ都道府県名を仮入力、解除時は削除
+      setDetailedAddresses(current => {
+        const copy = { ...current };
+        if (!isSelected) {
+          // 追加時: まだユーザー入力が無ければ県名を初期値として入れる
+          if (!copy[prefecture] || copy[prefecture].trim() === '') {
+            copy[prefecture] = prefecture;
+          }
+        } else {
+          // 解除時: 入力値をクリア
+          delete copy[prefecture];
+        }
+        return copy;
+      });
+      return next;
+    });
   };
 
   const handleSelectAll = () => {
     setSelectedPrefectures([...prefectures]);
+    // 詳細住所へ都道府県名を一括初期入力（未入力のみ）
+    setDetailedAddresses(prev => {
+      const next = { ...prev };
+      prefectures.forEach(p => {
+        if (!next[p] || next[p].trim() === '') {
+          next[p] = p;
+        }
+      });
+      return next;
+    });
   };
 
   const handleSelectNone = () => {
     setSelectedPrefectures([]);
+    // 詳細住所のクリア
+    setDetailedAddresses({});
   };
 
   const handleDetailedAddressChange = (prefecture, address) => {
@@ -107,7 +133,10 @@ const CsvExporter = ({ data, onBack }) => {
     
     selectedPrefectures.forEach(prefecture => {
       const detailedAddress = detailedAddresses[prefecture] || '';
-      const fullAddress = detailedAddress ? `${prefecture}${detailedAddress}` : prefecture;
+      // 重複防止: 詳細が県名で始まる場合はそのまま、そうでなければ県名を前置
+      const fullAddress = detailedAddress
+        ? (detailedAddress.startsWith(prefecture) ? detailedAddress : `${prefecture}${detailedAddress}`)
+        : prefecture;
       
       data.forEach(row => {
         const csvRow = [];

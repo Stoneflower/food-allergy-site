@@ -140,20 +140,12 @@ const SearchResults = () => {
     }
   };
 
-  // モバイル: ボタン位置へ自動スクロール
+  // モバイル: 検索実行時はページ最上部（注意書き）へ自動スクロール
   const buttonAnchorRef = React.useRef(null);
   React.useEffect(() => {
     try {
-      if (typeof window !== 'undefined' && window.innerWidth < 640 && buttonAnchorRef.current) {
-        buttonAnchorRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        // ボタンより少し上（注意書きが見える位置）までオフセット
-        setTimeout(() => {
-          try {
-            window.scrollBy({ top: -140, left: 0, behavior: 'smooth' });
-          } catch (e) {
-            void e;
-          }
-        }, 60);
+      if (typeof window !== 'undefined' && window.innerWidth < 640) {
+        window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
       }
     } catch (e) {
       // 画面スクロールアンカー取得に失敗しても致命的ではない

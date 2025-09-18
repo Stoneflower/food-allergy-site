@@ -154,12 +154,11 @@ const SearchResults = () => {
 
   const isMenuSafe = (menuItem) => {
     const list = menuItem.menu_item_allergies || [];
-    if (!Array.isArray(list) || list.length === 0) return false;
     if (!Array.isArray(selectedAllergies) || selectedAllergies.length === 0) return false;
     return selectedAllergies.every(slug => {
       const rec = list.find(a => (a.allergy_item_slug || a.allergy_item_id) === slug);
-      if (!rec) return false;
-      return rec.presence_type === 'none' || rec.presence_type === 'trace';
+      const presence = (rec?.presence_type) || 'none'; // レコードが無ければ none 扱い
+      return presence === 'none' || presence === 'trace';
     });
   };
 

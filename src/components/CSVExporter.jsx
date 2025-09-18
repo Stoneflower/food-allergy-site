@@ -8,6 +8,12 @@ const CsvExporter = ({ data, onBack }) => {
   const [downloadStatus, setDownloadStatus] = useState('ready');
   const [uploadStatus, setUploadStatus] = useState('ready');
   const [fileName, setFileName] = useState('converted_allergy_data.csv');
+  const [defaultAddress, setDefaultAddress] = useState('兵庫県');
+  const [defaultSourceUrl, setDefaultSourceUrl] = useState('https://example.com');
+  const [defaultStoreListUrl, setDefaultStoreListUrl] = useState('https://example.com/stores');
+  const [productName, setProductName] = useState('びっくりドンキー');
+  const [productBrand, setProductBrand] = useState('ハンバーグレストラン');
+  const [productCategory, setProductCategory] = useState('レストラン');
 
   // 標準アレルギー項目
   const standardAllergens = [
@@ -66,17 +72,17 @@ const CsvExporter = ({ data, onBack }) => {
       
       // 元データから基本情報を抽出
       const original = row.original || [];
-      csvRow.push(original[0] || ''); // raw_product_name
-      csvRow.push(original[2] || ''); // raw_category
-      csvRow.push(original[7] || ''); // raw_source_url
-      csvRow.push(original[1] || ''); // raw_branch_name
-      csvRow.push(original[3] || ''); // raw_address
-      csvRow.push(original[4] || ''); // raw_phone
-      csvRow.push(original[5] || ''); // raw_hours
-      csvRow.push(original[6] || ''); // raw_closed
-      csvRow.push(original[8] || ''); // raw_store_list_url
+      csvRow.push(productName); // raw_product_name (products.name)
+      csvRow.push(productCategory); // raw_category (products.category)
+      csvRow.push(defaultSourceUrl); // raw_source_url
+      csvRow.push(productBrand); // raw_branch_name (products.brand)
+      csvRow.push(defaultAddress); // raw_address
+      csvRow.push(''); // raw_phone
+      csvRow.push(''); // raw_hours
+      csvRow.push(''); // raw_closed
+      csvRow.push(defaultStoreListUrl); // raw_store_list_url
       csvRow.push(''); // raw_notes
-      csvRow.push(original[9] || ''); // raw_menu_name
+      csvRow.push(original[0] || ''); // raw_menu_name (商品名と同じ)
       
       // アレルギー情報を追加（日本語ラベルを英語に変換）
       standardAllergens.forEach(allergen => {
@@ -223,17 +229,17 @@ const CsvExporter = ({ data, onBack }) => {
         const stagingRow = {
           import_batch_id: jobId,
           row_no: index + 1,
-          raw_product_name: row[0] || '',
-          raw_category: row[1] || '',
-          raw_source_url: row[2] || '',
-          raw_branch_name: row[3] || '',
-          raw_address: row[4] || '',
+          raw_product_name: productName, // products.name
+          raw_category: productCategory, // products.category
+          raw_source_url: row[2] || defaultSourceUrl,
+          raw_branch_name: productBrand, // products.brand
+          raw_address: row[4] || defaultAddress,
           raw_phone: row[5] || '',
           raw_hours: row[6] || '',
           raw_closed: row[7] || '',
-          raw_store_list_url: row[8] || '',
+          raw_store_list_url: row[8] || defaultStoreListUrl,
           raw_notes: row[9] || '',
-          raw_menu_name: row[10] || ''
+          raw_menu_name: row[10] || row[0] || ''
         };
         
         // アレルギー情報を追加
@@ -276,6 +282,11 @@ const CsvExporter = ({ data, onBack }) => {
       
       console.log('バッチ処理完了:', processData);
       setUploadStatus('completed');
+      
+      // アプリケーションのデータを再読み込み
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
       
     } catch (error) {
       console.error('アップロードエラー:', error);
@@ -357,6 +368,87 @@ const CsvExporter = ({ data, onBack }) => {
               value={fileName}
               onChange={(e) => setFileName(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              商品名 (products.name)
+            </label>
+            <input
+              type="text"
+              value={productName}
+              onChange={(e) => setProductName(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              placeholder="びっくりドンキー"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              ブランド (products.brand)
+            </label>
+            <input
+              type="text"
+              value={productBrand}
+              onChange={(e) => setProductBrand(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              placeholder="ハンバーグレストラン"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              カテゴリ (products.category)
+            </label>
+            <select
+              value={productCategory}
+              onChange={(e) => setProductCategory(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            >
+              <option value="レストラン">レストラン</option>
+              <option value="テイクアウト">テイクアウト</option>
+              <option value="スーパー">スーパー</option>
+              <option value="ネットショップ">ネットショップ</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              デフォルト住所
+            </label>
+            <input
+              type="text"
+              value={defaultAddress}
+              onChange={(e) => setDefaultAddress(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              placeholder="兵庫県"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              情報元URL
+            </label>
+            <input
+              type="text"
+              value={defaultSourceUrl}
+              onChange={(e) => setDefaultSourceUrl(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              placeholder="https://example.com"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              店舗一覧URL
+            </label>
+            <input
+              type="text"
+              value={defaultStoreListUrl}
+              onChange={(e) => setDefaultStoreListUrl(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              placeholder="https://example.com/stores"
             />
           </div>
 

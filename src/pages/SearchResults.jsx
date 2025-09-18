@@ -115,6 +115,16 @@ const SearchResults = () => {
     }
   };
 
+  // モバイル: ボタン位置へ自動スクロール
+  const buttonAnchorRef = React.useRef(null);
+  React.useEffect(() => {
+    try {
+      if (typeof window !== 'undefined' && window.innerWidth < 640 && buttonAnchorRef.current) {
+        buttonAnchorRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    } catch (_) {}
+  }, [searchFilters, selectedAllergies, selectedArea, selectedCategory]);
+
   const getSearchSummary = () => {
     const parts = [];
     if (searchFilters.keyword) parts.push(`"${searchFilters.keyword}"`);
@@ -371,14 +381,14 @@ const SearchResults = () => {
           </div>
         </div>
 
-        {/* モバイル向け: お店を見るボタン（アンカーへジャンプ） */}
-        <div className="mb-4 sm:hidden">
+        {/* モバイル向け: 検索したお店を見るボタン（アンカーへジャンプ） */}
+        <div ref={buttonAnchorRef} className="mb-4 sm:hidden">
           <button
             type="button"
             onClick={scrollToRestaurant}
             className="w-full inline-flex items-center justify-center px-4 py-3 rounded-lg bg-orange-500 text-white font-medium shadow hover:bg-orange-600"
           >
-            お店を見る
+            検索したお店を見る
           </button>
         </div>
 

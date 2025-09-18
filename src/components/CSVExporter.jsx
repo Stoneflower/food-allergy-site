@@ -200,8 +200,7 @@ const CsvExporter = ({ data, onBack }) => {
       const { data: jobData, error: jobError } = await supabase
         .from('import_jobs')
         .insert([{
-          status: 'pending',
-          created_at: new Date().toISOString()
+          status: 'pending'
         }])
         .select()
         .single();

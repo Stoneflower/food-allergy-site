@@ -391,7 +391,9 @@ const CsvExporter = ({ data, onBack }) => {
         // 選択された都道府県から住所を生成
         const addresses = selectedPrefectures.map(prefecture => {
           const detailedAddress = detailedAddresses[prefecture] || '';
-          return detailedAddress ? `${prefecture}${detailedAddress}` : prefecture;
+          return detailedAddress
+            ? (detailedAddress.startsWith(prefecture) ? detailedAddress : `${prefecture}${detailedAddress}`)
+            : prefecture;
         });
         
         console.log('📍 生成された住所:', addresses);
@@ -404,7 +406,7 @@ const CsvExporter = ({ data, onBack }) => {
             .from('store_locations')
             .upsert({
               product_id: productId,
-              branch_name: productBrand,
+              branch_name: null,
               address: address,
               source_url: defaultSourceUrl,
               store_list_url: defaultStoreListUrl

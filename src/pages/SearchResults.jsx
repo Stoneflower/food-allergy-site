@@ -155,42 +155,51 @@ const SearchResults = () => {
   const isMenuSafe = (menuItem) => {
     if (!Array.isArray(selectedAllergies) || selectedAllergies.length === 0) return false;
 
-    // 1) product_allergies_matrix を優先（高カバレッジ）
-    // → 親参照が無い場合はこのステップはスキップ
-
-    // 2) menu_item_allergies ベース（既存）
     const list = menuItem.menu_item_allergies || [];
     const hasList = Array.isArray(list) && list.length > 0;
-    if (hasList) {
-      const ok = selectedAllergies.every(slug => {
-        const rec = list.find(a => (a.allergy_item_slug || a.allergy_item_id) === slug);
-        const presence = (rec?.presence_type) || 'direct';
-        return presence === 'none' || presence === 'trace';
-      });
-      if (ok) return true;
-    }
-
-    // 3) 親アイテムの matrix から判定（parentに格納してから判定）
     const parent = menuItem.__parentProduct;
     const matrixRows = parent?.allergyMatrix || [];
-    if (Array.isArray(matrixRows) && matrixRows.length > 0) {
-      const slugToCol = (s) => (s === 'soy' ? 'soybean' : s);
-      const rowsForMenu = matrixRows.filter(r => (r.menu_name || '') === (menuItem.name || ''));
-      if (rowsForMenu.length === 0) return false;
-      // いずれかの行で全スラッグが 'd' でない（= none/trace）ならOK
-      for (const r of rowsForMenu) {
-        let ok = true;
-        for (const s of selectedAllergies) {
-          const col = slugToCol(s);
-          const v = (r[col] || '').toString().toLowerCase(); // 'd'|'t'|'n'
-          if (v === 'd') { ok = false; break; }
+    const normalizeName = (t) => {
+      if (!t) return '';
+      let s = String(t).trim();
+      // 括弧や【】を除去
+      const strip = (x) => x
+        .replace(/^【([^】]+)】$/, '$1')
+        .replace(/^（([^）]+)）$/, '$1')
+        .replace(/^\(([^)]+)\)$/, '$1');
+      s = strip(s);
+      // 記号をスペースへ
+      s = s.replace(/[●〇◎△※★☆◇◆□■▯-]+/g, ' ');
+      // 連続空白を1つに
+      s = s.replace(/\s+/g, ' ').trim();
+      return s;
+    };
+    const rowsForMenu = Array.isArray(matrixRows)
+      ? matrixRows.filter(r => normalizeName(r.menu_name || '') === normalizeName(menuItem.name || ''))
+      : [];
+    const slugToCol = (s) => (s === 'soy' ? 'soybean' : s);
+
+    // 1) matrix がある場合は matrix を優先
+    if (rowsForMenu.length > 0) {
+      for (const s of selectedAllergies) {
+        for (const r of rowsForMenu) {
+          const v = (r[slugToCol(s)] || '').toString().toLowerCase();
+          if (v === 'd') return false; // 選択スラッグでdirectが1つでもあればNG
         }
-        if (ok) return true;
       }
-      return false;
+      return true; // 選択スラッグのどれもdirectでない → OK
     }
 
-    return false;
+    // 2) matrix が無い場合は menu_item_allergies で判定
+    if (hasList) {
+      for (const s of selectedAllergies) {
+        const rec = list.find(a => (a.allergy_item_slug || a.allergy_item_id) === s);
+        if (rec?.presence_type === 'direct') return false;
+      }
+      return true;
+    }
+
+    return false; // どちらの情報も無ければ安全不明として非表示
   };
 
   // 選択アレルギーのうち、コンタミ（trace）があるスラッグ名リストを返す
@@ -214,7 +223,18 @@ const SearchResults = () => {
     const parent = menuItem.__parentProduct;
     const matrixRows = parent?.allergyMatrix || [];
     if (Array.isArray(matrixRows) && matrixRows.length > 0) {
-      const rowsForMenu = matrixRows.filter(r => (r.menu_name || '') === (menuItem.name || ''));
+      const normalizeName = (t) => {
+        if (!t) return '';
+        let s = String(t).trim();
+        s = s
+          .replace(/^【([^】]+)】$/, '$1')
+          .replace(/^（([^）]+)）$/, '$1')
+          .replace(/^\(([^)]+)\)$/, '$1')
+          .replace(/[●〇◎△※★☆◇◆□■▯-]+/g, ' ')
+          .replace(/\s+/g, ' ').trim();
+        return s;
+      };
+      const rowsForMenu = matrixRows.filter(r => normalizeName(r.menu_name || '') === normalizeName(menuItem.name || ''));
       const slugToCol = (s) => (s === 'soy' ? 'soybean' : s);
       for (const r of rowsForMenu) {
         for (const s of selectedAllergies) {

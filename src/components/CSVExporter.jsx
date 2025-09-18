@@ -102,35 +102,26 @@ const CsvExporter = ({ data, onBack }) => {
     return t;
   };
 
-  // original配列からメニュー名を複数抽出（【…】や（…）は別商品として扱う）
-  const extractMenuNames = (originalRow) => {
-    const cells = Array.isArray(originalRow) ? originalRow : [originalRow];
-    const parts = [];
-    cells.forEach((cell) => {
-      if (!cell) return;
-      String(cell)
-        .split('\n')
-        .map(s => s.trim())
-        .filter(Boolean)
-        .forEach(s => parts.push(s));
-    });
-    // 前の仕様に戻す:
-    // ・【…】と（…）が両方あるときのみ結合して1件
-    // ・それ以外は行全体（本体行含む）をすべて商品として採用
-    const rawLines = parts.map(s => s.trim()).filter(Boolean);
-    const bracketLines = rawLines.filter(s => /^【.+】$/.test(s));
-    const parenLines = rawLines.filter(s => /^[（(].+[）)]$/.test(s));
-    const normalize = (p) => String(p || '').replace(/\s+/g, ' ').trim();
-    let names = [];
-    if (bracketLines.length > 0 && parenLines.length > 0) {
-      const middle = rawLines.find(s => !/^【.+】$/.test(s) && !/^[（(].+[）)]$/.test(s)) || '';
-      const joined = normalize(`${bracketLines[0]} ${middle} ${parenLines[0]}`);
-      names = joined ? [joined] : [];
-    } else {
-      names = rawLines.map(normalize).filter(n => n);
-    }
+  // originalから「1行=1商品名」を抽出（商品名限定、記号も保持）
+  const extractMenuNameSingle = (originalRow) => {
+    // 商品名は原則1列目のみを対象にする（他列の文字は無視）
+    const firstCell = Array.isArray(originalRow) ? originalRow[0] : originalRow;
+    const lines = String(firstCell || '')
+      .split('\n')
+      .map(s => String(s).trim())
+      .filter(Boolean);
 
-    return names;
+    const normalize = (p) => String(p || '').replace(/\s+/g, ' ').trim();
+    if (lines.length === 0) return '';
+
+    const bracketLines = lines.filter(s => /^【.+】$/.test(s));
+    const parenLines = lines.filter(s => /^[（(].+[）)]$/.test(s));
+    if (bracketLines.length > 0 && parenLines.length > 0) {
+      const middle = lines.find(s => !/^【.+】$/.test(s) && !/^[（(].+[）)]$/.test(s)) || '';
+      return normalize(`${bracketLines[0]} ${middle} ${parenLines[0]}`);
+    }
+    // それ以外は先頭行を採用（必要十分に単純化）
+    return normalize(lines[0]);
   };
 
   // 都道府県選択のヘルパー関数
@@ -202,53 +193,37 @@ const CsvExporter = ({ data, onBack }) => {
       ...standardAllergens.map(a => a.slug)
     ];
 
-    // 選択された都道府県ごとにデータ行を作成
-    const allRows = [];
-    
-    selectedPrefectures.forEach(prefecture => {
-      const detailedAddress = detailedAddresses[prefecture] || '';
-      const fullAddress = normalizeAddress(prefecture, detailedAddress);
-      
-      data.forEach(row => {
-        // 元データから基本情報を抽出
-        const original = row.original || [];
-        const menuNames = extractMenuNames(original);
-        if (!menuNames || menuNames.length === 0) {
-          return; // 空行・記号行のみはスキップ
+    // 商品名は202件に限定して生成（都道府県で水増ししない）
+    const allRows = data.map(row => {
+      const original = row.original || [];
+      const menuName = extractMenuNameSingle(original);
+      if (!menuName) return null;
+      const csvRow = [];
+      csvRow.push(productName);
+      csvRow.push(productCategory);
+      csvRow.push(defaultSourceUrl);
+      csvRow.push(productBrand);
+      csvRow.push(''); // raw_address はmenu用ステージングでは空
+      csvRow.push(''); // phone
+      csvRow.push(''); // hours
+      csvRow.push(''); // closed
+      csvRow.push(defaultStoreListUrl);
+      csvRow.push(''); // notes
+      csvRow.push(menuName);
+      standardAllergens.forEach(allergen => {
+        const value = row.converted[allergen.slug] || '';
+        let englishValue = '';
+        switch (value) {
+          case 'ふくむ': englishValue = 'direct'; break;
+          case 'ふくまない': englishValue = 'none'; break;
+          case 'コンタミ': englishValue = 'trace'; break;
+          case '未使用': englishValue = 'unused'; break;
+          default: englishValue = value;
         }
-
-        menuNames.forEach(menuName => {
-          const csvRow = [];
-          csvRow.push(productName); // raw_product_name (products.name)
-          csvRow.push(productCategory); // raw_category (products.category)
-          csvRow.push(defaultSourceUrl); // raw_source_url
-          csvRow.push(productBrand); // raw_branch_name (products.brand)
-          csvRow.push(fullAddress); // raw_address (都道府県 + 詳細住所)
-          csvRow.push(''); // raw_phone
-          csvRow.push(''); // raw_hours
-          csvRow.push(''); // raw_closed
-          csvRow.push(defaultStoreListUrl); // raw_store_list_url
-          csvRow.push(''); // raw_notes
-          csvRow.push(menuName); // raw_menu_name（記号は文字として保存）
-          
-          // アレルギー情報を追加（日本語ラベルを英語に変換）
-          standardAllergens.forEach(allergen => {
-            const value = row.converted[allergen.slug] || '';
-            let englishValue = '';
-            switch (value) {
-              case 'ふくむ': englishValue = 'direct'; break;
-              case 'ふくまない': englishValue = 'none'; break;
-              case 'コンタミ': englishValue = 'trace'; break;
-              case '未使用': englishValue = 'unused'; break;
-              default: englishValue = value;
-            }
-            csvRow.push(englishValue);
-          });
-
-          allRows.push(csvRow);
-        });
+        csvRow.push(englishValue);
       });
-    });
+      return csvRow;
+    }).filter(Boolean);
 
     return [headers, ...allRows];
   };
@@ -355,7 +330,18 @@ const CsvExporter = ({ data, onBack }) => {
     console.log('✅ データ検証完了、アップロード開始');
     setUploadStatus('uploading');
     
+    let watchdogId;
     try {
+      // アップロードが長時間固まるのを防ぐウォッチドッグ（60秒）
+      watchdogId = setTimeout(() => {
+        try {
+          console.warn('⏱️ アップロードが60秒以上かかっています。フォールバック／完了扱いに移行します。');
+          setUploadStatus('error');
+          alert('処理がタイムアウトした可能性があります。画面を更新して再確認してください。');
+        } catch (e) {
+          // noop
+        }
+      }, 60000);
       // 1. import_jobsテーブルにジョブを作成
       const jobId = crypto.randomUUID();
       console.log('🔄 ジョブ作成開始:', jobId);
@@ -382,9 +368,15 @@ const CsvExporter = ({ data, onBack }) => {
       console.log('🔄 CSVデータ生成開始');
       const csvData = generateCsvData();
       console.log('✅ CSVデータ生成完了:', csvData.length, '行');
+      if (csvData.length > 1000) {
+        console.warn('⚠️ 生成行数が想定外に多いです。処理時間が長くなる可能性があります。');
+      }
       
       const rows = csvData.slice(1); // ヘッダー行を除外
       console.log('📊 データ行数:', rows.length);
+      if (rows.length > 10000) {
+        throw new Error(`生成された行数が多すぎます (${rows.length}). 入力を見直してください。`);
+      }
       
       const stagingData = rows.map((row, index) => {
         const stagingRow = {
@@ -608,6 +600,11 @@ const CsvExporter = ({ data, onBack }) => {
     } catch (error) {
       console.error('アップロードエラー:', error);
       setUploadStatus('error');
+    }
+    finally {
+      if (watchdogId) {
+        clearTimeout(watchdogId);
+      }
     }
   };
 

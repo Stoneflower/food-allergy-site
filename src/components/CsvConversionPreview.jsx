@@ -70,8 +70,9 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
         if (cellIndex === 0) return;
         
         if (typeof cell === 'string' && cell.trim()) {
-          // 記号を検出して変換（手動追加された記号も含む）
-          const symbolMatches = cell.match(/[●○◎△▲\-▯◇◆□■※★☆]/g);
+          // 商品名に含まれる記号を除外してから記号を検出して変換（手動追加された記号も含む）
+          const cleanCell = cell.replace(/【|】|／|（|）|＊|・/g, '');
+          const symbolMatches = cleanCell.match(/[●○◎△▲\-▯◇◆□■※★☆]/g);
           if (symbolMatches) {
             symbolMatches.forEach(symbol => {
               const mappedValue = allSymbolMappings[symbol];

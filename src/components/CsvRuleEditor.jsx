@@ -55,8 +55,10 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
         if (cellIndex === 0) return;
         
         if (typeof cell === 'string') {
-          // 記号パターンを検出
-          const symbolMatches = cell.match(/[●○◎△▲\-▯◇◆□■※★☆]/g);
+          // 商品名に含まれる記号を除外してから記号パターンを検出
+          const cleanCell = cell.replace(/【|】|／|（|）|＊|・/g, '');
+          const symbolMatches = cleanCell.match(/[●○◎△▲\-▯◇◆□■※★☆]/g);
+          
           if (symbolMatches) {
             symbolMatches.forEach(symbol => {
               symbols.add(symbol);
@@ -70,6 +72,10 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
             // すべてのセルの内容をログ出力（デバッグ用）
             if (cell.includes('※')) {
               console.log(`※記号発見: 行${rowIndex + 1}, 列${cellIndex + 1}, セル内容: "${cell}"`);
+            }
+            // 商品名記号のデバッグ
+            if (cell.includes('【') || cell.includes('】') || cell.includes('／') || cell.includes('（') || cell.includes('）') || cell.includes('＊') || cell.includes('・')) {
+              console.log(`商品名記号発見: 行${rowIndex + 1}, 列${cellIndex + 1}, セル内容: "${cell}"`);
             }
           }
         }

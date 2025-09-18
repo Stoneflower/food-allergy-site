@@ -535,6 +535,59 @@ const CsvExporter = ({ data, onBack }) => {
         console.error('❌ store_locations作成フォールバックエラー:', fallbackError);
         console.error('エラー詳細:', JSON.stringify(fallbackError, null, 2));
       }
+
+      // 5. menu_items 不足分フォールバック（staging_imports からユニーク名を補完）
+      try {
+        // product_id を再取得（上のブロック変数に依存しない）
+        const { data: prodRow, error: prodErr } = await supabase
+          .from('products')
+          .select('id')
+          .eq('name', productName)
+          .single();
+        if (prodErr || !prodRow) {
+          console.error('❌ menu_items補完用 product取得エラー:', prodErr);
+          throw prodErr || new Error('product not found');
+        }
+        const pid = prodRow.id;
+
+        // 対象商品の既存メニュー名を取得
+        const { data: existingMenus, error: existingMenusError } = await supabase
+          .from('menu_items')
+          .select('name')
+          .eq('product_id', pid);
+        if (existingMenusError) {
+          console.error('❌ 既存menu_items取得エラー:', existingMenusError);
+        }
+
+        // 今回バッチのstaging_importsからユニーク名を収集
+        const { data: stagingNames, error: stagingNamesError } = await supabase
+          .from('staging_imports')
+          .select('raw_menu_name')
+          .eq('import_batch_id', jobId);
+        if (stagingNamesError) {
+          console.error('❌ staging_imports取得エラー:', stagingNamesError);
+        } else {
+          const uniqueNames = Array.from(new Set((stagingNames || [])
+            .map(r => (r.raw_menu_name || '').trim())
+            .filter(n => n !== '')));
+          const existingSet = new Set((existingMenus || []).map(m => m.name));
+          const toInsert = uniqueNames.filter(n => !existingSet.has(n));
+          console.log(`🧩 menu_items不足検知: 既存=${existingSet.size}件, 今回ユニーク=${uniqueNames.length}件, 追加予定=${toInsert.length}件`);
+          if (toInsert.length > 0) {
+            const payload = toInsert.map(n => ({ product_id: pid, name: n, active: false }));
+            const { error: insertMenusError } = await supabase
+              .from('menu_items')
+              .upsert(payload, { onConflict: 'product_id,name' });
+            if (insertMenusError) {
+              console.error('❌ menu_items upsertエラー:', insertMenusError);
+            } else {
+              console.log('✅ menu_items upsert完了:', payload.length, '件');
+            }
+          }
+        }
+      } catch (menuFallbackError) {
+        console.error('❌ menu_itemsフォールバック処理エラー:', menuFallbackError);
+      }
       setUploadStatus('completed');
       
       // 成功メッセージを表示してからアプリケーションのデータを再読み込み

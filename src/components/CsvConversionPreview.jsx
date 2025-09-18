@@ -105,7 +105,7 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
             console.log(`  行${rowIndex + 1}を分割:`, processedRow);
           }
         } else if (row[0].includes('\n')) {
-          // 改行を含む場合は、改行で分割して最初の行を商品名として使用
+          // 改行を含む場合は、改行で分割してスペースで結合
           const lines = row[0].split('\n');
           const productName = lines.join(' '); // 改行をスペースに置換
           if (rowIndex >= 70 && rowIndex <= 100) {

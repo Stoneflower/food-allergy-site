@@ -266,7 +266,7 @@ const CsvExporter = ({ data, onBack }) => {
       
       // 3. バッチ処理を実行
       const { data: processData, error: processError } = await supabase
-        .rpc('process_import_batch', { batch_id: jobId });
+        .rpc('process_import_batch', { p_batch_id: jobId });
       
       if (processError) {
         console.error('バッチ処理エラー:', processError);

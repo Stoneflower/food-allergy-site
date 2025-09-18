@@ -43,9 +43,12 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
   useEffect(() => {
     if (!csvData || !rules) return;
 
-    const converted = csvData.map((row, rowIndex) => {
+    // ヘッダー行と説明行を除外（最初の3行をスキップ）
+    const dataRows = csvData.slice(3);
+    
+    const converted = dataRows.map((row, rowIndex) => {
       const convertedRow = {
-        rowIndex,
+        rowIndex: rowIndex + 3, // 元の行番号を保持
         original: row,
         converted: {},
         errors: []
@@ -60,13 +63,19 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
             symbolMatches.forEach(symbol => {
               const mappedValue = rules.symbolMappings[symbol];
               if (mappedValue) {
-                // アレルギー項目を特定（簡易的な方法）
+                // アレルギー項目を特定
                 const allergenSlug = detectAllergenFromContext(row, cellIndex, standardAllergens);
                 if (allergenSlug) {
                   convertedRow.converted[allergenSlug] = rules.outputLabels[mappedValue] || mappedValue;
                 }
               }
             });
+          } else if (cell.trim() === '-' || cell.trim() === '－') {
+            // ハイフン記号も処理
+            const allergenSlug = detectAllergenFromContext(row, cellIndex, standardAllergens);
+            if (allergenSlug) {
+              convertedRow.converted[allergenSlug] = rules.outputLabels.none || 'none';
+            }
           }
         }
       });
@@ -79,19 +88,43 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
   }, [csvData, rules]);
 
   const detectAllergenFromContext = (row, cellIndex, allergens) => {
-    // ヘッダー行からアレルギー項目を特定
-    if (csvData.length > 0) {
-      const headerRow = csvData[0];
+    // 3行目のヘッダー行からアレルギー項目を特定
+    if (csvData.length > 2) {
+      const headerRow = csvData[2]; // 3行目（0ベースなので2）
       if (headerRow[cellIndex]) {
-        const header = headerRow[cellIndex].toString();
-        const allergen = allergens.find(a => 
-          header.includes(a.name) || a.name.includes(header)
-        );
+        const header = headerRow[cellIndex].toString().trim();
+        
+        // より柔軟なマッチング
+        const allergen = allergens.find(a => {
+          const name = a.name.trim();
+          return header === name || 
+                 header.includes(name) || 
+                 name.includes(header) ||
+                 header === a.slug ||
+                 header.includes(a.slug) ||
+                 // カタカナ表記も対応
+                 (header.includes('ｵﾚﾝｼﾞ') && a.slug === 'orange') ||
+                 (header.includes('ｷｳｲﾌﾙｰﾂ') && a.slug === 'kiwi') ||
+                 (header.includes('ｾﾞﾗﾁﾝ') && a.slug === 'gelatin') ||
+                 (header.includes('ｶｼｭｰﾅｯﾂ') && a.slug === 'cashew') ||
+                 (header.includes('ｱｰﾓﾝﾄﾞ') && a.slug === 'almond');
+        });
+        
         if (allergen) {
           return allergen.slug;
         }
       }
     }
+    
+    // ヘッダーで見つからない場合、列位置から推定
+    // このCSVフォーマット: 商品名,卵,乳,小麦,そば,落花生,えび,かに,くるみ,大豆,牛肉,豚肉,鶏肉,さけ,さば,あわび,いか,いくら,オレンジ,キウイフルーツ,もも,りんご,やまいも,ゼラチン,バナナ,カシューナッツ,ゴマ,アーモンド,まつたけ
+    if (cellIndex >= 1) { // アレルギー項目は2列目以降（商品名の後）
+      const allergenIndex = cellIndex - 1;
+      if (allergenIndex < rules.allergenOrder.length) {
+        return rules.allergenOrder[allergenIndex];
+      }
+    }
+    
     return null;
   };
 
@@ -205,17 +238,17 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
 
       {/* 変換テーブル */}
       <div className="bg-white border rounded-lg overflow-hidden">
-        <div className="max-h-96 overflow-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+        <div className="max-h-96 overflow-auto overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200" style={{ minWidth: '1200px' }}>
             <thead className="bg-gray-50 sticky top-0">
               <tr>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   行
                 </th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  元データ
+                  商品名
                 </th>
-                {rules.allergenOrder.slice(0, 10).map(slug => {
+                {rules.allergenOrder.map(slug => {
                   const allergen = standardAllergens.find(a => a.slug === slug);
                   return (
                     <th key={slug} className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -232,9 +265,9 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
                     {rowIndex + 1}
                   </td>
                   <td className="px-3 py-2 text-sm text-gray-900 max-w-xs truncate">
-                    {row.original.join(', ')}
+                    {row.original[0] || '商品名なし'}
                   </td>
-                  {rules.allergenOrder.slice(0, 10).map(slug => {
+                  {rules.allergenOrder.map(slug => {
                     const value = getCellValue(rowIndex, slug);
                     const isEditing = editingCell === `${rowIndex}-${slug}`;
                     
@@ -285,7 +318,7 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
         </div>
         {convertedData.length > 20 && (
           <div className="bg-gray-50 px-3 py-2 text-sm text-gray-500 text-center">
-            他 {convertedData.length - 20} 行...
+            他 {convertedData.length - 20} 行... (ヘッダー行3行を除外済み)
           </div>
         )}
       </div>

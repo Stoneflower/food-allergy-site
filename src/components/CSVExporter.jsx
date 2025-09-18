@@ -114,10 +114,21 @@ const CsvExporter = ({ data, onBack }) => {
         .filter(Boolean)
         .forEach(s => parts.push(s));
     });
-    // そのままの行をすべて採用（特別扱いなし）
+    // 前の仕様に戻す:
+    // ・【…】と（…）が両方あるときのみ結合して1件
+    // ・それ以外は行全体（本体行含む）をすべて商品として採用
     const rawLines = parts.map(s => s.trim()).filter(Boolean);
+    const bracketLines = rawLines.filter(s => /^【.+】$/.test(s));
+    const parenLines = rawLines.filter(s => /^[（(].+[）)]$/.test(s));
     const normalize = (p) => String(p || '').replace(/\s+/g, ' ').trim();
-    const names = rawLines.map(normalize).filter(n => n);
+    let names = [];
+    if (bracketLines.length > 0 && parenLines.length > 0) {
+      const middle = rawLines.find(s => !/^【.+】$/.test(s) && !/^[（(].+[）)]$/.test(s)) || '';
+      const joined = normalize(`${bracketLines[0]} ${middle} ${parenLines[0]}`);
+      names = joined ? [joined] : [];
+    } else {
+      names = rawLines.map(normalize).filter(n => n);
+    }
 
     return names;
   };
@@ -527,7 +538,7 @@ const CsvExporter = ({ data, onBack }) => {
         console.error('エラー詳細:', JSON.stringify(fallbackError, null, 2));
       }
 
-      // 5. menu_items 不足分フォールバック（staging_imports からユニーク名を補完）
+      // 5. menu_items 置換フォールバック（今回のバッチ202件を必ず反映）
       try {
         // product_id を再取得（上のブロック変数に依存しない）
         const { data: prodRow, error: prodErr } = await supabase
@@ -541,85 +552,58 @@ const CsvExporter = ({ data, onBack }) => {
         }
         const pid = prodRow.id;
 
-        // 対象商品の既存メニュー名を取得
-        const { data: existingMenus, error: existingMenusError } = await supabase
-          .from('menu_items')
-          .select('name')
-          .eq('product_id', pid);
-        if (existingMenusError) {
-          console.error('❌ 既存menu_items取得エラー:', existingMenusError);
-        }
-
-        // 今回バッチのstaging_importsからユニーク名を収集
+        // 今回バッチのstaging_importsから行順で名前を収集（重複も保持）
         const { data: stagingNames, error: stagingNamesError } = await supabase
           .from('staging_imports')
-          .select('raw_menu_name')
-          .eq('import_batch_id', jobId);
+          .select('row_no, raw_menu_name')
+          .eq('import_batch_id', jobId)
+          .order('row_no', { ascending: true });
         if (stagingNamesError) {
           console.error('❌ staging_imports取得エラー:', stagingNamesError);
         } else {
-          const uniqueNames = Array.from(new Set((stagingNames || [])
-            .map(r => (r.raw_menu_name || '').trim())
-            .filter(n => n !== '')));
-          const existingSet = new Set((existingMenus || []).map(m => m.name));
-          const toInsert = uniqueNames.filter(n => !existingSet.has(n));
-          console.log(`🧩 menu_items不足検知: 既存=${existingSet.size}件, 今回ユニーク=${uniqueNames.length}件, 追加予定=${toInsert.length}件`);
-          if (toInsert.length > 0) {
-            const payload = toInsert.map(n => ({ product_id: pid, name: n, active: false }));
-            const { error: insertMenusError } = await supabase
-              .from('menu_items')
-              .upsert(payload, { onConflict: 'product_id,name' });
-            if (insertMenusError) {
-              console.error('❌ menu_items upsertエラー:', insertMenusError);
-            } else {
-              console.log('✅ menu_items upsert完了:', payload.length, '件');
+          // 既存menu_itemsを丸ごと削除（対象商品）
+          const { data: allMenus, error: fetchAllErr } = await supabase
+            .from('menu_items')
+            .select('id')
+            .eq('product_id', pid);
+          if (fetchAllErr) {
+            console.error('❌ 既存menu_items取得エラー:', fetchAllErr);
+          } else {
+            const allIds = (allMenus || []).map(r => r.id);
+            if (allIds.length > 0) {
+              // 子を先に削除
+              await supabase.from('menu_item_allergies').delete().in('menu_item_id', allIds);
+              await supabase.from('menu_items').delete().eq('product_id', pid).in('id', allIds);
+              console.log('🧹 既存menu_items 全削除:', allIds.length, '件');
             }
           }
 
-          // 差分削除: 今回のユニーク名に含まれない既存メニューは削除
-          const toDelete = [...existingSet].filter(n => !uniqueNames.includes(n));
-          if (toDelete.length > 0) {
-            console.log('🧹 menu_items差分削除 予定:', toDelete.length, '件');
-            try {
-              // まず対象商品の全メニューを取得 → JS側で名前一致してID抽出（URL長の制限を回避）
-              const { data: allMenus, error: fetchAllErr } = await supabase
-                .from('menu_items')
-                .select('id,name')
-                .eq('product_id', pid);
-              if (fetchAllErr) {
-                console.error('❌ 削除対象取得エラー:', fetchAllErr);
-              } else {
-                const deleteIdList = (allMenus || [])
-                  .filter(r => toDelete.includes(r.name))
-                  .map(r => r.id);
-                if (deleteIdList.length > 0) {
-                  // バッチで削除（100件ずつ）
-                  const chunk = 100;
-                  for (let i = 0; i < deleteIdList.length; i += chunk) {
-                    const ids = deleteIdList.slice(i, i + chunk);
-                    // 子の削除（FK無ければ明示削除）
-                    await supabase
-                      .from('menu_item_allergies')
-                      .delete()
-                      .in('menu_item_id', ids);
-                    // 親の削除
-                    const { error: delErr } = await supabase
-                      .from('menu_items')
-                      .delete()
-                      .eq('product_id', pid)
-                      .in('id', ids);
-                    if (delErr) {
-                      console.error('❌ menu_items削除エラー:', delErr);
-                      break;
-                    }
-                  }
-                  console.log('✅ menu_items差分削除 完了:', deleteIdList.length, '件');
-                }
-              }
-            } catch (e) {
-              console.error('❌ menu_items差分削除 例外:', e);
+          // 202件を必ずINSERT（重複名は(2),(3)…を付与して衝突回避）
+          const finalNames = [];
+          const nameCount = new Map();
+          (stagingNames || []).forEach(r => {
+            const base = (r.raw_menu_name || '').trim();
+            if (!base) return;
+            const count = (nameCount.get(base) || 0) + 1;
+            nameCount.set(base, count);
+            const name = count === 1 ? base : `${base} (${count})`;
+            finalNames.push(name);
+          });
+
+          // 連番を維持して一括挿入（100件チャンク）
+          const batchSizeInsert = 100;
+          for (let i = 0; i < finalNames.length; i += batchSizeInsert) {
+            const slice = finalNames.slice(i, i + batchSizeInsert);
+            const payload = slice.map(n => ({ product_id: pid, name: n, active: false }));
+            const { error: insertErr } = await supabase
+              .from('menu_items')
+              .insert(payload);
+            if (insertErr) {
+              console.error('❌ menu_items 一括INSERTエラー:', insertErr);
+              break;
             }
           }
+          console.log('✅ menu_items 置換INSERT 完了:', finalNames.length, '件');
         }
       } catch (menuFallbackError) {
         console.error('❌ menu_itemsフォールバック処理エラー:', menuFallbackError);

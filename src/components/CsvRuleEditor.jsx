@@ -38,7 +38,8 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
     { slug: 'cashew', name: 'カシューナッツ' },
     { slug: 'sesame', name: 'ごま' },
     { slug: 'almond', name: 'アーモンド' },
-    { slug: 'matsutake', name: 'まつたけ' }
+    { slug: 'matsutake', name: 'まつたけ' },
+    { slug: 'macadamia', name: 'マカダミアナッツ' }
   ];
 
   // CSVから記号とアレルギー項目を検出

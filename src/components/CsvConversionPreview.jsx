@@ -197,9 +197,29 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
           console.log(`  セル[${rowIndex + 1},${cellIndex + 1}]: "${cell}"`);
         }
         
-        if (typeof cell === 'string' && cell.trim()) {
+        // まず対象アレルゲンを特定（空欄処理にも使う）
+        const allergenSlugForCell = detectAllergenFromContext(processedRow, cellIndex, standardAllergens);
+
+        // 空欄・不可視空白を「ふくまない」に正規化
+        const normalizedRaw = (cell ?? '')
+          .toString()
+          .replace(/\u00A0/g, '')  // NBSP
+          .replace(/\u200B/g, '')  // ゼロ幅空白
+          .trim();
+
+        if (!normalizedRaw) {
+          if (allergenSlugForCell) {
+            convertedRow.converted[allergenSlugForCell] = 'ふくまない';
+            if (rowIndex < 5 && cellIndex < 5) {
+              console.log(`    空欄→ふくまない: 行${rowIndex + 1}, アレルギー: "${allergenSlugForCell}"`);
+            }
+          }
+          return; // 次のセルへ
+        }
+
+        if (typeof cell === 'string' && normalizedRaw) {
           // 商品名に含まれる記号を除外してから記号を検出して変換（手動追加された記号も含む）
-          const cleanCell = cell.replace(/【|】|／|（|）|＊|・/g, '');
+          const cleanCell = normalizedRaw.replace(/【|】|／|（|）|＊|・/g, '');
           const symbolMatches = cleanCell.match(/[●○◎△▲\-▯◇◆□■※★☆]/g);
           if (symbolMatches) {
             if (rowIndex < 5 && cellIndex < 5) {
@@ -210,7 +230,7 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
               console.log(`記号変換: 行${rowIndex + 1}, 列${cellIndex + 1}, 記号: "${symbol}", マッピング値: "${mappedValue}"`);
               if (mappedValue) {
                 // アレルギー項目を特定
-                const allergenSlug = detectAllergenFromContext(processedRow, cellIndex, standardAllergens);
+                const allergenSlug = allergenSlugForCell || detectAllergenFromContext(processedRow, cellIndex, standardAllergens);
                 console.log(`アレルギー特定: 行${rowIndex + 1}, 列${cellIndex + 1}, アレルギー: "${allergenSlug}"`);
                 if (allergenSlug) {
                   // 直接日本語ラベルを設定
@@ -227,9 +247,9 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
                 }
               }
             });
-          } else if (cell.trim() === '-') {
+          } else if (normalizedRaw === '-') {
             // ハイフン記号も処理
-            const allergenSlug = detectAllergenFromContext(processedRow, cellIndex, standardAllergens);
+            const allergenSlug = allergenSlugForCell || detectAllergenFromContext(processedRow, cellIndex, standardAllergens);
             if (allergenSlug) {
               convertedRow.converted[allergenSlug] = 'ふくまない';
               console.log(`変換完了 (ハイフン): 行${rowIndex + 1}, アレルギー: "${allergenSlug}", 値: "ふくまない"`);

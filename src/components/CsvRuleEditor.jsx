@@ -308,6 +308,25 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
         </div>
 
         <div className="space-y-3">
+          {/* 空欄の扱いを明示的に表示 */}
+          <div className="flex items-center space-x-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+            <div className="w-12 text-center">
+              <span className="text-sm text-blue-600 font-medium">空欄</span>
+            </div>
+            <div className="flex-1">
+              <select
+                value="none"
+                disabled
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600"
+              >
+                <option value="none">ふくまない</option>
+              </select>
+            </div>
+            <div className="w-8 text-center">
+              <span className="text-xs text-blue-600">固定</span>
+            </div>
+          </div>
+          
           {Object.entries(localRules.symbolMappings).map(([symbol, value]) => (
             <div key={symbol} className="flex items-center space-x-4 p-3 bg-gray-50 rounded-lg">
               <div className="w-12 text-center">

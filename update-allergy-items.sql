@@ -58,3 +58,53 @@ FROM information_schema.columns
 WHERE table_name = 'product_allergies_matrix' 
 AND (column_name LIKE '%macadamia%' OR column_name LIKE '%matsutake%')
 ORDER BY column_name;
+
+-- 6. matrixにmenu_item_idを導入し、全メニューを1メニュー=1行で表現
+-- 6-1) カラム追加（存在しない場合）
+ALTER TABLE product_allergies_matrix 
+ADD COLUMN IF NOT EXISTS menu_item_id INTEGER;
+
+-- 6-2) 既存行のmenu_item_idをnameとproduct_idで突合して埋める
+UPDATE product_allergies_matrix pam
+SET menu_item_id = mi.id
+FROM menu_items mi
+WHERE pam.menu_item_id IS NULL
+  AND pam.product_id = mi.product_id
+  AND pam.menu_name = mi.name;
+
+-- 6-3) 欠落行を補完（menu_itemsにあるがmatrixに無いものをデフォルト'n'で作成）
+INSERT INTO product_allergies_matrix (
+  product_id, menu_item_id, menu_name,
+  egg,milk,wheat,buckwheat,peanut,shrimp,crab,walnut,almond,abalone,squid,salmon_roe,orange,cashew,kiwi,beef,gelatin,sesame,salmon,mackerel,soybean,chicken,banana,pork,matsutake,peach,yam,apple,macadamia
+)
+SELECT
+  mi.product_id, mi.id, mi.name,
+  'n','n','n','n','n','n','n','n','n','n','n','n','n','n','n','n','n','n','n','n','n','n','n','n','n','n','n','n','n'
+FROM menu_items mi
+LEFT JOIN product_allergies_matrix pam ON pam.menu_item_id = mi.id
+WHERE pam.menu_item_id IS NULL;
+
+-- 6-4) 同名統合用のユニークインデックスがあれば削除（存在すれば）
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 
+    FROM pg_indexes 
+    WHERE schemaname = ANY (current_schemas(false))
+      AND indexname IN ('ux_pam_product_menu_name','ux_product_menu_name')
+  ) THEN
+    BEGIN
+      EXECUTE 'DROP INDEX IF EXISTS ux_pam_product_menu_name';
+      EXECUTE 'DROP INDEX IF EXISTS ux_product_menu_name';
+    EXCEPTION WHEN OTHERS THEN NULL;
+    END;
+  END IF;
+END$$;
+
+-- 6-5) menu_item_idで一意化し、menu_itemsへFKを付与
+ALTER TABLE product_allergies_matrix
+  ADD CONSTRAINT IF NOT EXISTS fk_pam_menu_item
+  FOREIGN KEY (menu_item_id) REFERENCES menu_items(id) ON DELETE CASCADE;
+
+CREATE UNIQUE INDEX IF NOT EXISTS ux_pam_menu_item_id 
+ON product_allergies_matrix(menu_item_id);

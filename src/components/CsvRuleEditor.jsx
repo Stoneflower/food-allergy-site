@@ -3,7 +3,15 @@ import { motion } from 'framer-motion';
 import { FiPlus, FiTrash2, FiEdit3, FiSave, FiRotateCcw } from 'react-icons/fi';
 
 const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
-  const [localRules, setLocalRules] = useState(rules);
+  // デフォルトのallergenOrderを29項目に拡張し、29番目以降は「使用しない」に設定
+  const defaultRules = {
+    ...rules,
+    allergenOrder: rules.allergenOrder.slice(0, 28).concat(
+      Array.from({ length: Math.max(0, 29 - rules.allergenOrder.length) }, () => 'unused')
+    )
+  };
+  
+  const [localRules, setLocalRules] = useState(defaultRules);
   const [detectedSymbols, setDetectedSymbols] = useState(new Set());
   const [detectedAllergens, setDetectedAllergens] = useState([]);
   const [manualSymbols, setManualSymbols] = useState(new Set());
@@ -116,12 +124,18 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
         .sort((a, b) => a.columnIndex - b.columnIndex) // 列順でソート
         .map(a => a.slug);
       
+      // 29番目以降は「使用しない」に設定（ただし29番目は項目を選べるようにする）
+      const finalOrder = detectedOrder.slice(0, 28).concat(
+        Array.from({ length: Math.max(0, 29 - detectedOrder.length) }, () => 'unused')
+      );
+      
       console.log('検出されたアレルギー順序:', detectedOrder);
+      console.log('最終的な順序（29番目以降は使用しない）:', finalOrder);
       
       // 検出された順序でallergenOrderを更新
       setLocalRules(prev => ({
         ...prev,
-        allergenOrder: detectedOrder
+        allergenOrder: finalOrder
       }));
     }
   }, [csvData]);
@@ -380,6 +394,7 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {localRules.allergenOrder.map((slug, index) => {
             const allergen = standardAllergens.find(a => a.slug === slug);
+            const displayName = slug === 'unused' ? '使用しない' : (allergen ? `${allergen.name} (${allergen.slug})` : slug);
             return (
               <div key={index} className="flex items-center space-x-2">
                 <span className="w-8 text-sm text-gray-500">{index + 1}</span>
@@ -388,6 +403,7 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
                   onChange={(e) => handleAllergenOrderChange(index, e.target.value)}
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
                 >
+                  <option value="unused">使用しない</option>
                   {standardAllergens.map(allergen => (
                     <option key={allergen.slug} value={allergen.slug}>
                       {allergen.name} ({allergen.slug})

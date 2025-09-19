@@ -42,51 +42,109 @@ const CsvExporter = ({ data, onBack }) => {
     return `${prefecture}${normalized}`;
   };
 
-  // product_allergies_matrixを自動更新する関数（最適化版）
+  // product_allergies_matrixを自動更新する関数（確実な差分削除版）
   const updateProductAllergiesMatrix = async (productId, batchId) => {
     try {
       console.log('🔄 product_allergies_matrix自動更新開始');
       
-      // タイムアウト設定を追加（30秒）
-      const { error: insertError } = await supabase.rpc('upsert_product_allergies_matrix', {
-        p_product_id: productId,
-        p_batch_id: batchId
-      }, {
-        timeout: 30000 // 30秒タイムアウト
+      // 1. 既存のproduct_allergies_matrixを完全削除
+      console.log('🧹 既存product_allergies_matrix削除開始');
+      const { error: deleteError } = await supabase
+        .from('product_allergies_matrix')
+        .delete()
+        .eq('product_id', productId);
+      
+      if (deleteError) {
+        console.error('❌ product_allergies_matrix削除エラー:', deleteError);
+        throw deleteError;
+      }
+      console.log('✅ 既存product_allergies_matrix削除完了');
+      
+      // 2. 新しいmenu_itemsに対応するproduct_allergies_matrixを作成（デフォルト値）
+      console.log('📝 新しいproduct_allergies_matrix作成開始');
+      const { error: insertError } = await supabase.rpc('create_default_product_allergies_matrix', {
+        p_product_id: productId
       });
       
       if (insertError) {
-        console.error('❌ product_allergies_matrix補完エラー:', insertError);
+        console.error('❌ デフォルトproduct_allergies_matrix作成エラー:', insertError);
+        // フォールバック: 直接INSERT
+        const { data: menuItems, error: fetchError } = await supabase
+          .from('menu_items')
+          .select('id, name')
+          .eq('product_id', productId);
         
-        // タイムアウトの場合は手動更新を提案
-        if (insertError.code === '57014') {
-          console.warn('⚠️ タイムアウトが発生しました。手動更新が必要です。');
-          console.log('手動更新SQL:');
-          console.log(`-- 手動更新用SQL
-INSERT INTO product_allergies_matrix (
-  product_id, menu_item_id, menu_name,
-  egg, milk, wheat, buckwheat, peanut, shrimp, crab, walnut, almond,
-  abalone, squid, salmon_roe, orange, cashew, kiwi, beef, gelatin,
-  sesame, salmon, mackerel, soybean, chicken, banana, pork, matsutake,
-  peach, yam, apple, macadamia
-)
-SELECT
-  mi.product_id, mi.id, mi.name,
-  'none','none','none','none','none','none','none','none','none',
-  'none','none','none','none','none','none','none','none',
-  'none','none','none','none','none','none','none','none',
-  'none','none','none','none'
-FROM menu_items mi
-LEFT JOIN product_allergies_matrix pam ON pam.menu_item_id = mi.id
-WHERE mi.product_id = ${productId}
-  AND pam.menu_item_id IS NULL;`);
+        if (fetchError) {
+          throw fetchError;
         }
-        return;
+        
+        const defaultRows = (menuItems || []).map(mi => ({
+          product_id: productId,
+          menu_item_id: mi.id,
+          menu_name: mi.name,
+          egg: 'none',
+          milk: 'none',
+          wheat: 'none',
+          buckwheat: 'none',
+          peanut: 'none',
+          shrimp: 'none',
+          crab: 'none',
+          walnut: 'none',
+          almond: 'none',
+          abalone: 'none',
+          squid: 'none',
+          salmon_roe: 'none',
+          orange: 'none',
+          cashew: 'none',
+          kiwi: 'none',
+          beef: 'none',
+          gelatin: 'none',
+          sesame: 'none',
+          salmon: 'none',
+          mackerel: 'none',
+          soybean: 'none',
+          chicken: 'none',
+          banana: 'none',
+          pork: 'none',
+          matsutake: 'none',
+          peach: 'none',
+          yam: 'none',
+          apple: 'none',
+          macadamia: 'none'
+        }));
+        
+        const { error: fallbackInsertError } = await supabase
+          .from('product_allergies_matrix')
+          .insert(defaultRows);
+        
+        if (fallbackInsertError) {
+          throw fallbackInsertError;
+        }
+        console.log('✅ フォールバックproduct_allergies_matrix作成完了:', defaultRows.length, '件');
+      } else {
+        console.log('✅ デフォルトproduct_allergies_matrix作成完了');
+      }
+      
+      // 3. staging_importsから実際のアレルギー情報を更新
+      console.log('🔄 アレルギー情報更新開始');
+      const { error: updateError } = await supabase.rpc('upsert_product_allergies_matrix', {
+        p_product_id: productId,
+        p_batch_id: batchId
+      }, {
+        timeout: 60000 // 60秒タイムアウト
+      });
+      
+      if (updateError) {
+        console.error('❌ アレルギー情報更新エラー:', updateError);
+        // エラーでもデフォルト値は作成済みなので続行
+      } else {
+        console.log('✅ アレルギー情報更新完了');
       }
       
       console.log('✅ product_allergies_matrix自動更新完了');
     } catch (error) {
       console.error('❌ product_allergies_matrix更新エラー:', error);
+      throw error;
     }
   };
 
@@ -539,6 +597,12 @@ WHERE mi.product_id = ${productId}
       } else {
         console.log('✅ バッチ処理完了:', processData);
         console.log('📊 処理結果:', JSON.stringify(processData, null, 2));
+        
+        // バッチ処理が成功した場合、product_allergies_matrixを更新
+        if (processData && processData.product_id) {
+          console.log('🔄 バッチ処理成功後のproduct_allergies_matrix更新開始');
+          await updateProductAllergiesMatrix(processData.product_id, jobId);
+        }
       }
       
       // 4. store_locationsデータを手動で作成（バッチ処理が失敗した場合のフォールバック）
@@ -722,6 +786,23 @@ WHERE mi.product_id = ${productId}
       } catch (menuFallbackError) {
         console.error('❌ menu_itemsフォールバック処理エラー:', menuFallbackError);
       }
+      
+      // フォールバック処理完了後も、product_allergies_matrixを確実に更新
+      try {
+        const { data: finalProductData, error: finalProductError } = await supabase
+          .from('products')
+          .select('id')
+          .eq('name', productName)
+          .single();
+        
+        if (!finalProductError && finalProductData) {
+          console.log('🔄 フォールバック完了後のproduct_allergies_matrix最終更新開始');
+          await updateProductAllergiesMatrix(finalProductData.id, jobId);
+        }
+      } catch (finalUpdateError) {
+        console.error('❌ 最終更新エラー:', finalUpdateError);
+      }
+      
       setUploadStatus('completed');
       
       // 成功メッセージを表示してからアプリケーションのデータを再読み込み

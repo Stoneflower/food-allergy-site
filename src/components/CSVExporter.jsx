@@ -42,6 +42,26 @@ const CsvExporter = ({ data, onBack }) => {
     return `${prefecture}${normalized}`;
   };
 
+  // product_allergies_matrixを自動更新する関数
+  const updateProductAllergiesMatrix = async (productId, batchId) => {
+    try {
+      // 1. まず全メニュー分を既定値で補完
+      const { error: insertError } = await supabase.rpc('upsert_product_allergies_matrix', {
+        p_product_id: productId,
+        p_batch_id: batchId
+      });
+      
+      if (insertError) {
+        console.error('❌ product_allergies_matrix補完エラー:', insertError);
+        return;
+      }
+      
+      console.log('✅ product_allergies_matrix自動更新完了');
+    } catch (error) {
+      console.error('❌ product_allergies_matrix更新エラー:', error);
+    }
+  };
+
   // 標準アレルギー項目
   const standardAllergens = [
     { slug: 'egg', name: '卵' },
@@ -665,6 +685,10 @@ const CsvExporter = ({ data, onBack }) => {
             console.error('❌ menu_items 一括INSERTエラー:', insertErr);
           } else {
             console.log('✅ menu_items 置換INSERT 完了:', finalNames.length, '件');
+            
+            // product_allergies_matrixを自動更新
+            console.log('🔄 product_allergies_matrix自動更新開始');
+            await updateProductAllergiesMatrix(pid, jobId);
           }
         }
       } catch (menuFallbackError) {

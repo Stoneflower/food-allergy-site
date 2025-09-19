@@ -470,6 +470,9 @@ const CsvExporter = ({ data, onBack }) => {
         .insert(stagingData);
       if (insertError) {
         console.error('ステージングデータ挿入エラー:', insertError);
+        console.error('エラー詳細:', JSON.stringify(insertError, null, 2));
+        console.error('挿入データサンプル（最初の3行）:', stagingData.slice(0, 3));
+        console.error('挿入データのカラム一覧:', Object.keys(stagingData[0] || {}));
         setUploadStatus('error');
         return;
       }

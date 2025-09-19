@@ -95,7 +95,8 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
             (header.includes('ｷｳｲﾌﾙｰﾂ') && a.slug === 'kiwi') ||
             (header.includes('ｾﾞﾗﾁﾝ') && a.slug === 'gelatin') ||
             (header.includes('ｶｼｭｰﾅｯﾂ') && a.slug === 'cashew') ||
-            (header.includes('ｱｰﾓﾝﾄﾞ') && a.slug === 'almond')
+            (header.includes('ｱｰﾓﾝﾄﾞ') && a.slug === 'almond') ||
+            (header.includes('マカダミアナッツ') && a.slug === 'macadamia')
           );
           if (allergen) {
             allergens.push({ ...allergen, columnIndex: index });
@@ -108,6 +109,21 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
     console.log('検出された記号:', Array.from(symbols));
     setDetectedSymbols(symbols);
     setDetectedAllergens(allergens);
+    
+    // CSVヘッダーから検出されたアレルギー項目の順序を自動設定
+    if (allergens.length > 0) {
+      const detectedOrder = allergens
+        .sort((a, b) => a.columnIndex - b.columnIndex) // 列順でソート
+        .map(a => a.slug);
+      
+      console.log('検出されたアレルギー順序:', detectedOrder);
+      
+      // 検出された順序でallergenOrderを更新
+      setLocalRules(prev => ({
+        ...prev,
+        allergenOrder: detectedOrder
+      }));
+    }
   }, [csvData]);
 
   const handleSymbolMappingChange = (symbol, value) => {

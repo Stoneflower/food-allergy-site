@@ -289,7 +289,8 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
                  (header.includes('ｷｳｲﾌﾙｰﾂ') && a.slug === 'kiwi') ||
                  (header.includes('ｾﾞﾗﾁﾝ') && a.slug === 'gelatin') ||
                  (header.includes('ｶｼｭｰﾅｯﾂ') && a.slug === 'cashew') ||
-                 (header.includes('ｱｰﾓﾝﾄﾞ') && a.slug === 'almond');
+                 (header.includes('ｱｰﾓﾝﾄﾞ') && a.slug === 'almond') ||
+                 (header.includes('マカダミアナッツ') && a.slug === 'macadamia');
         });
         
         if (allergen) {

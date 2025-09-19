@@ -42,17 +42,45 @@ const CsvExporter = ({ data, onBack }) => {
     return `${prefecture}${normalized}`;
   };
 
-  // product_allergies_matrixを自動更新する関数
+  // product_allergies_matrixを自動更新する関数（最適化版）
   const updateProductAllergiesMatrix = async (productId, batchId) => {
     try {
-      // 1. まず全メニュー分を既定値で補完
+      console.log('🔄 product_allergies_matrix自動更新開始');
+      
+      // タイムアウト設定を追加（30秒）
       const { error: insertError } = await supabase.rpc('upsert_product_allergies_matrix', {
         p_product_id: productId,
         p_batch_id: batchId
+      }, {
+        timeout: 30000 // 30秒タイムアウト
       });
       
       if (insertError) {
         console.error('❌ product_allergies_matrix補完エラー:', insertError);
+        
+        // タイムアウトの場合は手動更新を提案
+        if (insertError.code === '57014') {
+          console.warn('⚠️ タイムアウトが発生しました。手動更新が必要です。');
+          console.log('手動更新SQL:');
+          console.log(`-- 手動更新用SQL
+INSERT INTO product_allergies_matrix (
+  product_id, menu_item_id, menu_name,
+  egg, milk, wheat, buckwheat, peanut, shrimp, crab, walnut, almond,
+  abalone, squid, salmon_roe, orange, cashew, kiwi, beef, gelatin,
+  sesame, salmon, mackerel, soybean, chicken, banana, pork, matsutake,
+  peach, yam, apple, macadamia
+)
+SELECT
+  mi.product_id, mi.id, mi.name,
+  'n','n','n','n','n','n','n','n','n',
+  'n','n','n','n','n','n','n','n',
+  'n','n','n','n','n','n','n','n',
+  'n','n','n','n'
+FROM menu_items mi
+LEFT JOIN product_allergies_matrix pam ON pam.menu_item_id = mi.id
+WHERE mi.product_id = ${productId}
+  AND pam.menu_item_id IS NULL;`);
+        }
         return;
       }
       

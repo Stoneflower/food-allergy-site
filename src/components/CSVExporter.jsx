@@ -542,32 +542,45 @@ const CsvExporter = ({ data, onBack }) => {
         throw new Error(`生成された行数が多すぎます (${rows.length}). 入力を見直してください。`);
       }
       
+      // 重複メニュー名の処理（staging_imports用）
+      const menuNameCount = new Map();
       const stagingData = rows.map((row, index) => {
-        const stagingRow = {
-          import_batch_id: jobId,
-          row_no: index + 1,
-          raw_product_name: productName, // products.name
-          raw_category: productCategory, // products.category
-          raw_source_url: row[2] || defaultSourceUrl,
-          raw_branch_name: productBrand, // products.brand
-          raw_address: row[4] || '', // 都道府県 + 詳細住所
-          raw_phone: row[5] || '',
-          raw_hours: row[6] || '',
-          raw_closed: row[7] || '',
-          raw_store_list_url: row[8] || defaultStoreListUrl,
-          raw_notes: row[9] || '',
-          raw_menu_name: row[10] || row[0] || ''
-        };
+        const originalMenuName = row[10] || row[0] || '';
+        const baseMenuName = originalMenuName.trim();
         
-        // アレルギー情報を追加（正規化適用）
-        standardAllergens.forEach((allergen, index) => {
-          const value = row[11 + index] || '';
-          // 含有量表示を正規化
-          stagingRow[allergen.slug] = normalizePresence(value);
-        });
-        
-        return stagingRow;
-      });
+        // 重複チェックと(2)付与
+        if (baseMenuName) {
+          const count = (menuNameCount.get(baseMenuName) || 0) + 1;
+          menuNameCount.set(baseMenuName, count);
+          const finalMenuName = count === 1 ? baseMenuName : `${baseMenuName} (${count})`;
+          
+          const stagingRow = {
+            import_batch_id: jobId,
+            row_no: index + 1,
+            raw_product_name: productName, // products.name
+            raw_category: productCategory, // products.category
+            raw_source_url: row[2] || defaultSourceUrl,
+            raw_branch_name: productBrand, // products.brand
+            raw_address: row[4] || '', // 都道府県 + 詳細住所
+            raw_phone: row[5] || '',
+            raw_hours: row[6] || '',
+            raw_closed: row[7] || '',
+            raw_store_list_url: row[8] || defaultStoreListUrl,
+            raw_notes: row[9] || '',
+            raw_menu_name: finalMenuName // 重複処理済みの名前
+          };
+          
+          // アレルギー情報を追加（正規化適用）
+          standardAllergens.forEach((allergen, index) => {
+            const value = row[11 + index] || '';
+            // 含有量表示を正規化
+            stagingRow[allergen.slug] = normalizePresence(value);
+          });
+          
+          return stagingRow;
+        }
+        return null;
+      }).filter(Boolean);
       
       console.log('ステージングデータ準備完了:', stagingData.length, '行');
       // 一括挿入（202件規模なら一発で投入）

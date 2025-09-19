@@ -71,8 +71,72 @@ const CsvExporter = ({ data, onBack }) => {
     { slug: 'cashew', name: 'カシューナッツ' },
     { slug: 'sesame', name: 'ごま' },
     { slug: 'almond', name: 'アーモンド' },
-    { slug: 'matsutake', name: 'まつたけ' }
+    { slug: 'matsutake', name: 'まつたけ' },
+    { slug: 'macadamia', name: 'マカダミアナッツ' }
   ];
+
+  // アレルギー項目名の正規化マッピング（異なる表記を統一）
+  const allergenNameMapping = {
+    // ゴマの表記統一
+    'ゴマ': 'ごま',
+    'ごま': 'ごま',
+    'ゴマ油': 'ごま',
+    'ごま油': 'ごま',
+    // まつたけとマカダミアナッツは別項目として保持
+    'まつたけ': 'まつたけ',
+    'マカダミアナッツ': 'マカダミアナッツ'
+  };
+
+  // 含有量表示の正規化マッピング
+  const presenceMapping = {
+    // 空欄・ハイフン系（会社によって異なる表記）
+    '': 'none',           // 空欄 → none
+    '-': 'none',          // ハイフン → none
+    '−': 'none',          // 全角ハイフン → none
+    'ー': 'none',          // 長音符 → none
+    '×': 'none',          // バツ → none
+    'なし': 'none',        // なし → none
+    '無': 'none',          // 無 → none
+    
+    // 含有しない系
+    'ふくまない': 'none',
+    '含まない': 'none',
+    '使用しない': 'none',
+    '不使用': 'none',
+    
+    // 含有する系
+    'ふくむ': 'direct',
+    '含む': 'direct',
+    '使用': 'direct',
+    'あり': 'direct',
+    '○': 'direct',        // 丸 → direct
+    '●': 'direct',        // 黒丸 → direct
+    
+    // コンタミ系
+    'コンタミ': 'trace',
+    'コンタミネーション': 'trace',
+    '混入の可能性': 'trace',
+    '△': 'trace',         // 三角 → trace
+    
+    // 未使用系
+    '未使用': 'unused',
+    '未記載': 'unused',
+    '記載なし': 'unused'
+  };
+
+  // アレルギー項目名を正規化
+  const normalizeAllergenName = (name) => {
+    if (!name) return name;
+    const normalized = allergenNameMapping[name.trim()];
+    return normalized || name.trim();
+  };
+
+  // 含有量表示を正規化
+  const normalizePresence = (value) => {
+    if (!value) return 'none';
+    const normalized = presenceMapping[value.trim()];
+    return normalized || value.trim();
+  };
 
   // 記号のみの行も商品名として許容するため、除外判定は行わない
   const isSymbolsOnly = () => false;
@@ -212,14 +276,8 @@ const CsvExporter = ({ data, onBack }) => {
       csvRow.push(menuName);
       standardAllergens.forEach(allergen => {
         const value = row.converted[allergen.slug] || '';
-        let englishValue = '';
-        switch (value) {
-          case 'ふくむ': englishValue = 'direct'; break;
-          case 'ふくまない': englishValue = 'none'; break;
-          case 'コンタミ': englishValue = 'trace'; break;
-          case '未使用': englishValue = 'unused'; break;
-          default: englishValue = value;
-        }
+        // 含有量表示を正規化
+        const englishValue = normalizePresence(value);
         csvRow.push(englishValue);
       });
       return csvRow;
@@ -395,10 +453,11 @@ const CsvExporter = ({ data, onBack }) => {
           raw_menu_name: row[10] || row[0] || ''
         };
         
-        // アレルギー情報を追加
+        // アレルギー情報を追加（正規化適用）
         standardAllergens.forEach((allergen, index) => {
           const value = row[11 + index] || '';
-          stagingRow[allergen.slug] = value;
+          // 含有量表示を正規化
+          stagingRow[allergen.slug] = normalizePresence(value);
         });
         
         return stagingRow;

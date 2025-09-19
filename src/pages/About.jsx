@@ -22,7 +22,7 @@ const About = () => {
               <span className="text-6xl">🤔</span>
               <div>
                 <h1 className="text-4xl md:text-6xl font-bold">
-                  CanIEat? について
+                  CanIEatOo? について
                 </h1>
                 <p className="text-2xl md:text-3xl font-medium text-orange-200 mt-2">
                   食べれる？
@@ -167,7 +167,7 @@ const About = () => {
             >
               <div className="text-center mb-6">
                 <span className="text-5xl">💡</span>
-                <h3 className="text-2xl font-bold text-gray-900 mt-4">CanIEat?の解決策</h3>
+                <h3 className="text-2xl font-bold text-gray-900 mt-4">CanIEatOo?の解決策</h3>
               </div>
               
               <div className="space-y-4">

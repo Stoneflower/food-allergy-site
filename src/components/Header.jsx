@@ -73,7 +73,7 @@ const Header = () => {
               </div>
               <div className="flex flex-col">
                 <div className="flex items-baseline space-x-1">
-                  <span className="text-lg font-bold text-white">CanIEat?</span>
+                  <span className="text-lg font-bold text-white">CanIEatOo?</span>
                   <span className="text-orange-200 text-sm font-bold">✓</span>
                 </div>
                 <span className="text-orange-200 text-xs font-medium">みんなで共有</span>
@@ -127,7 +127,7 @@ const Header = () => {
               to="/about"
               className="hover:text-orange-200 transition-colors font-medium"
             >
-              CanIEat?について
+              CanIEatOo?について
             </Link>
             <Link
               to="/login"
@@ -487,7 +487,7 @@ const Header = () => {
                 className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
                 onClick={() => setIsMenuOpen(false)}
               >
-                CanIEat?について
+                CanIEatOo?について
               </Link>
               <Link
                 to="/login"

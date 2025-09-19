@@ -497,6 +497,9 @@ const CsvExporter = ({ data, onBack }) => {
       console.log('🔄 store_locationsデータ作成開始');
       try {
         // 商品IDを動的に取得
+        let productId;
+        
+        // まず既存の商品を検索
         const { data: productData, error: productError } = await supabase
           .from('products')
           .select('id')
@@ -504,12 +507,32 @@ const CsvExporter = ({ data, onBack }) => {
           .single();
         
         if (productError || !productData) {
-          console.error('❌ 商品ID取得エラー:', productError);
-          console.error('商品名:', productName);
-          return;
+          console.log('🔄 商品が存在しないため、新規作成します:', productName);
+          
+          // 新しい商品を作成
+          const { data: newProductData, error: createError } = await supabase
+            .from('products')
+            .insert({
+              name: productName,
+              brand: productBrand,
+              category: productCategory,
+              description: `${productName}のアレルギー情報`
+            })
+            .select('id')
+            .single();
+          
+          if (createError || !newProductData) {
+            console.error('❌ 商品作成エラー:', createError);
+            console.error('商品名:', productName);
+            return;
+          }
+          
+          productId = newProductData.id;
+          console.log('✅ 新商品作成完了:', productName, 'ID:', productId);
+        } else {
+          productId = productData.id;
+          console.log('📦 既存商品ID:', productId);
         }
-        
-        const productId = productData.id;
         console.log('📦 商品ID:', productId);
         
         // 選択された都道府県から住所を生成

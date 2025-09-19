@@ -31,10 +31,10 @@ BEGIN
   )
   SELECT
     nmi.product_id, nmi.id, nmi.name,
-    'n','n','n','n','n','n','n','n','n',
-    'n','n','n','n','n','n','n','n',
-    'n','n','n','n','n','n','n','n',
-    'n','n','n','n'
+    'none','none','none','none','none','none','none','none','none',
+    'none','none','none','none','none','none','none','none',
+    'none','none','none','none','none','none','none','none',
+    'none','none','none','none'
   FROM new_menu_items nmi;
   
   GET DIAGNOSTICS v_inserted_count = ROW_COUNT;
@@ -43,35 +43,35 @@ BEGIN
   -- CTEを使わず直接JOINで効率化
   UPDATE product_allergies_matrix pam
   SET 
-    egg = CASE WHEN si.egg IN ('direct','trace') THEN 'y' ELSE 'n' END,
-    milk = CASE WHEN si.milk IN ('direct','trace') THEN 'y' ELSE 'n' END,
-    wheat = CASE WHEN si.wheat IN ('direct','trace') THEN 'y' ELSE 'n' END,
-    buckwheat = CASE WHEN si.buckwheat IN ('direct','trace') THEN 'y' ELSE 'n' END,
-    peanut = CASE WHEN si.peanut IN ('direct','trace') THEN 'y' ELSE 'n' END,
-    shrimp = CASE WHEN si.shrimp IN ('direct','trace') THEN 'y' ELSE 'n' END,
-    crab = CASE WHEN si.crab IN ('direct','trace') THEN 'y' ELSE 'n' END,
-    walnut = CASE WHEN si.walnut IN ('direct','trace') THEN 'y' ELSE 'n' END,
-    almond = CASE WHEN si.almond IN ('direct','trace') THEN 'y' ELSE 'n' END,
-    abalone = CASE WHEN si.abalone IN ('direct','trace') THEN 'y' ELSE 'n' END,
-    squid = CASE WHEN si.squid IN ('direct','trace') THEN 'y' ELSE 'n' END,
-    salmon_roe = CASE WHEN si.salmon_roe IN ('direct','trace') THEN 'y' ELSE 'n' END,
-    orange = CASE WHEN si.orange IN ('direct','trace') THEN 'y' ELSE 'n' END,
-    cashew = CASE WHEN si.cashew IN ('direct','trace') THEN 'y' ELSE 'n' END,
-    kiwi = CASE WHEN si.kiwi IN ('direct','trace') THEN 'y' ELSE 'n' END,
-    beef = CASE WHEN si.beef IN ('direct','trace') THEN 'y' ELSE 'n' END,
-    gelatin = CASE WHEN si.gelatin IN ('direct','trace') THEN 'y' ELSE 'n' END,
-    sesame = CASE WHEN si.sesame IN ('direct','trace') THEN 'y' ELSE 'n' END,
-    salmon = CASE WHEN si.salmon IN ('direct','trace') THEN 'y' ELSE 'n' END,
-    mackerel = CASE WHEN si.mackerel IN ('direct','trace') THEN 'y' ELSE 'n' END,
-    soybean = CASE WHEN si.soybean IN ('direct','trace') THEN 'y' ELSE 'n' END,
-    chicken = CASE WHEN si.chicken IN ('direct','trace') THEN 'y' ELSE 'n' END,
-    banana = CASE WHEN si.banana IN ('direct','trace') THEN 'y' ELSE 'n' END,
-    pork = CASE WHEN si.pork IN ('direct','trace') THEN 'y' ELSE 'n' END,
-    matsutake = CASE WHEN si.matsutake IN ('direct','trace') THEN 'y' ELSE 'n' END,
-    peach = CASE WHEN si.peach IN ('direct','trace') THEN 'y' ELSE 'n' END,
-    yam = CASE WHEN si.yam IN ('direct','trace') THEN 'y' ELSE 'n' END,
-    apple = CASE WHEN si.apple IN ('direct','trace') THEN 'y' ELSE 'n' END,
-    macadamia = CASE WHEN si.macadamia IN ('direct','trace') THEN 'y' ELSE 'n' END
+    egg = si.egg,
+    milk = si.milk,
+    wheat = si.wheat,
+    buckwheat = si.buckwheat,
+    peanut = si.peanut,
+    shrimp = si.shrimp,
+    crab = si.crab,
+    walnut = si.walnut,
+    almond = si.almond,
+    abalone = si.abalone,
+    squid = si.squid,
+    salmon_roe = si.salmon_roe,
+    orange = si.orange,
+    cashew = si.cashew,
+    kiwi = si.kiwi,
+    beef = si.beef,
+    gelatin = si.gelatin,
+    sesame = si.sesame,
+    salmon = si.salmon,
+    mackerel = si.mackerel,
+    soybean = si.soybean,
+    chicken = si.chicken,
+    banana = si.banana,
+    pork = si.pork,
+    matsutake = si.matsutake,
+    peach = si.peach,
+    yam = si.yam,
+    apple = si.apple,
+    macadamia = si.macadamia
   FROM staging_imports si
   JOIN menu_items mi ON si.raw_menu_name = mi.name
   WHERE mi.product_id = p_product_id

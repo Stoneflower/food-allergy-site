@@ -246,7 +246,14 @@ export const RestaurantProvider = ({ children }) => {
           return;
         }
 
-        // menu_item_allergiesから直接安全判定（direct/trace/noneを正しく処理）
+        // menu_item_allergiesとproduct_allergies_matrixの両方から安全判定
+        console.log('🔍 アレルギー検索開始:', {
+          selectedAllergies,
+          pidList,
+          pidListLength: pidList.length
+        });
+        
+        // 1. menu_item_allergiesから取得
         const { data: allergyData, error: allergyError } = await supabase
           .from('menu_item_allergies')
           .select(`
@@ -257,19 +264,84 @@ export const RestaurantProvider = ({ children }) => {
           `)
           .in('menu_items.product_id', pidList)
           .in('allergy_item_slug', selectedAllergies);
+          
+        console.log('📊 menu_item_allergies取得結果:', {
+          dataCount: allergyData?.length || 0,
+          error: allergyError,
+          sampleData: allergyData?.slice(0, 3)
+        });
         
         if (allergyError) throw allergyError;
+        
+        // 2. product_allergies_matrixから取得（フォールバック）
+        const matrixColumns = [
+          'product_id','menu_name','egg','milk','wheat','buckwheat','peanut','shrimp','crab','walnut','almond','abalone','squid','salmon_roe','orange','cashew','kiwi','beef','gelatin','sesame','salmon','mackerel','soybean','chicken','banana','pork','matsutake','peach','yam','apple','macadamia'
+        ];
+        
+        const { data: matrixData, error: matrixError } = await supabase
+          .from('product_allergies_matrix')
+          .select(matrixColumns.join(','))
+          .in('product_id', pidList);
+          
+        console.log('📊 product_allergies_matrix取得結果:', {
+          dataCount: matrixData?.length || 0,
+          error: matrixError,
+          sampleData: matrixData?.slice(0, 3)
+        });
+        
+        if (matrixError) throw matrixError;
 
-        // 各商品の安全メニューをチェック
+        // 各商品の安全メニューをチェック（両方のデータソースを統合）
         const byProduct = new Map(); // pid -> array of menu allergy records
+        
+        // 1. menu_item_allergiesから取得
         for (const record of allergyData || []) {
           const pid = record.menu_items.product_id;
           const arr = byProduct.get(pid) || [];
           arr.push({
             menuName: record.menu_items.name,
             allergen: record.allergy_item_slug,
-            presenceType: record.presence_type
+            presenceType: record.presence_type,
+            source: 'menu_item_allergies'
           });
+          byProduct.set(pid, arr);
+        }
+        
+        // 2. product_allergies_matrixから取得（フォールバック）
+        const slugToColumn = (slug) => slug === 'soy' ? 'soybean' : slug;
+        for (const row of matrixData || []) {
+          const pid = row.product_id;
+          const arr = byProduct.get(pid) || [];
+          
+          for (const allergenSlug of selectedAllergies) {
+            const column = slugToColumn(allergenSlug);
+            const value = (row[column] || '').toString().toLowerCase();
+            
+            console.log('🔍 マトリックス値チェック:', {
+              productId: pid,
+              menuName: row.menu_name,
+              allergen: allergenSlug,
+              column: column,
+              value: value
+            });
+            
+            if (value === 'direct') {
+              arr.push({
+                menuName: row.menu_name,
+                allergen: allergenSlug,
+                presenceType: 'direct',
+                source: 'product_allergies_matrix'
+              });
+            } else if (value === 'trace') {
+              arr.push({
+                menuName: row.menu_name,
+                allergen: allergenSlug,
+                presenceType: 'trace',
+                source: 'product_allergies_matrix'
+              });
+            }
+            // 'none'の場合は何も追加しない（安全）
+          }
           byProduct.set(pid, arr);
         }
 
@@ -286,7 +358,8 @@ export const RestaurantProvider = ({ children }) => {
                 productId: pid,
                 menuName: allergy.menuName,
                 allergen: allergy.allergen,
-                presenceType: allergy.presenceType
+                presenceType: allergy.presenceType,
+                source: allergy.source
               });
               break;
             } else if (allergy.presenceType === 'trace') {
@@ -296,6 +369,7 @@ export const RestaurantProvider = ({ children }) => {
                 menuName: allergy.menuName,
                 allergen: allergy.allergen,
                 presenceType: allergy.presenceType,
+                source: allergy.source,
                 note: 'ユーザーが判断してください'
               });
             }

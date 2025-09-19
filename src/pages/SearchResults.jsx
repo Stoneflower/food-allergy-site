@@ -247,7 +247,7 @@ const SearchResults = () => {
       for (const s of selectedAllergies) {
         for (const r of rowsForMenu) {
           const v = (r[slugToCol(s)] || '').toString().toLowerCase();
-          if (v === 'd') return false; // 選択スラッグでdirectが1つでもあればNG
+          if (v === 'direct') return false; // 選択スラッグでdirectが1つでもあればNG
         }
       }
       return true; // 選択スラッグのどれもdirectでない → OK
@@ -302,7 +302,7 @@ const SearchResults = () => {
       for (const r of rowsForMenu) {
         for (const s of selectedAllergies) {
           const v = (r[slugToCol(s)] || '').toString().toLowerCase();
-          if (v === 't') traces.add(slugToName(s));
+          if (v === 'trace') traces.add(slugToName(s));
         }
       }
     }

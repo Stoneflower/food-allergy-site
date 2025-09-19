@@ -72,10 +72,10 @@ INSERT INTO product_allergies_matrix (
 )
 SELECT
   mi.product_id, mi.id, mi.name,
-  'n','n','n','n','n','n','n','n','n',
-  'n','n','n','n','n','n','n','n',
-  'n','n','n','n','n','n','n','n',
-  'n','n','n','n'
+  'none','none','none','none','none','none','none','none','none',
+  'none','none','none','none','none','none','none','none',
+  'none','none','none','none','none','none','none','none',
+  'none','none','none','none'
 FROM menu_items mi
 LEFT JOIN product_allergies_matrix pam ON pam.menu_item_id = mi.id
 WHERE mi.product_id = ${productId}

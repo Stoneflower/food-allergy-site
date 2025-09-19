@@ -246,39 +246,80 @@ export const RestaurantProvider = ({ children }) => {
           return;
         }
 
-        // product_allergies_matrix（ワイド表）から安全判定
-        const columns = [
-          'product_id','menu_name','egg','milk','wheat','buckwheat','peanut','shrimp','crab','walnut','almond','abalone','squid','salmon_roe','orange','cashew','kiwi','beef','gelatin','sesame','salmon','mackerel','soybean','chicken','banana','pork','matsutake','peach','yam','apple'
-        ];
-        const { data, error } = await supabase
-          .from('product_allergies_matrix')
-          .select(columns.join(','))
-          .in('product_id', pidList);
-        if (error) throw error;
+        // menu_item_allergiesから直接安全判定（direct/trace/noneを正しく処理）
+        const { data: allergyData, error: allergyError } = await supabase
+          .from('menu_item_allergies')
+          .select(`
+            menu_item_id,
+            allergy_item_slug,
+            presence_type,
+            menu_items!inner(product_id, name)
+          `)
+          .in('menu_items.product_id', pidList)
+          .in('allergy_item_slug', selectedAllergies);
+        
+        if (allergyError) throw allergyError;
 
-        // slug→列名のマップ（大豆はsoy→soybean）
-        const slugToColumn = (slug) => slug === 'soy' ? 'soybean' : slug;
-
-        const needSlugs = selectedAllergies.map(slugToColumn);
-        const byProduct = new Map(); // pid -> array of rows
-        for (const row of data || []) {
-          const arr = byProduct.get(row.product_id) || [];
-          arr.push(row);
-          byProduct.set(row.product_id, arr);
+        // 各商品の安全メニューをチェック
+        const byProduct = new Map(); // pid -> array of menu allergy records
+        for (const record of allergyData || []) {
+          const pid = record.menu_items.product_id;
+          const arr = byProduct.get(pid) || [];
+          arr.push({
+            menuName: record.menu_items.name,
+            allergen: record.allergy_item_slug,
+            presenceType: record.presence_type
+          });
+          byProduct.set(pid, arr);
         }
 
         const okProducts = new Set();
-        for (const [pid, rows] of byProduct.entries()) {
-          let productOk = false;
-          for (const r of rows) {
-            let menuOk = true;
-            for (const c of needSlugs) {
-              const v = (r[c] || '').toString().toLowerCase(); // 'd' | 't' | 'n'
-              if (v === 'd') { menuOk = false; break; }
+        for (const pid of pidList) {
+          const productAllergies = byProduct.get(pid) || [];
+          
+          // この商品に選択されたアレルギーが含まれているかチェック
+          let hasUnsafeMenu = false;
+          for (const allergy of productAllergies) {
+            if (allergy.presenceType === 'direct') {
+              hasUnsafeMenu = true;
+              console.log('🚫 直接含有メニュー発見:', {
+                productId: pid,
+                menuName: allergy.menuName,
+                allergen: allergy.allergen,
+                presenceType: allergy.presenceType
+              });
+              break;
+            } else if (allergy.presenceType === 'trace') {
+              // コンタミネーション（trace）は表示する（ユーザーが判断）
+              console.log('⚠️ コンタミネーション含有メニュー（表示対象）:', {
+                productId: pid,
+                menuName: allergy.menuName,
+                allergen: allergy.allergen,
+                presenceType: allergy.presenceType,
+                note: 'ユーザーが判断してください'
+              });
             }
-            if (menuOk) { productOk = true; break; }
           }
-          if (productOk) okProducts.add(pid);
+          
+          if (!hasUnsafeMenu) {
+            okProducts.add(pid);
+            const traceMenus = productAllergies.filter(a => a.presenceType === 'trace');
+            if (traceMenus.length > 0) {
+              console.log('✅ 安全商品（コンタミネーション含む）:', {
+                productId: pid,
+                traceMenusCount: traceMenus.length,
+                traceAllergens: traceMenus.map(t => t.allergen),
+                totalMenus: productAllergies.length,
+                note: 'コンタミネーションは表示されます'
+              });
+            } else {
+              console.log('✅ 完全安全商品:', {
+                productId: pid,
+                totalMenus: productAllergies.length,
+                note: 'アレルギー含有なし'
+              });
+            }
+          }
         }
 
         setSafeProductIds(okProducts);
@@ -388,13 +429,31 @@ export const RestaurantProvider = ({ children }) => {
 
     if (selectedAllergies.length > 0) {
       const beforeAllergyFilter = items.length;
+      console.log('🚫 アレルギーフィルター適用前:', {
+        selectedAllergies,
+        safeProductIds: safeProductIds ? Array.from(safeProductIds) : null,
+        safeProductIdsSize: safeProductIds ? safeProductIds.size : 0
+      });
+      
       // 安全候補が空集合なら、ユーザーに結果ゼロを避けるため一旦フィルタをスキップ
       const shouldApply = safeProductIds && safeProductIds.size > 0;
       items = items.filter(item => {
-        if (!(item.id && typeof item.id === 'string' && item.id.startsWith('db_'))) return false;
-        if (!shouldApply) return true;
+        if (!(item.id && typeof item.id === 'string' && item.id.startsWith('db_'))) {
+          console.log('🚫 非DBデータ除外:', item.name, item.id);
+          return false;
+        }
+        if (!shouldApply) {
+          console.log('⚠️ アレルギーフィルタースキップ:', item.name, 'safeProductIdsが空');
+          return true;
+        }
         const pid = Number(item.id.slice(3));
-        return safeProductIds.has(pid);
+        const isSafe = safeProductIds.has(pid);
+        console.log('🔍 アレルギー安全性チェック:', {
+          itemName: item.name,
+          productId: pid,
+          isSafe: isSafe
+        });
+        return isSafe;
       });
       console.log('🚫 アレルギーフィルター後:', beforeAllergyFilter, '→', items.length, 'items');
     }

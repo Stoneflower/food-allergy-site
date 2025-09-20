@@ -2,6 +2,7 @@ import os
 import io
 import json
 import uuid
+import time
 from datetime import datetime
 from flask import Flask, request, jsonify, render_template_string
 from werkzeug.utils import secure_filename
@@ -251,7 +252,7 @@ CSV_CONVERTER_TEMPLATE = '''
     <p>PaddleOCRの高精度なOCR機能と詳細なCSV変換機能を統合したツールです。</p>
     {% if not paddleocr_available %}
     <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; border-radius: 5px; margin-bottom: 20px;">
-        <strong>⚠️ 注意:</strong> PaddleOCRが利用できない環境です。サンプルデータで動作しています。
+        <strong>⚠️ 注意:</strong> Tesseract OCR + OpenCV環境で動作しています。
     </div>
     {% endif %}
     
@@ -1378,7 +1379,7 @@ HTML_TEMPLATE = '''
     </div>
     {% else %}
     <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; border-radius: 5px; margin-bottom: 20px;">
-        <strong>⚠️ 注意:</strong> PaddleOCRが利用できない環境です。サンプルデータで動作しています。
+        <strong>⚠️ 注意:</strong> Tesseract OCR + OpenCV環境で動作しています。
     </div>
     {% endif %}
     

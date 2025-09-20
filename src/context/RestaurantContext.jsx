@@ -105,6 +105,7 @@ export const RestaurantProvider = ({ children }) => {
         if (!error) {
           productData = data;
           console.log('productsデータ取得成功:', data?.length || 0, '件');
+          console.log('productsデータ詳細:', data);
         } else {
           console.error('productsテーブルエラー:', error);
         }
@@ -277,7 +278,9 @@ export const RestaurantProvider = ({ children }) => {
       console.log('最終的なtransformedData:', transformedData);
       console.log('商品データ数:', transformedData.filter(item => item.category === 'products').length);
       console.log('店舗データ数:', transformedData.filter(item => item.category === 'restaurants').length);
+      console.log('transformedData.length:', transformedData.length);
       setAllItems(transformedData);
+      console.log('setAllItems完了');
       
     } catch (err) {
       console.error('データ取得エラー:', err);

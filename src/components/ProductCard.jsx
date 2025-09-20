@@ -12,6 +12,10 @@ const { FiStar, FiShoppingCart, FiMapPin, FiExternalLink, FiShield, FiHeart, FiM
 
 const ProductCard = ({ product }) => {
   const { allergyOptions, toggleFavorite, isFavorite, addToHistory } = useRestaurant();
+  
+  // デバッグログ
+  console.log('ProductCard - product:', product);
+  console.log('ProductCard - product.availability:', product.availability);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [showSourceDetails, setShowSourceDetails] = useState(false);
@@ -217,7 +221,7 @@ const ProductCard = ({ product }) => {
           <div className="space-y-2">
             <h4 className="text-sm font-semibold text-gray-900">購入先:</h4>
             <div className="flex flex-wrap gap-1">
-              {product.availability.online.slice(0, 2).map((store, index) => (
+              {(product.availability?.online || []).slice(0, 2).map((store, index) => (
                 <button
                   key={index}
                   onClick={() => handlePurchase(store)}
@@ -227,6 +231,9 @@ const ProductCard = ({ product }) => {
                   <SafeIcon icon={FiExternalLink} className="w-3 h-3" />
                 </button>
               ))}
+              {(!product.availability?.online || product.availability.online.length === 0) && (
+                <span className="text-gray-500 text-xs">購入先情報なし</span>
+              )}
             </div>
           </div>
         </div>

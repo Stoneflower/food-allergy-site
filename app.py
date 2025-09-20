@@ -326,8 +326,12 @@ def parse_allergy_info(text, filename):
 def send_to_supabase(allergy_data, batch_id):
     """Supabaseにデータを送信"""
     try:
+        print(f"Supabase送信開始: URL={SUPABASE_URL}, KEY={SUPABASE_KEY[:20]}...")
+        
         if not SUPABASE_URL or not SUPABASE_KEY:
             print("Supabase設定が不完全です")
+            print(f"URL: {SUPABASE_URL}")
+            print(f"KEY: {SUPABASE_KEY[:20] if SUPABASE_KEY else 'None'}...")
             return False
         
         # staging_importsテーブルに送信するデータを準備
@@ -344,6 +348,8 @@ def send_to_supabase(allergy_data, batch_id):
                 'created_at': item['extracted_at']
             })
         
+        print(f"送信データ: {staging_data}")
+        
         # SupabaseにPOSTリクエスト
         headers = {
             'apikey': SUPABASE_KEY,
@@ -353,9 +359,13 @@ def send_to_supabase(allergy_data, batch_id):
         }
         
         url = f"{SUPABASE_URL}/rest/v1/staging_imports"
+        print(f"送信URL: {url}")
         
         for data in staging_data:
+            print(f"送信中: {data}")
             response = requests.post(url, json=data, headers=headers)
+            print(f"レスポンス: {response.status_code} - {response.text}")
+            
             if response.status_code not in [200, 201]:
                 print(f"Supabase送信エラー: {response.status_code} - {response.text}")
                 return False
@@ -365,6 +375,8 @@ def send_to_supabase(allergy_data, batch_id):
         
     except Exception as e:
         print(f"Supabase送信エラー: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return False
 
 @app.route('/health')

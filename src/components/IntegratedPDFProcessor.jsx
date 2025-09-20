@@ -9,6 +9,8 @@ import CsvUpload from './CsvUpload';
 
 const IntegratedPDFProcessor = () => {
   const [step, setStep] = useState(1); // 1: CSVアップロード, 2: OCR処理, 3: ルール設定, 4: プレビュー, 5: エクスポート
+  const [inputType, setInputType] = useState('csv'); // 'pdf' or 'csv'
+  const [pdfFile, setPdfFile] = useState(null);
   const [csvFile, setCsvFile] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -31,6 +33,14 @@ const IntegratedPDFProcessor = () => {
   });
   const [error, setError] = useState(null);
   const fileInputRef = useRef(null);
+
+  // PDFアップロードハンドラー
+  const handlePDFUpload = (file) => {
+    setPdfFile(file);
+    setError(null);
+    // PDF処理のロジックは後で実装
+    setError('PDF処理機能は現在開発中です。CSVファイルをご利用ください。');
+  };
 
   // CSVから画像URLを抽出
   const extractImagesFromCSV = async (csvData) => {

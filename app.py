@@ -12,6 +12,7 @@ import requests
 try:
     from paddleocr import PaddleOCR
     PADDLEOCR_AVAILABLE = True
+    print("PaddleOCR imported successfully")
 except ImportError:
     PADDLEOCR_AVAILABLE = False
     print("PaddleOCR not available, using sample data mode")
@@ -42,17 +43,33 @@ SYMBOL_MAPPING = {
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
-# PaddleOCR初期化（利用可能な場合のみ）
-if PADDLEOCR_AVAILABLE:
-    try:
-        ocr = PaddleOCR(use_angle_cls=True, lang='jap')
-        print("PaddleOCR initialized successfully")
-    except Exception as e:
-        print(f"PaddleOCR initialization failed: {e}")
-        PADDLEOCR_AVAILABLE = False
-        ocr = None
-else:
-    ocr = None
+# PaddleOCR初期化（遅延読み込み）
+ocr = None
+print(f"PaddleOCR available: {PADDLEOCR_AVAILABLE}")
+
+def get_ocr():
+    """PaddleOCRインスタンスを取得（遅延初期化）"""
+    global ocr
+    if ocr is None and PADDLEOCR_AVAILABLE:
+        try:
+            print("Initializing PaddleOCR...")
+            # 複数の言語設定を試す
+            languages = ['japan', 'ch', 'en']
+            for lang in languages:
+                try:
+                    ocr = PaddleOCR(use_angle_cls=True, lang=lang)
+                    print(f"PaddleOCR initialized successfully with language: {lang}")
+                    break
+                except Exception as e:
+                    print(f"PaddleOCR initialization failed with {lang}: {e}")
+                    continue
+            else:
+                print("All language options failed for PaddleOCR")
+                return None
+        except Exception as e:
+            print(f"PaddleOCR initialization failed completely: {e}")
+            return None
+    return ocr
 
 # Supabase設定（環境変数から取得）
 SUPABASE_URL = os.getenv('SUPABASE_URL', 'your_supabase_url')
@@ -1653,7 +1670,8 @@ def extract_text_from_pdf_content(pdf_content):
 def extract_text_from_image_data(image_data):
     """画像データからテキストを抽出（PaddleOCR使用）"""
     try:
-        if not PADDLEOCR_AVAILABLE or ocr is None:
+        ocr_instance = get_ocr()
+        if not PADDLEOCR_AVAILABLE or ocr_instance is None:
             # PaddleOCRが利用できない場合はサンプルテキストを返す
             return """
             メニュー一覧
@@ -1694,7 +1712,7 @@ def extract_text_from_image_data(image_data):
             temp_path = temp_file.name
         
         # PaddleOCRでテキスト抽出
-        result = ocr.ocr(temp_path, cls=True)
+        result = ocr_instance.ocr(temp_path, cls=True)
         extracted_text = []
         
         if result and result[0]:
@@ -1812,5 +1830,5 @@ def apply_filters(row, filters):
         return True
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
+    port = int(os.environ.get('PORT', 10000))
     app.run(host='0.0.0.0', port=port, debug=False)

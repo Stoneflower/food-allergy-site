@@ -26,6 +26,10 @@ const Header = () => {
     isLoggedIn
   } = useRestaurant();
 
+  // デバッグ用ログ
+  console.log('Header - allergyOptions:', allergyOptions);
+  console.log('Header - allergyOptions length:', allergyOptions?.length);
+
   const navigate = useNavigate();
 
   const handleSearch = (e) => {
@@ -178,7 +182,11 @@ const Header = () => {
                 <div className="relative flex-1">
                   <button
                     type="button"
-                    onClick={() => setShowAllergyDropdown(!showAllergyDropdown)}
+                    onClick={() => {
+                      console.log('アレルギー選択ボタンクリック');
+                      console.log('現在のshowAllergyDropdown:', showAllergyDropdown);
+                      setShowAllergyDropdown(!showAllergyDropdown);
+                    }}
                     className="h-12 w-full px-4 bg-red-50 border-l border-red-200 text-sm font-medium text-gray-700 focus:outline-none hover:bg-red-100 transition-colors flex items-center justify-between"
                   >
                     <div className="flex items-center space-x-1 min-w-0 flex-1">
@@ -194,6 +202,7 @@ const Header = () => {
 
                   {/* Allergy Dropdown Menu */}
                   {showAllergyDropdown && (
+                    console.log('ドロップダウンメニュー表示中') ||
                     <>
                       {/* 背景オーバーレイ */}
                       <div 
@@ -224,7 +233,7 @@ const Header = () => {
                               表示義務のある8品目（特定原材料）
                             </h5>
                             <div className="grid grid-cols-4 gap-2 mb-3">
-                              {allergyOptions.slice(0, 8).map(allergy => (
+                              {allergyOptions && allergyOptions.length > 0 ? allergyOptions.slice(0, 8).map(allergy => (
                                 <button
                                   key={allergy.id}
                                   type="button"
@@ -240,7 +249,11 @@ const Header = () => {
                                     <div className="font-medium">{allergy.name}</div>
                                   </div>
                                 </button>
-                              ))}
+                              )) : (
+                                <div className="col-span-4 text-center text-gray-500 py-4">
+                                  アレルギー項目を読み込み中...
+                                </div>
+                              )}
                             </div>
                           </div>
 
@@ -250,7 +263,7 @@ const Header = () => {
                               表示が推奨される20品目（特定原材料に準ずるもの）
                             </h5>
                             <div className="grid grid-cols-5 gap-2">
-                              {allergyOptions.slice(8).map(allergy => (
+                              {allergyOptions && allergyOptions.length > 8 ? allergyOptions.slice(8).map(allergy => (
                                 <button
                                   key={allergy.id}
                                   type="button"
@@ -266,7 +279,11 @@ const Header = () => {
                                     <div className="font-medium">{allergy.name}</div>
                                   </div>
                                 </button>
-                              ))}
+                              )) : (
+                                <div className="col-span-5 text-center text-gray-500 py-4">
+                                  アレルギー項目を読み込み中...
+                                </div>
+                              )}
                             </div>
                           </div>
 
@@ -369,7 +386,7 @@ const Header = () => {
                     表示義務のある8品目（特定原材料）
                   </h4>
                   <div className="grid grid-cols-3 gap-2">
-                    {allergyOptions.slice(0, 8).map(allergy => (
+                    {allergyOptions && allergyOptions.length > 0 ? allergyOptions.slice(0, 8).map(allergy => (
                       <button
                         key={allergy.id}
                         type="button"
@@ -385,7 +402,11 @@ const Header = () => {
                           <div className="font-medium">{allergy.name}</div>
                         </div>
                       </button>
-                    ))}
+                    )) : (
+                      <div className="col-span-3 text-center text-gray-500 py-4">
+                        アレルギー項目を読み込み中...
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -395,7 +416,7 @@ const Header = () => {
                     表示が推奨される20品目（特定原材料に準ずるもの）
                   </h4>
                   <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto">
-                    {allergyOptions.slice(8).map(allergy => (
+                    {allergyOptions && allergyOptions.length > 8 ? allergyOptions.slice(8).map(allergy => (
                       <button
                         key={allergy.id}
                         type="button"
@@ -411,7 +432,11 @@ const Header = () => {
                           <div className="font-medium">{allergy.name}</div>
                         </div>
                       </button>
-                    ))}
+                    )) : (
+                      <div className="col-span-3 text-center text-gray-500 py-4">
+                        アレルギー項目を読み込み中...
+                      </div>
+                    )}
                   </div>
                 </div>
 

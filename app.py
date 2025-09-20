@@ -11,14 +11,15 @@ import cv2
 import numpy as np
 import PyPDF2
 import requests
-from paddleocr import PaddleOCR
+# from paddleocr import PaddleOCR  # Netlifyでビルドエラーのため一時的にコメントアウト
 import base64
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
-# PaddleOCR初期化（日本語対応）
-ocr = PaddleOCR(use_angle_cls=True, lang='jap')
+# OCR初期化（Netlify対応のため簡易版）
+# ocr = PaddleOCR(use_angle_cls=True, lang='jap')
+ocr = None  # 一時的に無効化
 
 # Supabase設定（環境変数から取得）
 SUPABASE_URL = os.getenv('SUPABASE_URL', 'your_supabase_url')
@@ -54,8 +55,9 @@ HTML_TEMPLATE = '''
     </style>
 </head>
 <body>
-    <h1>🍽️ アレルギー情報 OCR 変換ツール</h1>
+    <h1>🍽️ アレルギー情報 OCR 変換ツール（Netlify版）</h1>
     <p>画像やPDFファイルをアップロードして、アレルギー情報をCSV形式でSupabaseに送信します。</p>
+    <p><strong>注意:</strong> 現在はデモ版です。実際のOCR処理はRender版で利用可能です。</p>
     
     <div class="upload-area" id="uploadArea">
         <p>📁 ファイルをドラッグ&ドロップまたはクリックして選択</p>
@@ -253,28 +255,26 @@ def preprocess_image(image_path):
         return image_path
 
 def extract_text_from_image(image_path):
-    """画像からテキストを抽出"""
+    """画像からテキストを抽出（Netlify対応版）"""
     try:
-        # 画像前処理
-        processed_path = preprocess_image(image_path)
+        # NetlifyでPaddleOCRがビルドできないため、簡易的なテキスト抽出
+        # 実際のOCR処理は後でRenderで実装
         
-        # PaddleOCRでテキスト抽出
-        result = ocr.ocr(processed_path, cls=True)
-        extracted_text = []
+        # サンプルデータを返す（デモ用）
+        sample_text = """
+        アイスカフェラテ
+        牛乳含有
+        卵なし
+        小麦なし
         
-        if result and result[0]:
-            for line in result[0]:
-                if line and len(line) >= 2:
-                    text = line[1][0]
-                    confidence = line[1][1]
-                    if confidence > 0.6:  # 信頼度60%以上（前処理により精度向上）
-                        extracted_text.append(text)
+        いきいき乳酸菌ヨーデル
+        牛乳含有
+        卵なし
+        小麦なし
+        """
         
-        # 前処理済み画像を削除
-        if processed_path != image_path and os.path.exists(processed_path):
-            os.remove(processed_path)
+        return sample_text.strip()
         
-        return '\n'.join(extracted_text)
     except Exception as e:
         print(f"画像OCRエラー: {str(e)}")
         return ""

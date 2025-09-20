@@ -8,14 +8,10 @@ import Login from './pages/Login';
 import About from './pages/About';
 import Upload from './pages/Upload';
 import FoodSearch from './pages/FoodSearch';
-import SupabaseTestPage from './pages/SupabaseTestPage';
-import AllergyTablePage from './pages/AllergyTablePage';
-import AllergySettingsPage from './pages/AllergySettingsPage';
-import ProductManagementPage from './pages/ProductManagementPage';
+import IntegratedPDFProcessor from './components/IntegratedPDFProcessor';
+import AdminTools from './pages/AdminTools';
 import { RestaurantProvider } from './context/RestaurantContext';
 import './App.css';
-import PdfConverter from './pages/PdfConverter';
-import CsvConverter from './pages/CsvConverter';
 
 function App() {
   return (
@@ -31,12 +27,8 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/about" element={<About />} />
             <Route path="/upload" element={<Upload />} />
-            <Route path="/supabase-test" element={<SupabaseTestPage />} />
-            <Route path="/allergy-table" element={<AllergyTablePage />} />
-            <Route path="/allergy-settings" element={<AllergySettingsPage />} />
-            <Route path="/product-management" element={<ProductManagementPage />} />
-            <Route path="/pdf-converter" element={<PdfConverter />} />
-            <Route path="/csv-converter" element={<CsvConverter />} />
+            <Route path="/pdf-processor" element={<IntegratedPDFProcessor />} />
+            <Route path="/admin-tools" element={<AdminTools />} />
           </Routes>
         </div>
       </Router>

@@ -1,5 +1,4 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import SafeIcon from '../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
@@ -22,7 +21,7 @@ const About = () => {
               <span className="text-6xl">🤔</span>
               <div>
                 <h1 className="text-4xl md:text-6xl font-bold">
-                  CanIEatOo? について
+                  CanIEat? について
                 </h1>
                 <p className="text-2xl md:text-3xl font-medium text-orange-200 mt-2">
                   食べれる？
@@ -167,7 +166,7 @@ const About = () => {
             >
               <div className="text-center mb-6">
                 <span className="text-5xl">💡</span>
-                <h3 className="text-2xl font-bold text-gray-900 mt-4">CanIEatOo?の解決策</h3>
+                <h3 className="text-2xl font-bold text-gray-900 mt-4">CanIEat?の解決策</h3>
               </div>
               
               <div className="space-y-4">
@@ -325,12 +324,13 @@ const About = () => {
             <p className="text-xl mb-8 opacity-90">
               無料会員登録で、より詳細なアレルギー情報やお気に入り機能をご利用いただけます
             </p>
-            <Link
-              to="/login"
-              className="inline-block bg-white text-orange-500 px-8 py-3 rounded-lg font-semibold text-lg hover:bg-gray-100 transition-colors shadow-lg"
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="bg-white text-orange-500 px-8 py-3 rounded-lg font-semibold text-lg hover:bg-gray-100 transition-colors shadow-lg"
             >
               今すぐ無料登録して安心な食事を始める
-            </Link>
+            </motion.button>
           </motion.div>
         </div>
       </section>

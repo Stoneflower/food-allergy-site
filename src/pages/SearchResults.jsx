@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import AllergyFilter from '../components/AllergyFilter';
 import CategoryFilter from '../components/CategoryFilter';
 import AdvancedSearchPanel from '../components/AdvancedSearchPanel';
-// import UnifiedAllergyFilter from '../components/UnifiedAllergyFilter';
 import RestaurantCard from '../components/RestaurantCard';
 import ProductCard from '../components/ProductCard';
 import SupermarketCard from '../components/SupermarketCard';
@@ -11,7 +11,7 @@ import { useRestaurant } from '../context/RestaurantContext';
 import SafeIcon from '../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
 
-const { FiFilter, FiGrid, FiList, FiMapPin, FiStar, FiInfo, FiShield, FiUser, FiFileText, FiChevronDown, FiChevronRight, FiExternalLink } = FiIcons;
+const { FiFilter, FiGrid, FiList, FiMapPin, FiStar, FiInfo, FiShield, FiUser, FiFileText } = FiIcons;
 
 const SearchResults = () => {
   const [showFilters, setShowFilters] = useState(true);
@@ -29,32 +29,7 @@ const SearchResults = () => {
     safetyLevel: 'all'
   });
 
-  const { getFilteredItems, selectedAllergies, setSelectedAllergies, selectedArea, selectedCategory, categories, allergyOptions } = useRestaurant();
-
-  // フローティング「一番上へ」ボタン表示制御
-  const [showBackToTop, setShowBackToTop] = useState(false);
-  React.useEffect(() => {
-    const onScroll = () => {
-      try {
-        const y = window.scrollY || document.documentElement.scrollTop || 0;
-        setShowBackToTop(y > 400);
-      } catch (e) {
-        // ignore
-        void e;
-      }
-    };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    onScroll();
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-
-  const scrollToTop = () => {
-    try {
-      window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
-    } catch (_) {
-      window.scrollTo(0, 0);
-    }
-  };
+  const { getFilteredItems, selectedAllergies, searchKeyword, selectedArea, selectedCategory, categories } = useRestaurant();
 
   const filteredItems = getFilteredItems();
 
@@ -115,44 +90,6 @@ const SearchResults = () => {
     }
   });
 
-  // お店アンカーへスクロール
-  const scrollToRestaurant = () => {
-    try {
-      const list = shouldShowGrouped
-        ? restaurantsWithEdible.map(x => x.item)
-        : sortedItems.filter(i => i.category === 'restaurants');
-      if (!list || list.length === 0) return;
-
-      // キーワードに一致する店舗を優先、なければ先頭
-      let target = list[0];
-      if (searchFilters.keyword) {
-        const kw = searchFilters.keyword.toLowerCase();
-        const found = list.find(it => (it.name || '').toLowerCase().includes(kw));
-        if (found) target = found;
-      }
-      const anchorId = `restaurant-${target.id}`;
-      const el = document.getElementById(anchorId);
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    } catch (_) {
-      // noop
-    }
-  };
-
-  // モバイル: 検索実行時はページ最上部（注意書き）へ自動スクロール
-  const buttonAnchorRef = React.useRef(null);
-  React.useEffect(() => {
-    try {
-      if (typeof window !== 'undefined' && window.innerWidth < 640) {
-        window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
-      }
-    } catch (e) {
-      // 画面スクロールアンカー取得に失敗しても致命的ではない
-      void e;
-    }
-  }, [searchFilters, selectedAllergies, selectedArea, selectedCategory]);
-
   const getSearchSummary = () => {
     const parts = [];
     if (searchFilters.keyword) parts.push(`"${searchFilters.keyword}"`);
@@ -211,213 +148,76 @@ const SearchResults = () => {
     setSearchFilters(newFilters);
   };
 
-  // ここから: 店舗ごとの折りたたみ表示（選択アレルギーで食べられるメニューのみ）
-  const [expanded, setExpanded] = useState({}); // key: item.id -> bool
-  const toggleExpand = (pid) => setExpanded(prev => ({ ...prev, [pid]: !prev[pid] }));
-
-  const isMenuSafe = (menuItem) => {
-    if (!Array.isArray(selectedAllergies) || selectedAllergies.length === 0) return false;
-
-    const list = menuItem.menu_item_allergies || [];
-    const hasList = Array.isArray(list) && list.length > 0;
-    const parent = menuItem.__parentProduct;
-    const matrixRows = parent?.allergyMatrix || [];
-    const normalizeName = (t) => {
-      if (!t) return '';
-      let s = String(t).trim();
-      // 括弧や【】を除去
-      const strip = (x) => x
-        .replace(/^【([^】]+)】$/, '$1')
-        .replace(/^（([^）]+)）$/, '$1')
-        .replace(/^\(([^)]+)\)$/, '$1');
-      s = strip(s);
-      // 表示用の黒丸だけ無視（データ照合時）
-      s = s.replace(/[●]+/g, ' ');
-      // 連続空白を1つに
-      s = s.replace(/\s+/g, ' ').trim();
-      return s;
-    };
-    const rowsForMenu = Array.isArray(matrixRows)
-      ? matrixRows.filter(r => normalizeName(r.menu_name || '') === normalizeName(menuItem.name || ''))
-      : [];
-    const slugToCol = (s) => (s === 'soy' ? 'soybean' : s);
-
-    // 1) matrix がある場合は matrix を優先
-    if (rowsForMenu.length > 0) {
-      for (const s of selectedAllergies) {
-        for (const r of rowsForMenu) {
-          const v = (r[slugToCol(s)] || '').toString().toLowerCase();
-          if (v === 'direct') return false; // 選択スラッグでdirectが1つでもあればNG
-        }
-      }
-      return true; // 選択スラッグのどれもdirectでない → OK
-    }
-
-    // 2) matrix が無い場合は menu_item_allergies で判定
-    if (hasList) {
-      for (const s of selectedAllergies) {
-        const rec = list.find(a => (a.allergy_item_slug || a.allergy_item_id) === s);
-        if (rec?.presence_type === 'direct') return false;
-      }
-      return true;
-    }
-
-    return false; // どちらの情報も無ければ安全不明として非表示
-  };
-
-  // 選択アレルギーのうち、コンタミ（trace）があるスラッグ名リストを返す
-  const getTraceAllergenNames = (menuItem) => {
-    if (!Array.isArray(selectedAllergies) || selectedAllergies.length === 0) return [];
-
-    // 1) menu_item_allergies から取得
-    const list = menuItem.menu_item_allergies || [];
-    const hasList = Array.isArray(list) && list.length > 0;
-    const slugToName = (slug) => (allergyOptions.find(a => a.id === slug)?.name || slug);
-
-    const traces = new Set();
-    if (hasList) {
-      for (const s of selectedAllergies) {
-        const rec = list.find(a => (a.allergy_item_slug || a.allergy_item_id) === s);
-        if ((rec?.presence_type) === 'trace') traces.add(slugToName(s));
-      }
-    }
-
-    // 2) 親の matrix から補完
-    const parent = menuItem.__parentProduct;
-    const matrixRows = parent?.allergyMatrix || [];
-    if (Array.isArray(matrixRows) && matrixRows.length > 0) {
-      const normalizeName = (t) => {
-        if (!t) return '';
-        let s = String(t).trim();
-        s = s
-          .replace(/^【([^】]+)】$/, '$1')
-          .replace(/^（([^）]+)）$/, '$1')
-          .replace(/^\(([^)]+)\)$/, '$1')
-          .replace(/[●〇◎△※★☆◇◆□■▯-]+/g, ' ')
-          .replace(/\s+/g, ' ').trim();
-        return s;
-      };
-      const rowsForMenu = matrixRows.filter(r => normalizeName(r.menu_name || '') === normalizeName(menuItem.name || ''));
-      const slugToCol = (s) => (s === 'soy' ? 'soybean' : s);
-      for (const r of rowsForMenu) {
-        for (const s of selectedAllergies) {
-          const v = (r[slugToCol(s)] || '').toString().toLowerCase();
-          if (v === 'trace') traces.add(slugToName(s));
-        }
-      }
-    }
-
-    return Array.from(traces);
-  };
-
-  const restaurantsOnly = sortedItems.filter(i => i.category === 'restaurants');
-  const restaurantsWithEdible = restaurantsOnly.map(item => {
-    const menus = Array.isArray(item.menuItems) ? item.menuItems : [];
-    // 子へ親参照を付与しつつ判定
-    const edible = menus.filter(m => {
-      const mi = { ...m, __parentProduct: item };
-      return isMenuSafe(mi);
-    });
-    // URLは source_url のみ（NULLは無視）
-    const locs = Array.isArray(item.storeLocations) ? item.storeLocations : [];
-    const primaryUrl = (locs.find(l => l.source_url)?.source_url) || null;
-    return { item, edible, primaryUrl };
-  });
-
-  const shouldShowGrouped = selectedAllergies.length > 0 && selectedCategory === 'restaurants';
-
-  // アレルギー選択トグル
-  const toggleAllergy = (slug) => {
-    setSelectedAllergies(prev => prev.includes(slug) ? prev.filter(s => s !== slug) : [...prev, slug]);
-  };
-
-  // サイドバー上部に選択済み成分チップを表示
-  const selectedChips = (allergyOptions || []).filter(a => selectedAllergies.includes(a.id));
-
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="mb-4">
+        <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">検索結果</h1>
-          <p className="text-gray-600">{getSearchSummary()}</p>
-        </div>
-
-        <div className="flex items-center justify-between flex-wrap gap-4 mb-8">
-          <p className="text-sm text-gray-500">
-            {(shouldShowGrouped && restaurantsWithEdible.length > 0)
-              ? restaurantsWithEdible.length
-              : sortedItems.length}件のアイテムが見つかりました
-          </p>
-          <div className="flex items-center space-x-4">
-            {/* Sort */}
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="px-3 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-            >
-              <option value="rating">評価順</option>
-              <option value="reviews">レビュー数順</option>
-              <option value="confidence">信頼度順</option>
-              <option value="updated">更新日順</option>
-              <option value="name">名前順</option>
-              <option value="price">価格順</option>
-            </select>
-
-            {/* Source Filter Toggle */}
-            <button
-              onClick={() => setShowSourceFilter(!showSourceFilter)}
-              className={`flex items-center space-x-2 px-3 py-1 border rounded-lg text-sm hover:bg-gray-50 transition-colors ${
-                selectedSourceTypes.length > 0
-                  ? 'border-orange-500 bg-orange-50 text-orange-700'
-                  : 'border-gray-300'
-              }`}
-            >
-              <SafeIcon icon={FiInfo} className="w-4 h-4" />
-              <span>情報源</span>
-              {selectedSourceTypes.length > 0 && (
-                <span className="bg-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                  {selectedSourceTypes.length}
-                </span>
-              )}
-            </button>
-
-            {/* View Mode */}
-            <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`p-1 rounded ${viewMode === 'grid' ? 'bg-white shadow-sm' : ''}`}
+          <p className="text-gray-600 mb-4">{getSearchSummary()}</p>
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <p className="text-sm text-gray-500">
+              {sortedItems.length}件のアイテムが見つかりました
+            </p>
+            <div className="flex items-center space-x-4">
+              {/* Sort */}
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="px-3 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               >
-                <SafeIcon icon={FiGrid} className="w-4 h-4" />
+                <option value="rating">評価順</option>
+                <option value="reviews">レビュー数順</option>
+                <option value="confidence">信頼度順</option>
+                <option value="updated">更新日順</option>
+                <option value="name">名前順</option>
+                <option value="price">価格順</option>
+              </select>
+
+              {/* Source Filter Toggle */}
+              <button
+                onClick={() => setShowSourceFilter(!showSourceFilter)}
+                className={`flex items-center space-x-2 px-3 py-1 border rounded-lg text-sm hover:bg-gray-50 transition-colors ${
+                  selectedSourceTypes.length > 0
+                    ? 'border-orange-500 bg-orange-50 text-orange-700'
+                    : 'border-gray-300'
+                }`}
+              >
+                <SafeIcon icon={FiInfo} className="w-4 h-4" />
+                <span>情報源</span>
+                {selectedSourceTypes.length > 0 && (
+                  <span className="bg-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                    {selectedSourceTypes.length}
+                  </span>
+                )}
               </button>
+
+              {/* View Mode */}
+              <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className={`p-1 rounded ${viewMode === 'grid' ? 'bg-white shadow-sm' : ''}`}
+                >
+                  <SafeIcon icon={FiGrid} className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`p-1 rounded ${viewMode === 'list' ? 'bg-white shadow-sm' : ''}`}
+                >
+                  <SafeIcon icon={FiList} className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Filter Toggle */}
               <button
-                onClick={() => setViewMode('list')}
-                className={`p-1 rounded ${viewMode === 'list' ? 'bg-white shadow-sm' : ''}`}
+                onClick={() => setShowFilters(!showFilters)}
+                className="flex items-center space-x-2 px-3 py-1 border border-gray-300 rounded-lg text-sm hover:bg-gray-50"
               >
-                <SafeIcon icon={FiList} className="w-4 h-4" />
+                <SafeIcon icon={FiFilter} className="w-4 h-4" />
+                <span>フィルター</span>
               </button>
             </div>
-
-            {/* Filter Toggle */}
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center space-x-2 px-3 py-1 border border-gray-300 rounded-lg text-sm hover:bg-gray-50"
-            >
-              <SafeIcon icon={FiFilter} className="w-4 h-4" />
-              <span>フィルター</span>
-            </button>
           </div>
-        </div>
-
-        {/* モバイル向け: 検索したお店を見るボタン（アンカーへジャンプ） */}
-        <div ref={buttonAnchorRef} className="mb-4 sm:hidden">
-          <button
-            type="button"
-            onClick={scrollToRestaurant}
-            className="w-full inline-flex items-center justify-center px-4 py-3 rounded-lg bg-orange-500 text-white font-medium shadow hover:bg-orange-600"
-          >
-            検索したお店を見る
-          </button>
         </div>
 
         {/* Category Filter */}
@@ -477,79 +277,15 @@ const SearchResults = () => {
               animate={{ opacity: 1, x: 0 }}
               className="lg:w-96 space-y-6"
             >
-              {/* 選択済みアレルギー（サイド上部で表示・同期） */}
-              {selectedChips.length > 0 && (
-                <div className="bg-white rounded-xl shadow-md p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-sm font-semibold text-gray-900">選択中の成分</h3>
-                    <button
-                      onClick={() => setSelectedAllergies([])}
-                      className="text-xs text-gray-500 hover:text-gray-700"
-                    >
-                      クリア
-                    </button>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedChips.map(a => (
-                      <button
-                        key={a.id}
-                        onClick={() => toggleAllergy(a.id)}
-                        className="px-2 py-1 rounded-full text-xs bg-red-50 text-red-700 border border-red-200"
-                        title={`${a.name} を外す`}
-                      >
-                        <span className="mr-1">{a.icon}</span>{a.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* 8品目 + 20品目（上と連動） */}
-              <div className="bg-white rounded-xl shadow-md p-4">
-                <h3 className="text-sm font-semibold text-gray-900 mb-2">表示義務のある8品目</h3>
-                <div className="grid grid-cols-2 gap-2 mb-4">
-                  {(allergyOptions || []).slice(0,8).map(a => {
-                    const active = selectedAllergies.includes(a.id);
-                    return (
-                      <button
-                        key={a.id}
-                        onClick={() => toggleAllergy(a.id)}
-                        className={`p-2 rounded-lg border-2 text-xs transition-all ${active ? 'bg-red-500 text-white border-red-500' : 'bg-white border-gray-200 hover:border-red-300'}`}
-                        title={`${a.name}${active ? '（選択中）' : ''}`}
-                      >
-                        <div className="text-center">
-                          <div className="text-lg mb-1">{a.icon}</div>
-                          <div className="font-medium">{a.name}</div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-                <h3 className="text-sm font-semibold text-gray-900 mb-2">表示が推奨される20品目</h3>
-                <div className="grid grid-cols-2 gap-2">
-                  {(allergyOptions || []).slice(8).map(a => {
-                    const active = selectedAllergies.includes(a.id);
-                    return (
-                      <button
-                        key={a.id}
-                        onClick={() => toggleAllergy(a.id)}
-                        className={`p-2 rounded-lg border-2 text-xs transition-all ${active ? 'bg-red-500 text-white border-red-500' : 'bg-white border-gray-200 hover:border-red-300'}`}
-                        title={`${a.name}${active ? '（選択中）' : ''}`}
-                      >
-                        <div className="text-center">
-                          <div className="text-lg mb-1">{a.icon}</div>
-                          <div className="font-medium">{a.name}</div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
               <AdvancedSearchPanel 
                 onSearch={handleSearchFilters}
                 initialFilters={searchFilters}
               />
+
+              <div className="bg-white rounded-xl shadow-md p-6">
+                <h3 className="text-lg font-semibold mb-4">アレルギーフィルター</h3>
+                <AllergyFilter />
+              </div>
 
               {/* Source Statistics */}
               <div className="bg-white rounded-xl shadow-md p-6">
@@ -573,156 +309,68 @@ const SearchResults = () => {
 
           {/* Results */}
           <div className="flex-1">
-            {shouldShowGrouped ? (
-              restaurantsWithEdible.length > 0 ? (
-                <div className="space-y-3">
-                  {restaurantsWithEdible.map(({ item, edible, primaryUrl }) => (
-                    <div key={item.id} id={`restaurant-${item.id}`} className="bg-white rounded-lg border shadow-sm">
-                      <div className="flex items-center justify-between">
-                        <button
-                          onClick={() => toggleExpand(item.id)}
-                          className="flex-1 flex items-center justify-between px-4 py-3 text-left hover:bg-gray-50"
-                        >
-                          <div className="flex items-center space-x-2">
-                            <SafeIcon icon={expanded[item.id] ? FiChevronDown : FiChevronRight} className="w-4 h-4 text-gray-500" />
-                            <span className="font-semibold text-gray-900">{item.name}</span>
-                            <span className="text-xs text-gray-500">（{edible.length}件 食べられる）</span>
-                          </div>
-                        </button>
-                        {primaryUrl && (
-                          <a
-                            href={primaryUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="mx-3 inline-flex items-center space-x-1 text-sm text-blue-600 hover:text-blue-800"
-                            title="情報元を開く"
-                          >
-                            <SafeIcon icon={FiExternalLink} className="w-4 h-4" />
-                            <span>情報元</span>
-                          </a>
-                        )}
-                      </div>
-                      {expanded[item.id] && (
-                        <div className="px-4 pb-3">
-                          {edible.length > 0 ? (
-                            <ul className="list-disc list-inside text-sm text-gray-800 space-y-1">
-                              {edible.map(mi => {
-                                const traces = getTraceAllergenNames({ ...mi, __parentProduct: item });
-                                const cleanName = String(mi.name || '')
-                                  // 表示では黒丸だけ除去し、それ以外の記号・英字は保持
-                                  .replace(/[●]+/g, ' ')
-                                  .replace(/\s+/g, ' ')
-                                  .trim();
-                                return (
-                                  <li key={mi.id}>
-                                    {cleanName}
-                                    {traces.length > 0 && (
-                                      <span className="ml-1 text-xs text-yellow-700">（{traces.join('、')}、コンタミネーションあり）</span>
-                                    )}
-                                  </li>
-                                );
-                              })}
-                            </ul>
-                          ) : (
-                            <p className="text-sm text-gray-500">該当するメニューはありません</p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                // グルーピングが空でも通常リストにフォールバック
-                sortedItems.length > 0 ? (
+            {sortedItems.length > 0 ? (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className={viewMode === 'grid'
+                  ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6'
+                  : 'space-y-4'
+                }
+              >
+                {sortedItems.map((item, index) => (
                   <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className={viewMode === 'grid'
-                      ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6'
-                      : 'space-y-4'
-                    }
+                    key={`${item.category}-${item.id}`}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: index * 0.05 }}
                   >
-                    {sortedItems.map((item, index) => (
-                      <motion.div
-                        key={`${item.category}-${item.id}`}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3, delay: index * 0.05 }}
-                      >
-                        {item.category === 'restaurants' ? (
-                          <div id={`restaurant-${item.id}`}>
-                            {renderCard(item)}
-                          </div>
-                        ) : (
-                          renderCard(item)
-                        )}
-                      </motion.div>
-                    ))}
+                    {renderCard(item)}
                   </motion.div>
-                ) : (
-                  <div className="text-center py-16">
-                    <div className="w-24 h-24 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
-                      <SafeIcon icon={FiMapPin} className="w-12 h-12 text-gray-400" />
-                    </div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                      条件に合う店舗が見つかりませんでした
-                    </h3>
-                    <p className="text-gray-600 mb-4">
-                      エリアやアレルギー条件を調整して再度お試しください
-                    </p>
-                  </div>
-                )
-              )
+                ))}
+              </motion.div>
             ) : (
-              sortedItems.length > 0 ? (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className={viewMode === 'grid'
-                    ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6'
-                    : 'space-y-4'
-                  }
-                >
-                  {sortedItems.map((item, index) => (
-                    <motion.div
-                      key={`${item.category}-${item.id}`}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3, delay: index * 0.05 }}
-                    >
-                      {renderCard(item)}
-                    </motion.div>
-                  ))}
-                </motion.div>
-              ) : (
-                <div className="text-center py-16">
-                  <div className="w-24 h-24 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
-                    <SafeIcon icon={FiMapPin} className="w-12 h-12 text-gray-400" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                    条件に合うアイテムが見つかりませんでした
-                  </h3>
-                  <p className="text-gray-600 mb-4">
-                    検索条件やアレルギーフィルター、情報源フィルターを調整して再度お試しください
-                  </p>
+              <div className="text-center py-16">
+                <div className="w-24 h-24 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
+                  <SafeIcon icon={FiMapPin} className="w-12 h-12 text-gray-400" />
                 </div>
-              )
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  条件に合うアイテムが見つかりませんでした
+                </h3>
+                <p className="text-gray-600 mb-4">
+                  検索条件やアレルギーフィルター、情報源フィルターを調整して再度お試しください
+                </p>
+                <div className="flex justify-center space-x-4">
+                  <button
+                    onClick={() => setShowFilters(true)}
+                    className="text-orange-500 hover:text-orange-600 font-semibold"
+                  >
+                    フィルターを調整する
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSelectedSourceTypes([]);
+                      setShowSourceFilter(false);
+                      setSearchFilters({
+                        keyword: '',
+                        brand: '',
+                        category: 'all',
+                        containsAllergens: [],
+                        excludeAllergens: [],
+                        priceRange: 'all',
+                        safetyLevel: 'all'
+                      });
+                    }}
+                    className="text-blue-500 hover:text-blue-600 font-semibold"
+                  >
+                    すべてのフィルターをリセット
+                  </button>
+                </div>
+              </div>
             )}
           </div>
         </div>
       </div>
-      {/* フローティング: 一番上へ */}
-      {showBackToTop && (
-        <button
-          type="button"
-          onClick={scrollToTop}
-          className="fixed bottom-6 right-4 sm:right-6 z-40 rounded-full shadow-lg bg-orange-500 text-white w-12 h-12 flex items-center justify-center hover:bg-orange-600"
-          aria-label="一番上へ"
-          title="一番上へ"
-        >
-          ↑
-        </button>
-      )}
     </div>
   );
 };

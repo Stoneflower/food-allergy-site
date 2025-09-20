@@ -1,5 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import React, { createContext, useContext, useState } from 'react';
 
 const RestaurantContext = createContext();
 
@@ -13,7 +12,6 @@ export const useRestaurant = () => {
 
 export const RestaurantProvider = ({ children }) => {
   const [selectedAllergies, setSelectedAllergies] = useState([]);
-  const [allergyMaster, setAllergyMaster] = useState([]);
   const [searchKeyword, setSearchKeyword] = useState('');
   const [selectedArea, setSelectedArea] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -53,7 +51,7 @@ export const RestaurantProvider = ({ children }) => {
     { id: 'sesame', name: 'ごま', icon: '🌱' },
     { id: 'salmon', name: 'さけ', icon: '🐟' },
     { id: 'mackerel', name: 'さば', icon: '🐟' },
-    { id: 'soy', name: '大豆', icon: '🟤' },
+    { id: 'soy', name: '大豆', icon: '🫘' },
     { id: 'chicken', name: '鶏肉', icon: '🐔' },
     { id: 'banana', name: 'バナナ', icon: '🍌' },
     { id: 'pork', name: '豚肉', icon: '🥓' },
@@ -73,337 +71,345 @@ export const RestaurantProvider = ({ children }) => {
     { id: 'online', name: 'ネットショップ', icon: '📦' }
   ];
 
-  // サンプルデータを削除 - Supabaseデータのみを使用
-
-  // 共有（DB）から取得した商品
-  const [dbProducts, setDbProducts] = useState([]);
-
-  // サンプル商品データを削除 - Supabaseデータのみを使用
-  const products = [];
-
-  const supermarkets = [];
-
-  const onlineShops = [];
-
-  // Supabase から最近の共有商品を取得（メニューとアレルギー情報も含む）
-  useEffect(() => {
-    const loadProducts = async () => {
-      try {
-        // 効率的なJOINクエリでデータを一括取得（store_locationsは別取得で補完）
-        const { data, error } = await supabase
-          .from('products')
-          .select(`
-            *,
-            menu_items (
-              *,
-              menu_item_allergies (
-                *,
-                allergy_items (name, icon)
-              )
-            ),
-            product_allergies_matrix (*)
-          `)
-          .order('id', { ascending: false });
-        
-        if (error) throw error;
-        
-        const mapped = (data || []).map((p) => {
-          const catRaw = (p.category || '').toString().toLowerCase();
-          const normalizedCategory = catRaw.includes('レストラン') || catRaw.includes('restaurant')
-            ? 'restaurants'
-            : (catRaw.includes('super') || catRaw.includes('スーパー'))
-              ? 'supermarkets'
-              : (catRaw.includes('online') || catRaw.includes('ネット'))
-                ? 'online'
-                : 'restaurants';
-          
-          const isBikkuri = (p.name || '').includes('びっくりドンキー');
-          const imageUrl = 'https://images.unsplash.com/photo-1511690656952-34342bb7c2f2?w=600';
-          
-          return {
-            id: `db_${p.id}`,
-            name: p.name,
-            image: imageUrl,
-            price: '',
-            brand: p.brand || '',
-            category: normalizedCategory,
-            type: p.category || '共有商品',
-            description: 'みんなが共有した商品',
+  // 軽量化されたサンプルデータ（更新履歴を追加）
+  const restaurants = [
+    {
+      id: 1,
+      name: 'アレルギーフリー カフェ 渋谷店',
+      image: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400',
       rating: 4.5,
-            reviewCount: 0,
-            availability: { online: [] },
-            allergyFree: [],
-            source: { type: 'community', contributor: '共有', lastUpdated: new Date().toISOString(), confidence: 80, verified: false },
-            menuItems: p.menu_items || [],
-            storeLocations: [], // 後で補完
-            allergyMatrix: p.product_allergies_matrix || [],
+      reviewCount: 128,
+      price: '¥1,000～¥2,000',
+      area: '渋谷',
+      cuisine: 'カフェ・洋食',
+      category: 'restaurants',
+      allergyFree: ['egg', 'milk', 'wheat'],
       allergyInfo: {
-              egg: false, milk: false, wheat: false, buckwheat: true,
-              peanut: true, shrimp: true, crab: true, walnut: true,
-              almond: true, abalone: true, squid: true, salmon_roe: true,
-              orange: true, cashew: true, kiwi: true, beef: true,
-              gelatin: true, sesame: true, salmon: true, mackerel: true,
-              soy: true, chicken: true, banana: true, pork: true,
-              matsutake: true, peach: true, yam: true, apple: true
-            }
-          };
-        });
-
-        const pidList = (data || []).map(p => p.id);
-        let storeLocationsByProduct = new Map();
-        if (pidList.length > 0) {
-          const { data: locs, error: locErr } = await supabase
-            .from('store_locations')
-            .select('*')
-            .in('product_id', pidList);
-          if (locErr) {
-            console.warn('store_locations fetch failed:', locErr.message);
-          } else {
-            for (const loc of locs || []) {
-              const arr = storeLocationsByProduct.get(loc.product_id) || [];
-              arr.push(loc);
-              storeLocationsByProduct.set(loc.product_id, arr);
-            }
-          }
-        }
-
-        const merged = mapped.map(m => {
-          const pid = Number(m.id.slice(3));
-          return { ...m, storeLocations: storeLocationsByProduct.get(pid) || [] };
-        });
-        
-        console.log('Supabase products loaded:', merged.length, 'items');
-        console.log('Loaded products:', merged.map(p => ({ 
-          id: p.id, 
-          name: p.name, 
-          category: p.category,
-          menuItems: p.menuItems?.length || 0,
-          storeLocations: p.storeLocations?.length || 0,
-          allergyMatrix: p.allergyMatrix?.length || 0
-        })));
-        
-        const bikkuriDonkey = merged.find(p => p.name && p.name.includes('びっくりドンキー'));
-        if (bikkuriDonkey) {
-          console.log('✅ びっくりドンキーが見つかりました:', bikkuriDonkey);
-        } else {
-          console.log('❌ びっくりドンキーが見つかりませんでした');
-        }
-        
-        setDbProducts(merged);
-      } catch (e) {
-        console.error('Supabase products fetch failed:', e);
-        console.error('Error details:', {
-          message: e.message,
-          details: e.details,
-          hint: e.hint,
-          code: e.code
-        });
-        setDbProducts([]);
+        // 義務8品目
+        egg: false,
+        milk: false,
+        wheat: false,
+        buckwheat: true,
+        peanut: false,
+        shrimp: true,
+        crab: true,
+        walnut: true,
+        // 推奨20品目
+        almond: false,
+        abalone: true,
+        squid: true,
+        salmon_roe: true,
+        orange: true,
+        cashew: false,
+        kiwi: true,
+        beef: true,
+        gelatin: true,
+        sesame: true,
+        salmon: true,
+        mackerel: true,
+        soy: true,
+        chicken: true,
+        banana: true,
+        pork: true,
+        matsutake: true,
+        peach: true,
+        yam: true,
+        apple: true
+      },
+      description: 'アレルギーをお持ちの方でも安心してお食事を楽しめるカフェです。',
+      address: '東京都渋谷区渋谷1-1-1',
+      phone: '03-1234-5678',
+      hours: '11:00～22:00',
+      closed: '年中無休',
+      source: {
+        type: 'official',
+        contributor: '店舗公式',
+        lastUpdated: '2024-01-15',
+        confidence: 95,
+        verified: true,
+        reviewCount: 25,
+        url: 'https://example.com/official-allergy-info'
       }
-    };
-    loadProducts();
-  }, []);
-
-  // アレルギーマスタ（表示名/アイコン/並び）
-  useEffect(() => {
-    (async () => {
-      try {
-        const { data, error } = await supabase
-          .from('allergy_items')
-          .select('slug,name,icon,sort_order')
-          .order('sort_order', { ascending: true });
-        if (error) throw error;
-        setAllergyMaster(data || []);
-      } catch (e) {
-        console.warn('allergy master load failed:', e.message);
-        setAllergyMaster([]);
+    },
+    {
+      id: 2,
+      name: 'グルテンフリー レストラン 新宿店',
+      image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400',
+      rating: 4.3,
+      reviewCount: 95,
+      price: '¥2,000～¥3,000',
+      area: '新宿',
+      cuisine: 'イタリアン',
+      category: 'restaurants',
+      allergyFree: ['wheat', 'milk'],
+      allergyInfo: {
+        // 義務8品目
+        egg: true,
+        milk: false,
+        wheat: false,
+        buckwheat: true,
+        peanut: true,
+        shrimp: true,
+        crab: true,
+        walnut: true,
+        // 推奨20品目
+        almond: true,
+        abalone: true,
+        squid: true,
+        salmon_roe: true,
+        orange: true,
+        cashew: true,
+        kiwi: true,
+        beef: true,
+        gelatin: true,
+        sesame: true,
+        salmon: true,
+        mackerel: true,
+        soy: true,
+        chicken: true,
+        banana: true,
+        pork: true,
+        matsutake: true,
+        peach: true,
+        yam: true,
+        apple: true
+      },
+      description: 'グルテンフリーパスタが自慢のイタリアンレストランです。',
+      address: '東京都新宿区新宿2-2-2',
+      phone: '03-2345-6789',
+      hours: '17:00～23:00',
+      closed: '月曜日',
+      source: {
+        type: 'pdf',
+        contributor: 'システム解析',
+        lastUpdated: '2024-01-20',
+        confidence: 88,
+        verified: true,
+        reviewCount: 12,
+        url: 'https://example.com/restaurant-menu.pdf'
       }
-    })();
-  }, []);
+    }
+  ];
 
-  // 統合データ（Supabaseデータのみを使用）
-  const allItems = [...dbProducts];
-
-  // 選択アレルギーに対して、安全メニューを持つ product_id を事前計算
-  const [safeProductIds, setSafeProductIds] = useState(null);
-  useEffect(() => {
-    (async () => {
-      try {
-        if (!Array.isArray(dbProducts) || dbProducts.length === 0) {
-          setSafeProductIds(new Set());
-          return;
+  const products = [
+    {
+      id: 'p1',
+      name: 'グルテンフリー米粉パン',
+      image: 'https://images.unsplash.com/photo-1549931319-a545dcf3bc73?w=400',
+      price: '¥480',
+      brand: 'アレルギー対応パン工房',
+      category: 'products',
+      type: 'パン・米粉製品',
+      allergyFree: ['wheat', 'egg', 'milk'],
+      allergyInfo: {
+        // 義務8品目
+        egg: false,
+        milk: false,
+        wheat: false,
+        buckwheat: true,
+        peanut: true,
+        shrimp: true,
+        crab: true,
+        walnut: true,
+        // 推奨20品目
+        almond: true,
+        abalone: true,
+        squid: true,
+        salmon_roe: true,
+        orange: true,
+        cashew: true,
+        kiwi: true,
+        beef: true,
+        gelatin: true,
+        sesame: true,
+        salmon: true,
+        mackerel: true,
+        soy: true,
+        chicken: true,
+        banana: true,
+        pork: true,
+        matsutake: true,
+        peach: true,
+        yam: true,
+        apple: true
+      },
+      description: '小麦粉不使用、米粉100%で作られたふわふわパンです。',
+      rating: 4.6,
+      reviewCount: 89,
+      ingredients: [
+        '米粉（国産）',
+        '砂糖',
+        '植物油脂',
+        '食塩',
+        'イースト',
+        'キサンタンガム'
+      ],
+      availability: {
+        supermarkets: ['イオン', 'イトーヨーカドー'],
+        online: ['Amazon', '楽天市場']
+      },
+      source: {
+        type: 'user_upload',
+        contributor: '田中さん',
+        lastUpdated: '2024-01-18',
+        confidence: 92,
+        verified: false,
+        reviewCount: 8,
+        uploadDate: '2024-01-18'
+      },
+      // 更新履歴を追加
+      updateHistory: [
+        {
+          id: 'update_p1_1',
+          type: 'info_change',
+          submittedBy: '山田さん',
+          submittedAt: new Date('2024-01-25'),
+          status: 'approved',
+          changes: [
+            { field: '価格', old: '¥450', new: '¥480' }
+          ],
+          changeReason: '1月からの値上げを確認しました。',
+          reviewedBy: '運営チーム',
+          reviewedAt: new Date('2024-01-26')
         }
-        if (!Array.isArray(selectedAllergies) || selectedAllergies.length === 0) {
-          setSafeProductIds(null);
-          return;
+      ],
+      lastUpdateReport: '2024-01-25',
+      pendingUpdates: 0
+    },
+    {
+      id: 'p2',
+      name: 'オーガニック豆乳ヨーグルト',
+      image: 'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400',
+      price: '¥298',
+      brand: 'オーガニック食品',
+      category: 'products',
+      type: '乳製品代替',
+      allergyFree: ['milk', 'egg'],
+      allergyInfo: {
+        // 義務8品目
+        egg: false,
+        milk: false,
+        wheat: true,
+        buckwheat: true,
+        peanut: true,
+        shrimp: true,
+        crab: true,
+        walnut: true,
+        // 推奨20品目
+        almond: true,
+        abalone: true,
+        squid: true,
+        salmon_roe: true,
+        orange: true,
+        cashew: true,
+        kiwi: true,
+        beef: true,
+        gelatin: true,
+        sesame: true,
+        salmon: true,
+        mackerel: true,
+        soy: true,
+        chicken: true,
+        banana: true,
+        pork: true,
+        matsutake: true,
+        peach: true,
+        yam: true,
+        apple: true
+      },
+      description: '乳製品不使用、豆乳ベースのプロバイオティクスヨーグルトです。',
+      rating: 4.3,
+      reviewCount: 156,
+      ingredients: [
+        '有機豆乳',
+        '有機砂糖',
+        '乳酸菌',
+        '寒天',
+        'クエン酸'
+      ],
+      availability: {
+        supermarkets: ['ナチュラルローソン', '成城石井'],
+        online: ['iHerb', 'ケンコーコム']
+      },
+      source: {
+        type: 'verified',
+        contributor: '運営チーム',
+        lastUpdated: '2024-01-22',
+        confidence: 98,
+        verified: true,
+        reviewCount: 45
+      },
+      updateHistory: [
+        {
+          id: 'update_p2_1',
+          type: 'info_change',
+          submittedBy: '佐藤さん',
+          submittedAt: new Date('2024-01-20'),
+          status: 'pending_review',
+          changes: [
+            { field: 'アレルギー成分（追加）', old: '', new: '🫘 大豆', type: 'addition' }
+          ],
+          changeReason: 'パッケージに大豆アレルギーの注意書きが追加されていました。'
         }
+      ],
+      pendingUpdates: 1
+    }
+  ];
 
-        const pidList = dbProducts
-          .filter(p => typeof p.id === 'string' && p.id.startsWith('db_'))
-          .map(p => Number(p.id.slice(3)));
-        if (pidList.length === 0) {
-          setSafeProductIds(new Set());
-          return;
-        }
-
-        // menu_item_allergiesとproduct_allergies_matrixの両方から安全判定
-        console.log('🔍 アレルギー検索開始:', {
-          selectedAllergies,
-          pidList,
-          pidListLength: pidList.length
-        });
-        
-        // 1. menu_item_allergiesから取得
-        const { data: allergyData, error: allergyError } = await supabase
-          .from('menu_item_allergies')
-          .select(`
-            menu_item_id,
-            allergy_item_slug,
-            presence_type,
-            menu_items!inner(product_id, name)
-          `)
-          .in('menu_items.product_id', pidList)
-          .in('allergy_item_slug', selectedAllergies);
-          
-        console.log('📊 menu_item_allergies取得結果:', {
-          dataCount: allergyData?.length || 0,
-          error: allergyError,
-          sampleData: allergyData?.slice(0, 3)
-        });
-        
-        if (allergyError) throw allergyError;
-        
-        // 2. product_allergies_matrixから取得（フォールバック）
-        const matrixColumns = [
-          'product_id','menu_name','egg','milk','wheat','buckwheat','peanut','shrimp','crab','walnut','almond','abalone','squid','salmon_roe','orange','cashew','kiwi','beef','gelatin','sesame','salmon','mackerel','soybean','chicken','banana','pork','matsutake','peach','yam','apple','macadamia'
-        ];
-        
-        const { data: matrixData, error: matrixError } = await supabase
-          .from('product_allergies_matrix')
-          .select(matrixColumns.join(','))
-          .in('product_id', pidList);
-          
-        console.log('📊 product_allergies_matrix取得結果:', {
-          dataCount: matrixData?.length || 0,
-          error: matrixError,
-          sampleData: matrixData?.slice(0, 3)
-        });
-        
-        if (matrixError) throw matrixError;
-
-        // 各商品の安全メニューをチェック（両方のデータソースを統合）
-        const byProduct = new Map(); // pid -> array of menu allergy records
-        
-        // 1. menu_item_allergiesから取得
-        for (const record of allergyData || []) {
-          const pid = record.menu_items.product_id;
-          const arr = byProduct.get(pid) || [];
-          arr.push({
-            menuName: record.menu_items.name,
-            allergen: record.allergy_item_slug,
-            presenceType: record.presence_type,
-            source: 'menu_item_allergies'
-          });
-          byProduct.set(pid, arr);
-        }
-        
-        // 2. product_allergies_matrixから取得（フォールバック）
-        const slugToColumn = (slug) => slug === 'soy' ? 'soybean' : slug;
-        for (const row of matrixData || []) {
-          const pid = row.product_id;
-          const arr = byProduct.get(pid) || [];
-          
-          for (const allergenSlug of selectedAllergies) {
-            const column = slugToColumn(allergenSlug);
-            const value = (row[column] || '').toString().toLowerCase();
-            
-            console.log('🔍 マトリックス値チェック:', {
-              productId: pid,
-              menuName: row.menu_name,
-              allergen: allergenSlug,
-              column: column,
-              value: value
-            });
-            
-            if (value === 'direct') {
-              arr.push({
-                menuName: row.menu_name,
-                allergen: allergenSlug,
-                presenceType: 'direct',
-                source: 'product_allergies_matrix'
-              });
-            } else if (value === 'trace') {
-              arr.push({
-                menuName: row.menu_name,
-                allergen: allergenSlug,
-                presenceType: 'trace',
-                source: 'product_allergies_matrix'
-              });
-            }
-            // 'none'の場合は何も追加しない（安全）
-          }
-          byProduct.set(pid, arr);
-        }
-
-        const okProducts = new Set();
-        for (const pid of pidList) {
-          const productAllergies = byProduct.get(pid) || [];
-          
-          // この商品に選択されたアレルギーが含まれているかチェック
-          let hasUnsafeMenu = false;
-          for (const allergy of productAllergies) {
-            if (allergy.presenceType === 'direct') {
-              hasUnsafeMenu = true;
-              console.log('🚫 直接含有メニュー発見:', {
-                productId: pid,
-                menuName: allergy.menuName,
-                allergen: allergy.allergen,
-                presenceType: allergy.presenceType,
-                source: allergy.source
-              });
-              break;
-            } else if (allergy.presenceType === 'trace') {
-              // コンタミネーション（trace）は表示する（ユーザーが判断）
-              console.log('⚠️ コンタミネーション含有メニュー（表示対象）:', {
-                productId: pid,
-                menuName: allergy.menuName,
-                allergen: allergy.allergen,
-                presenceType: allergy.presenceType,
-                source: allergy.source,
-                note: 'ユーザーが判断してください'
-              });
-            }
-          }
-          
-          if (!hasUnsafeMenu) {
-            okProducts.add(pid);
-            const traceMenus = productAllergies.filter(a => a.presenceType === 'trace');
-            if (traceMenus.length > 0) {
-              console.log('✅ 安全商品（コンタミネーション含む）:', {
-                productId: pid,
-                traceMenusCount: traceMenus.length,
-                traceAllergens: traceMenus.map(t => t.allergen),
-                totalMenus: productAllergies.length,
-                note: 'コンタミネーションは表示されます'
-              });
-            } else {
-              console.log('✅ 完全安全商品:', {
-                productId: pid,
-                totalMenus: productAllergies.length,
-                note: 'アレルギー含有なし'
-              });
-            }
-          }
-        }
-
-        setSafeProductIds(okProducts);
-        console.log('✅ safeProductIds computed via matrix:', okProducts.size);
-      } catch (e) {
-        console.warn('safeProductIds compute failed:', e.message);
-        setSafeProductIds(new Set());
+  const supermarkets = [
+    {
+      id: 's1',
+      name: 'イオン 渋谷店',
+      image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400',
+      category: 'supermarkets',
+      area: '渋谷',
+      rating: 4.2,
+      reviewCount: 445,
+      allergyFreeProducts: 25,
+      specialFeatures: ['アレルギー対応コーナー', '専門スタッフ常駐'],
+      address: '東京都渋谷区渋谷2-24-1',
+      hours: '9:00～23:00',
+      phone: '03-5456-7890',
+      description: 'アレルギー対応商品を豊富に取り揃えているイオンの大型店舗です。',
+      source: {
+        type: 'community',
+        contributor: 'アレルギー情報収集グループ',
+        lastUpdated: '2024-01-10',
+        confidence: 85,
+        verified: false,
+        reviewCount: 32
       }
-    })();
-  }, [JSON.stringify(dbProducts.map(p => p.id)), JSON.stringify(selectedAllergies)]);
+    }
+  ];
+
+  const onlineShops = [
+    {
+      id: 'o1',
+      name: 'アレルギー対応食品専門店',
+      image: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400',
+      category: 'online',
+      url: 'https://allergy-foods.com',
+      rating: 4.8,
+      reviewCount: 1234,
+      allergyFreeProducts: 150,
+      specialFeatures: ['28品目完全対応', '栄養士監修', '全国配送'],
+      description: 'アレルギー対応食品に特化した専門オンラインストアです。',
+      shippingInfo: '全国送料無料（5,000円以上）',
+      deliveryTime: '1-3営業日',
+      source: {
+        type: 'official',
+        contributor: 'ショップ公式',
+        lastUpdated: '2024-01-25',
+        confidence: 96,
+        verified: true,
+        reviewCount: 67,
+        url: 'https://allergy-foods.com'
+      }
+    }
+  ];
+
+  // 統合データ
+  const allItems = [...restaurants, ...products, ...supermarkets, ...onlineShops];
 
   // お気に入り機能
   const toggleFavorite = (itemId, category) => {
@@ -424,14 +430,16 @@ export const RestaurantProvider = ({ children }) => {
   const addToHistory = (item) => {
     setHistory(prev => {
       const newHistory = prev.filter(h => h.id !== item.id || h.category !== item.category);
-      return [{ ...item, viewedAt: new Date() }, ...newHistory].slice(0, 10);
+      return [{ ...item, viewedAt: new Date() }, ...newHistory].slice(0, 10); // 最新10件
     });
   };
 
   // 商品更新機能
   const updateProductInfo = (productId, updateData) => {
+    // 実際にはここでAPIを呼び出してデータベースを更新
     console.log('商品更新:', productId, updateData);
-    const updatedProducts = (allItems || []).map(product => {
+    // ローカル状態の更新（実際の実装では不要）
+    const updatedProducts = products.map(product => {
       if (product.id === productId) {
         return {
           ...product,
@@ -453,9 +461,11 @@ export const RestaurantProvider = ({ children }) => {
     return updatedProducts;
   };
 
+  // QRコード機能（モック）
   const scanQRCode = () => {
     return new Promise((resolve) => {
       setTimeout(() => {
+        // モックデータを返す
         resolve({
           productName: 'グルテンフリー米粉パン',
           allergens: ['wheat', 'egg', 'milk'],
@@ -465,9 +475,11 @@ export const RestaurantProvider = ({ children }) => {
     });
   };
 
+  // 位置情報機能（モック）
   const getNearbyItems = (latitude, longitude) => {
     return new Promise((resolve) => {
       setTimeout(() => {
+        // 渋谷周辺のモックデータ
         resolve(
           allItems.filter(item => item.area === '渋谷' || !item.area)
         );
@@ -478,58 +490,21 @@ export const RestaurantProvider = ({ children }) => {
   // フィルタリング機能
   const getFilteredItems = () => {
     let items = allItems;
-    
-    console.log('🔍 検索開始:', {
-      totalItems: allItems.length,
-      selectedCategory,
-      selectedAllergies,
-      selectedArea,
-      searchKeyword
-    });
-    
-    console.log('📋 全アイテム一覧:', allItems.map(item => ({
-      id: item.id,
-      name: item.name,
-      category: item.category,
-      area: item.area,
-      isDbData: item.id && typeof item.id === 'string' && item.id.startsWith('db_'),
-      hasStoreLocations: item.storeLocations?.length || 0
-    })));
 
     if (selectedCategory !== 'all') {
       items = items.filter(item => item.category === selectedCategory);
-      console.log('📂 カテゴリフィルター後:', items.length, 'items');
     }
 
-    if (selectedAllergies.length > 0) {
-      const beforeAllergyFilter = items.length;
-      console.log('🚫 アレルギーフィルター適用前:', {
-        selectedAllergies,
-        safeProductIds: safeProductIds ? Array.from(safeProductIds) : null,
-        safeProductIdsSize: safeProductIds ? safeProductIds.size : 0
-      });
-      
-      // 安全候補が空集合なら、ユーザーに結果ゼロを避けるため一旦フィルタをスキップ
-      const shouldApply = safeProductIds && safeProductIds.size > 0;
+    // ログインユーザーの場合はユーザー設定を考慮
+    if (isLoggedIn && userSettings.selectedAllergies.length > 0) {
       items = items.filter(item => {
-        if (!(item.id && typeof item.id === 'string' && item.id.startsWith('db_'))) {
-          console.log('🚫 非DBデータ除外:', item.name, item.id);
-          return false;
-        }
-        if (!shouldApply) {
-          console.log('⚠️ アレルギーフィルタースキップ:', item.name, 'safeProductIdsが空');
-          return true;
-        }
-        const pid = Number(item.id.slice(3));
-        const isSafe = safeProductIds.has(pid);
-        console.log('🔍 アレルギー安全性チェック:', {
-          itemName: item.name,
-          productId: pid,
-          isSafe: isSafe
-        });
-        return isSafe;
+        return userSettings.selectedAllergies.every(allergy => !item.allergyInfo[allergy]);
       });
-      console.log('🚫 アレルギーフィルター後:', beforeAllergyFilter, '→', items.length, 'items');
+    } else if (selectedAllergies.length > 0) {
+      // 非ログインユーザーは基本的なフィルタリングのみ
+      items = items.filter(item => {
+        return selectedAllergies.every(allergy => !item.allergyInfo[allergy]);
+      });
     }
 
     if (searchKeyword) {
@@ -543,35 +518,11 @@ export const RestaurantProvider = ({ children }) => {
     }
 
     if (selectedArea) {
-      const beforeAreaFilter = items.length;
-      items = items.filter(item => {
-        if (item.storeLocations && item.storeLocations.length > 0) {
-          const hasMatchingLocation = item.storeLocations.some(location => {
-            if (!location.address) return false;
-            const address = location.address.toString();
-            const searchArea = selectedArea.toString();
-            const matches = address.includes(searchArea);
-            console.log('📍 住所マッチング:', {
-              itemName: item.name,
-              address: address,
-              searchArea: searchArea,
-              matches: matches
-            });
-            return matches;
-          });
-          console.log('📍 エリアマッチ結果:', item.name, hasMatchingLocation, {
-            locations: item.storeLocations.map(l => l.address) || []
-          });
-          return hasMatchingLocation;
-        } else {
-          console.log('📍 住所情報なし:', item.name, '→ 非表示');
-          return false;
-        }
-      });
-      console.log('📍 エリアフィルター後:', beforeAreaFilter, '→', items.length, 'items');
+      items = items.filter(item => 
+        !item.area || item.area.toLowerCase().includes(selectedArea.toLowerCase())
+      );
     }
 
-    console.log('🎯 最終結果:', items.length, 'items');
     return items;
   };
 
@@ -579,8 +530,11 @@ export const RestaurantProvider = ({ children }) => {
     return getFilteredItems().filter(item => item.category === 'restaurants' || !item.category);
   };
 
+  // レコメンド機能
   const getRecommendations = () => {
     if (history.length === 0) return allItems.slice(0, 3);
+
+    // 履歴から類似アイテムを推薦（簡単なロジック）
     const lastViewed = history[0];
     return allItems.filter(item =>
       item.id !== lastViewed.id && item.category === lastViewed.category
@@ -588,12 +542,18 @@ export const RestaurantProvider = ({ children }) => {
   };
 
   const value = {
+    // データ
     allergyOptions,
     mandatoryAllergies,
     recommendedAllergies,
     categories,
+    restaurants,
+    products,
+    supermarkets,
+    onlineShops,
     allItems,
 
+    // 状態
     selectedAllergies,
     setSelectedAllergies,
     searchKeyword,
@@ -609,6 +569,7 @@ export const RestaurantProvider = ({ children }) => {
     userSettings,
     setUserSettings,
 
+    // 機能
     getFilteredRestaurants,
     getFilteredItems,
     toggleFavorite,
@@ -626,5 +587,3 @@ export const RestaurantProvider = ({ children }) => {
     </RestaurantContext.Provider>
   );
 };
-
-export default RestaurantContext;

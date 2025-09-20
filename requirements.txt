@@ -1,9 +1,0 @@
-Flask==3.0.0
-requests
-python-dotenv
-pdf2image
-pytesseract
-opencv-python-headless
-pandas
-Pillow>=10.0.0
-numpy

@@ -3,8 +3,7 @@ import { motion } from 'framer-motion';
 import SafeIcon from '../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
 import { useRestaurant } from '../context/RestaurantContext';
-import { supabase } from '../lib/supabase';
-// PDFアップローダは廃止（CSV取込へ移行）
+import PDFUploader from '../components/PDFUploader';
 
 const { FiCamera, FiUpload, FiX, FiCheck, FiAlertCircle, FiEdit3, FiSave, FiImage, FiRefreshCw, FiTrendingUp, FiFileText } = FiIcons;
 
@@ -24,25 +23,12 @@ const Upload = () => {
   });
   const [similarProducts, setSimilarProducts] = useState([]);
   const [showSimilarProducts, setShowSimilarProducts] = useState(false);
-  // PDFは廃止
-  const [uploadType, setUploadType] = useState('image'); // 'image' or 'csv'
-  const [csvFile, setCsvFile] = useState(null);
-  const [csvImporting, setCsvImporting] = useState(false);
-
-  const readFileAsText = (file) => new Promise((resolve, reject) => {
-    try {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = () => reject(reader.error || new Error('ファイル読み込みに失敗しました'));
-      reader.readAsText(file, 'utf-8');
-    } catch (e) {
-      reject(e);
-    }
-  });
+  const [showPDFUploader, setShowPDFUploader] = useState(false);
+  const [uploadType, setUploadType] = useState('image'); // 'image' or 'pdf'
   
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
-  const { allergyOptions, userSettings } = useRestaurant();
+  const { allergyOptions } = useRestaurant();
 
   // カメラで撮影
   const handleCameraCapture = (event) => {
@@ -164,7 +150,7 @@ const Upload = () => {
       confidence: mockExtractedInfo.confidence
     });
     
-    // PDF機能は廃止: 直接Step遷移のみ
+    setShowPDFUploader(false);
     setStep(2);
   };
 
@@ -208,129 +194,15 @@ const Upload = () => {
     }));
   };
 
-  // 投稿完了（PDF解析結果は Functions 経由で保存を発火）
+  // 投稿完了
   const handleSubmit = async () => {
-    try {
     setIsProcessing(true);
-      // PDF由来の場合は保存APIを発火
-      if (extractedInfo?.pdfSource) {
-        // ID正規化（DBのitem_idに合わせる）
-        const normalizeId = (id) => (id === 'soy' ? 'soybean' : id);
-
-        const product = {
-          name: (editedInfo.productName || '').trim(),
-          brand: editedInfo.brand || null,
-          category: extractedInfo.pdfSource ? 'レストラン・店舗' : null
-        };
-        if (!product.name) {
-          alert('店舗名（商品名）を入力してください');
-          setIsProcessing(false);
-          return;
-        }
-
-        // presence/amount 自動推定
-        const textBlob = [
-          ...(extractedInfo?.warnings || []),
-          ...(Array.isArray(editedInfo.ingredients) ? editedInfo.ingredients : [])
-        ].join(' ');
-        const hasFragrance = /香料/.test(textBlob);
-        const processedHeatedRegex = /(加工品|加熱|加熱済|加熱処理|焼成|ボイル|揚げ|フライ|炒め|蒸し|レトルト|殺菌)/;
-        const isProcessedHeated = processedHeatedRegex.test(textBlob);
-
-        // 28品目すべてを保存（未検出は presence_type='none'）
-        const allIds = (Array.isArray(allergyOptions) ? allergyOptions : []).map(a => normalizeId(a.id));
-        // OCR由来の検出があるのにUIで未操作の場合のフォールバック
-        const baseSelected = Array.isArray(editedInfo.allergens) && editedInfo.allergens.length > 0
-          ? editedInfo.allergens
-          : (Array.isArray(extractedInfo?.allergens) ? extractedInfo.allergens : []);
-        const selected = new Set(baseSelected.map(normalizeId));
-        const allergies = allIds.map(id => {
-          const detected = selected.has(id);
-          const presence = detected ? (hasFragrance ? 'trace' : (isProcessedHeated ? 'heated' : 'direct')) : 'none';
-          const amount = detected ? (hasFragrance ? 'trace' : 'unknown') : 'none';
-          const note = detected ? (hasFragrance ? '香料表記を検出' : (isProcessedHeated ? '加工/加熱表記を検出' : 'shared from upload page')) : '';
-          return {
-            allergy_item_id: id,
-            presence_type: presence,
-            amount_level: amount,
-            notes: note
-          };
-        });
-
-        console.log('POST /.netlify/functions/save-product', { product, allergies });
-        // メニュー行の組み立て（PDFのメニュー項目ごとに28品目を作成）
-        const allIdsForMenu = (Array.isArray(allergyOptions) ? allergyOptions : []).map(a => normalizeId(a.id));
-        const buildMenuAllergies = (menuName) => {
-          // 簡易推定: 全メニューに同じpresenceを適用（将来: 行ごと推定に拡張）
-          return allIdsForMenu.map(id => ({
-            allergy_item_id: id,
-            presence_type: hasFragrance ? 'trace' : (isProcessedHeated ? 'heated' : 'none'),
-            amount_level: hasFragrance ? 'trace' : (isProcessedHeated ? 'unknown' : 'none'),
-            notes: hasFragrance ? '香料表記を検出' : (isProcessedHeated ? '加工/加熱表記を検出' : '')
-          }));
-        };
-        const menuItems = Array.isArray(extractedInfo?.ingredients) && extractedInfo.ingredients.length > 0
-          ? extractedInfo.ingredients.slice(0, 50).map(name => ({ name, allergies: buildMenuAllergies(name) }))
-          : [];
-
-        const resp = await fetch('/.netlify/functions/save-product', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ product, allergies, menuItems })
-        });
-        const txt = await resp.text();
-        if (!resp.ok) {
-          console.error('save-product error', resp.status, txt);
-          alert(`保存エラー: ${resp.status}`);
-          setIsProcessing(false);
-          return;
-        }
-        console.log('save-product ok', txt);
-      }
-
-      // 保存成功または画像由来（将来拡張）の場合は完了画面へ
+    
+    // 実際にはサーバーに送信
+    setTimeout(() => {
       setIsProcessing(false);
       setStep(3);
-    } catch (e) {
-      console.error('投稿保存中エラー', e);
-      alert(`投稿に失敗しました: ${e.message}`);
-      setIsProcessing(false);
-    }
-  };
-
-  // あなた向け判定（表を見せずに可否表示）
-  const getPersonalVerdict = () => {
-    const allowTrace = !!userSettings?.allowTrace; // 既定: false
-    const allowHeated = !!userSettings?.allowHeated; // 既定: true
-    const hasSelection = Array.isArray(editedInfo.allergens) && editedInfo.allergens.length > 0;
-    // 判定素材（注意書き + メニュー/原材料）
-    const textBlob = [
-      ...(extractedInfo?.warnings || []),
-      ...(Array.isArray(editedInfo.ingredients) ? editedInfo.ingredients : [])
-    ].join(' ');
-    const hasFragrance = /香料/.test(textBlob);
-    const processedHeatedRegex = /(加工品|加熱|加熱済|加熱処理|焼成|ボイル|揚げ|フライ|炒め|蒸し|レトルト|殺菌)/;
-    const isProcessedHeated = processedHeatedRegex.test(textBlob);
-
-    if (!hasSelection) {
-      return { level: 'ok', label: '食べられます', reason: '該当アレルギー成分は検出されませんでした' };
-    }
-
-    // 単純な優先順: direct > heated > trace
-    if (!hasFragrance && !isProcessedHeated) {
-      return { level: 'ng', label: '食べられません', reason: '該当アレルギーが含有されています' };
-    }
-    if (isProcessedHeated) {
-      return allowHeated
-        ? { level: 'ok', label: '食べられます', reason: '該当アレルギーは加熱済み相当（許容設定）' }
-        : { level: 'caution', label: '条件付きでOK', reason: '加熱済みですが許容設定が必要です' };
-    }
-    if (hasFragrance) {
-      return allowTrace
-        ? { level: 'ok', label: '食べられます', reason: '香料レベルの微量（許容設定）' }
-        : { level: 'caution', label: '条件付きでOK', reason: '香料レベルの微量。微量許容でOKになります' };
-    }
-    return { level: 'caution', label: '条件付きでOK', reason: '詳細不明のためご注意ください' };
+    }, 1000);
   };
 
   // リセット
@@ -350,11 +222,6 @@ const Upload = () => {
       lastUpdated: new Date(),
       confidence: 0
     });
-  };
-
-  // CSV取込機能は /csv-converter ページに移動
-  const handleCsvImportStaging = async () => {
-    alert('CSV取込機能は /csv-converter ページに移動しました。\nURL: #/csv-converter');
   };
 
   return (
@@ -406,49 +273,105 @@ const Upload = () => {
               </p>
             </div>
 
+            {/* Upload Type Selection */}
+            <div className="mb-8">
+              <div className="flex space-x-1 bg-gray-100 rounded-lg p-1 max-w-md mx-auto">
+                <button
+                  onClick={() => setUploadType('image')}
+                  className={`flex-1 py-3 px-4 rounded-md text-sm font-medium transition-colors flex items-center justify-center space-x-2 ${
+                    uploadType === 'image'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  <SafeIcon icon={FiCamera} className="w-4 h-4" />
+                  <span>商品撮影</span>
+                </button>
+                <button
+                  onClick={() => setUploadType('pdf')}
+                  className={`flex-1 py-3 px-4 rounded-md text-sm font-medium transition-colors flex items-center justify-center space-x-2 ${
+                    uploadType === 'pdf'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  <SafeIcon icon={FiFileText} className="w-4 h-4" />
+                  <span>PDF解析</span>
+                </button>
+              </div>
+            </div>
 
             {!capturedImage && !isProcessing && (
               <div className="space-y-4">
-                {/* カメラ撮影ボタン */}
-                <button
-                  onClick={() => cameraInputRef.current?.click()}
-                  className="w-full flex items-center justify-center space-x-3 bg-gradient-to-r from-orange-500 to-red-500 text-white py-4 px-6 rounded-lg hover:from-orange-600 hover:to-red-600 transition-colors shadow-md"
-                >
-                  <SafeIcon icon={FiCamera} className="w-6 h-6" />
-                  <span className="text-lg font-semibold">カメラで撮影する</span>
-                </button>
+                {uploadType === 'image' ? (
+                  <>
+                    {/* カメラ撮影ボタン */}
+                    <button
+                      onClick={() => cameraInputRef.current?.click()}
+                      className="w-full flex items-center justify-center space-x-3 bg-gradient-to-r from-orange-500 to-red-500 text-white py-4 px-6 rounded-lg hover:from-orange-600 hover:to-red-600 transition-colors shadow-md"
+                    >
+                      <SafeIcon icon={FiCamera} className="w-6 h-6" />
+                      <span className="text-lg font-semibold">カメラで撮影する</span>
+                    </button>
 
-                {/* ファイルアップロードボタン */}
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-full flex items-center justify-center space-x-3 bg-gray-100 text-gray-700 py-4 px-6 rounded-lg hover:bg-gray-200 transition-colors border-2 border-dashed border-gray-300"
-                >
-                  <SafeIcon icon={FiUpload} className="w-6 h-6" />
-                  <span className="text-lg font-semibold">写真をアップロード</span>
-                </button>
+                    {/* ファイルアップロードボタン */}
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-full flex items-center justify-center space-x-3 bg-gray-100 text-gray-700 py-4 px-6 rounded-lg hover:bg-gray-200 transition-colors border-2 border-dashed border-gray-300"
+                    >
+                      <SafeIcon icon={FiUpload} className="w-6 h-6" />
+                      <span className="text-lg font-semibold">写真をアップロード</span>
+                    </button>
 
-                <input
-                  ref={cameraInputRef}
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  onChange={handleCameraCapture}
-                  className="hidden"
-                />
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
+                    <input
+                      ref={cameraInputRef}
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={handleCameraCapture}
+                      className="hidden"
+                    />
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+                  </>
+                ) : (
+                  <>
+                    {/* PDF解析ボタン */}
+                    <button
+                      onClick={() => setShowPDFUploader(true)}
+                      className="w-full flex items-center justify-center space-x-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white py-4 px-6 rounded-lg hover:from-blue-600 hover:to-purple-600 transition-colors shadow-md"
+                    >
+                      <SafeIcon icon={FiFileText} className="w-6 h-6" />
+                      <span className="text-lg font-semibold">PDFを解析する</span>
+                    </button>
+
+                    {/* 登録済みPDFの案内 */}
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <h3 className="font-semibold text-blue-800 mb-2">📋 登録済みPDFリンク</h3>
+                      <p className="text-sm text-blue-700 mb-3">
+                        スシロー、かっぱ寿司、マクドナルドなど人気レストランのアレルギー情報PDFが登録済みです
+                      </p>
+                      <button
+                        onClick={() => setShowPDFUploader(true)}
+                        className="text-blue-600 hover:text-blue-800 text-sm font-medium underline"
+                      >
+                        登録済みPDFから選択する →
+                      </button>
+                    </div>
+                  </>
+                )}
 
                 {/* 撮影のコツ */}
                 <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <h3 className="font-semibold text-blue-800 mb-2 flex items-center space-x-2">
                     <SafeIcon icon={FiAlertCircle} className="w-5 h-5" />
                     <span>
-                      {uploadType === 'image' ? 'きれいに撮影するコツ' : 'CSVアップロードについて'}
+                      {uploadType === 'image' ? 'きれいに撮影するコツ' : 'PDF解析について'}
                     </span>
                   </h3>
                   {uploadType === 'image' ? (
@@ -456,13 +379,15 @@ const Upload = () => {
                       <li>• 原材料名の部分を中心に撮影してください</li>
                       <li>• 明るい場所で撮影し、影が入らないようにしてください</li>
                       <li>• 文字がぼけないよう、ピントを合わせてください</li>
-                      <li>• パッケージ全体と、成分表示部分を大きく撮影してください</li>
+                      <li>• パッケージ全体ではなく、成分表示部分を大きく撮影してください</li>
                     </ul>
                   ) : (
                     <ul className="text-sm text-blue-700 space-y-1">
-                      <li>• 店舗名・メニュー名・28品目（●/△/－）のCSVを取り込めます</li>
-                      <li>• テンプレートCSVをダウンロードして編集してください</li>
-                      <li>• 取込後はSupabaseに自動保存されます</li>
+                      <li>• レストランのアレルギー情報PDFを解析できます</li>
+                      <li>• 登録済みリンクから選択すると高速処理が可能</li>
+                      <li>• 新しいURLも追加・解析できます</li>
+                      <li>• 日本語・英語のアレルギー成分を自動検出</li>
+                      <li>• メニュー項目と注意事項も抽出されます</li>
                     </ul>
                   )}
                 </div>
@@ -746,7 +671,7 @@ const Upload = () => {
               </button>
               <button
                 onClick={handleSubmit}
-                disabled={!editedInfo.productName}
+                disabled={!editedInfo.productName || !editedInfo.brand}
                 className="flex-1 py-3 px-6 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold flex items-center justify-center space-x-2"
               >
                 <SafeIcon icon={FiSave} className="w-5 h-5" />
@@ -787,19 +712,6 @@ const Upload = () => {
               </div>
             </div>
 
-            {/* あなた向けの判定（簡易表示） */}
-            {(() => {
-              const verdict = getPersonalVerdict();
-              const color = verdict.level === 'ok' ? 'green' : verdict.level === 'ng' ? 'red' : 'yellow';
-              return (
-                <div className={`border rounded-lg p-4 mb-6 bg-${color}-50 border-${color}-200`}>
-                  <h3 className={`font-semibold text-${color}-800 mb-1`}>あなた向けの判定</h3>
-                  <p className={`text-${color}-700 font-medium`}>{verdict.label}</p>
-                  <p className="text-sm text-gray-600 mt-1">{verdict.reason}</p>
-                </div>
-              );
-            })()}
-
             <div className="flex space-x-4">
               <button
                 onClick={resetForm}
@@ -813,67 +725,18 @@ const Upload = () => {
               >
                 ホームに戻る
               </button>
-              <button
-                onClick={async () => {
-                  try {
-                    const base = import.meta.env.VITE_SUPABASE_URL;
-                    const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
-                    const store = window.prompt('店舗名でフィルタ（例: びっくりドンキー）※空で全件', 'びっくりドンキー') || '';
-                    const params = new URLSearchParams();
-                    params.set('select', 'products(name,brand,category),menu_name,egg,milk,wheat,buckwheat,peanut,shrimp,crab,walnut,almond,abalone,squid,salmon_roe,orange,cashew,kiwi,beef,gelatin,sesame,salmon,mackerel,soybean,chicken,banana,pork,matsutake,peach,yam,apple');
-                    params.set('products!inner()', '');
-                    if (store.trim()) {
-                      params.set('products.name', `ilike.*${store.trim()}*`);
-                    }
-                    params.set('order', 'id.desc');
-
-                    const url = `${base}/rest/v1/product_allergies_matrix?${params.toString()}`.replace('products!inner()=', 'products!inner()');
-                    const res = await fetch(url, {
-                      headers: {
-                        apikey: key,
-                        Authorization: `Bearer ${key}`,
-                        Accept: 'application/json'
-                      }
-                    });
-                    if (!res.ok) throw new Error(`CSVエクスポート失敗 ${res.status}`);
-                    const data = await res.json();
-
-                    // 日本語ヘッダー（店舗名入り、びっくりドンキー想定の固定スキーマ）
-                    const headers = ['店舗名','系列','カテゴリ','メニュー名','小麦','そば','卵','乳','落花生','えび','かに','くるみ','アーモンド','あわび','いか','いくら','オレンジ','カシューナッツ','キウイ','牛肉','ゼラチン','ごま','さけ','さば','大豆','鶏肉','バナナ','豚肉','まつたけ','もも','やまいも','りんご'];
-                    const mapRow = (r) => ([
-                      r.products?.name || '',
-                      r.products?.brand || '',
-                      r.products?.category || '',
-                      r.menu_name || '',
-                      r.wheat, r.buckwheat, r.egg, r.milk, r.peanut, r.shrimp, r.crab, r.walnut, r.almond, r.abalone, r.squid, r.salmon_roe, r.orange, r.cashew, r.kiwi, r.beef, r.gelatin, r.sesame, r.salmon, r.mackerel, r.soybean, r.chicken, r.banana, r.pork, r.matsutake, r.peach, r.yam, r.apple
-                    ]);
-
-                    const escapeCSV = (v) => {
-                      const s = v == null ? '' : String(v);
-                      return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
-                    };
-                    const rows = data.map(mapRow);
-                    const csv = [headers, ...rows].map(row => row.map(escapeCSV).join(',')).join('\n');
-                    const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
-                    const a = document.createElement('a');
-                    a.href = URL.createObjectURL(blob);
-                    a.download = (store.trim() ? `${store.trim()}_` : '') + 'アレルギー一覧.csv';
-                    a.click();
-                    URL.revokeObjectURL(a.href);
-                  } catch (e) {
-                    alert(e.message);
-                  }
-                }}
-                className="flex-1 py-3 px-6 bg-gray-800 text-white rounded-lg hover:bg-black transition-colors font-semibold"
-              >
-                CSVをダウンロード
-              </button>
             </div>
           </motion.div>
         )}
       </div>
 
-      {/* CSV移行のためPDFモーダルは廃止 */}
+      {/* PDF Uploader Modal */}
+      {showPDFUploader && (
+        <PDFUploader
+          onResult={handlePDFResult}
+          onClose={() => setShowPDFUploader(false)}
+        />
+      )}
     </div>
   );
 };

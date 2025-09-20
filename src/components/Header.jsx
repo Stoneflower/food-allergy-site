@@ -55,7 +55,7 @@ const Header = () => {
           <div className="flex items-center space-x-2 text-center">
             <SafeIcon icon={FiAlertTriangle} className="w-4 h-4 text-yellow-300 flex-shrink-0" />
             <span className="font-medium">
-              （重要）情報は日々変わることがあるため、必ずお店の確認、もしくは商品の成分の確認をお願いします
+              （重要）情報は日々変わることがあるため、必ずお店に確認をお願いします
             </span>
           </div>
         </div>
@@ -73,7 +73,7 @@ const Header = () => {
               </div>
               <div className="flex flex-col">
                 <div className="flex items-baseline space-x-1">
-                  <span className="text-lg font-bold text-white">CanIEatOo?</span>
+                  <span className="text-lg font-bold text-white">CanIEat?</span>
                   <span className="text-orange-200 text-sm font-bold">✓</span>
                 </div>
                 <span className="text-orange-200 text-xs font-medium">みんなで共有</span>
@@ -108,6 +108,17 @@ const Header = () => {
           
           {/* PC版の右側メニュー - 「商品を投稿」をより目立つように */}
           <div className="hidden md:flex items-center space-x-4">
+            {/* PDF処理ボタン */}
+            <Link
+              to="/pdf-processor"
+              className="relative group"
+            >
+              <div className="flex items-center space-x-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white px-4 py-2 rounded-lg font-medium hover:from-blue-400 hover:to-purple-400 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105">
+                <SafeIcon icon={FiCamera} className="w-4 h-4" />
+                <span>PDF処理</span>
+              </div>
+            </Link>
+            
             {/* より目立つ投稿ボタン */}
             <Link
               to="/upload"
@@ -127,7 +138,7 @@ const Header = () => {
               to="/about"
               className="hover:text-orange-200 transition-colors font-medium"
             >
-              CanIEatOo?について
+              CanIEat?について
             </Link>
             <Link
               to="/login"
@@ -145,7 +156,7 @@ const Header = () => {
           {/* 検索バー */}
           <div className="flex justify-center items-center h-16">
             <form onSubmit={handleSearch} className="w-full max-w-6xl">
-              <div className="bg-white border-2 border-orange-400 rounded-lg overflow-visible flex shadow-md">
+              <div className="bg-white border-2 border-orange-400 rounded-lg overflow-hidden flex shadow-md">
                 {/* Category Dropdown */}
                 <div className="relative">
                   <select
@@ -487,7 +498,7 @@ const Header = () => {
                 className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
                 onClick={() => setIsMenuOpen(false)}
               >
-                CanIEatOo?について
+                CanIEat?について
               </Link>
               <Link
                 to="/login"

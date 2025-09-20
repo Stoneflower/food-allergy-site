@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useRestaurant } from '../context/RestaurantContext';
 import SafeIcon from '../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
-import { supabase } from '../lib/supabase';
 
 const { 
   FiStar, 
@@ -21,98 +20,12 @@ const {
 
 const RestaurantDetail = () => {
   const { id } = useParams();
-  const { allergyOptions, selectedAllergies, setSelectedAllergies } = useRestaurant();
+  const { restaurants, allergyOptions } = useRestaurant();
   const [activeTab, setActiveTab] = useState('overview');
-  const [dbProduct, setDbProduct] = useState(null);
-  const [dbMenuItems, setDbMenuItems] = useState([]);
-  const [matrixRows, setMatrixRows] = useState([]);
-  const [storeLocations, setStoreLocations] = useState([]);
-  const [selectedAllergyIds, setSelectedAllergyIds] = useState([]);
-  const [loading, setLoading] = useState(false);
+  
+  const restaurant = restaurants.find(r => r.id === parseInt(id));
 
-  const isDbId = typeof id === 'string' && id.startsWith('db_');
-
-  // 初期選択を検索条件から反映
-  useEffect(() => {
-    if (Array.isArray(selectedAllergies) && selectedAllergies.length > 0) {
-      setSelectedAllergyIds(selectedAllergies);
-    }
-  }, [JSON.stringify(selectedAllergies)]);
-
-  useEffect(() => {
-    if (!isDbId) return;
-    const productId = parseInt(id.slice(3), 10);
-    if (!productId) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        setLoading(true);
-        const { data: prod, error: pErr } = await supabase
-          .from('products')
-          .select('*')
-          .eq('id', productId)
-          .single();
-        if (pErr) throw pErr;
-        const { data: items, error: mErr } = await supabase
-          .from('menu_items')
-          .select(`
-            id,
-            name,
-            created_at,
-            menu_item_allergies (
-              *,
-              allergy_items (name, icon)
-            )
-          `)
-          .eq('product_id', productId)
-          .order('id', { ascending: false });
-        if (mErr) throw mErr;
-        const { data: matrix, error: mxErr } = await supabase
-          .from('product_allergies_matrix')
-          .select('*')
-          .eq('product_id', productId)
-          .order('id', { ascending: false });
-        if (mxErr) throw mxErr;
-        const { data: locations, error: locErr } = await supabase
-          .from('store_locations')
-          .select('*')
-          .eq('product_id', productId)
-          .order('id', { ascending: true });
-        if (locErr) throw locErr;
-        if (!cancelled) {
-          setDbProduct(prod);
-          setDbMenuItems(items || []);
-          setMatrixRows(matrix || []);
-          setStoreLocations(locations || []);
-        }
-      } catch (e) {
-        console.warn('DB detail load failed:', e.message);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [id, isDbId]);
-
-  const resolvedRestaurant = isDbId && dbProduct ? {
-    id: `db_${dbProduct.id}`,
-    name: dbProduct.name,
-    image: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=1200',
-    rating: 4.5,
-    reviewCount: dbMenuItems.length || 0,
-    area: '',
-    price: '',
-    description: dbProduct.description || '共有データ（Supabase）',
-    cuisine: dbProduct.category || 'レストラン',
-    allergyInfo: {},
-  } : null;
-
-  if (!resolvedRestaurant) {
-    if (loading && isDbId) {
-      return (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">読み込み中...</div>
-      );
-    }
+  if (!restaurant) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -126,66 +39,22 @@ const RestaurantDetail = () => {
   }
 
   const getAllergyInfo = () => {
-    return (allergyOptions || []).map(allergy => ({
+    return allergyOptions.map(allergy => ({
       ...allergy,
-      isSafe: true
+      isSafe: !restaurant.allergyInfo[allergy.id]
     }));
   };
 
   const safeAllergies = getAllergyInfo().filter(a => a.isSafe);
-  const unsafeAllergies = [];
-
-  // アレルギー選択（メニュー絞り込み）
-  const toggleFilter = (id) => {
-    setSelectedAllergyIds((prev) => (
-      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-    ));
-    // 左アイコン（検索の選択状態）とも同期
-    if (Array.isArray(selectedAllergies)) {
-      const next = selectedAllergies.includes(id)
-        ? selectedAllergies.filter(x => x !== id)
-        : [...selectedAllergies, id];
-      setSelectedAllergies(next);
-    }
-  };
-
-  const filteredMenus = (() => {
-    if (!isDbId || dbMenuItems.length === 0) return [];
-
-    if ((selectedAllergyIds || []).length === 0) {
-      return dbMenuItems.map(item => ({
-        id: item.id,
-        name: item.name,
-        allergies: item.menu_item_allergies || []
-      }));
-    }
-
-    const needSlugs = selectedAllergyIds; // slugs で保持（例: 'milk','egg','soy'）
-    const filtered = dbMenuItems.filter(menuItem => {
-      const list = menuItem.menu_item_allergies || [];
-      if (list.length === 0) return false;
-      const isSafe = needSlugs.every(slug => {
-        const rec = list.find(a => (a.allergy_item_slug || a.allergy_item_id) === slug);
-        if (!rec) return false;
-        return rec.presence_type === 'none' || rec.presence_type === 'trace';
-      });
-      return isSafe;
-    });
-
-    return filtered.map(item => ({
-      id: item.id,
-      name: item.name,
-      allergies: item.menu_item_allergies || []
-    }));
-  })();
+  const unsafeAllergies = getAllergyInfo().filter(a => !a.isSafe);
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
       <div className="relative h-96">
         <img
-          src={resolvedRestaurant.image}
-          alt={resolvedRestaurant.name}
+          src={restaurant.image}
+          alt={restaurant.name}
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-black bg-opacity-40"></div>
@@ -206,20 +75,20 @@ const RestaurantDetail = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
             >
-              <h1 className="text-4xl font-bold text-white mb-4">{resolvedRestaurant.name}</h1>
+              <h1 className="text-4xl font-bold text-white mb-4">{restaurant.name}</h1>
               <div className="flex items-center space-x-6 text-white">
                 <div className="flex items-center space-x-2">
                   <SafeIcon icon={FiStar} className="w-5 h-5 text-yellow-400" />
-                  <span className="text-lg font-semibold">{resolvedRestaurant.rating}</span>
-                  <span className="text-gray-300">({resolvedRestaurant.reviewCount}件のレビュー)</span>
+                  <span className="text-lg font-semibold">{restaurant.rating}</span>
+                  <span className="text-gray-300">({restaurant.reviewCount}件のレビュー)</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <SafeIcon icon={FiMapPin} className="w-5 h-5" />
-                  <span>{resolvedRestaurant.area}</span>
+                  <span>{restaurant.area}</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <SafeIcon icon={FiDollarSign} className="w-5 h-5" />
-                  <span>{resolvedRestaurant.price}</span>
+                  <span>{restaurant.price}</span>
                 </div>
               </div>
             </motion.div>
@@ -261,63 +130,28 @@ const RestaurantDetail = () => {
                     animate={{ opacity: 1 }}
                     className="space-y-6"
                   >
-                    {isDbId && (
-                      <div>
-                        <h3 className="text-xl font-semibold mb-3">メニューの絞り込み</h3>
-                        <div className="flex flex-wrap gap-2 mb-4">
-                          {(allergyOptions || []).map(a => (
-                            <button
-                              key={a.id}
-                              onClick={() => toggleFilter(a.id)}
-                              className={`px-3 py-1 rounded-full text-sm border ${selectedAllergyIds.includes(a.id) ? 'bg-red-500 text-white border-red-500' : 'bg-white text-gray-700 border-gray-300'}`}
-                              title={`${a.name}を含むメニューを除外`}
-                            >
-                              <span className="mr-1">{a.icon}</span>{a.name}
-                            </button>
-                          ))}
-                        </div>
-                        <div className="bg-white rounded-lg border p-4">
-                          <h4 className="font-semibold mb-2 text-gray-900">表示対象のメニュー</h4>
-                          {selectedAllergyIds.length === 0 ? (
-                            <div>
-                              <p className="text-sm text-gray-600 mb-2">左のアイコン（上部）で選んだアレルギーが初期反映されています。変更して食べられるメニューを確認できます。</p>
-                              <p className="text-sm text-gray-500">現在 {filteredMenus.length} 個のメニューが登録されています。</p>
-                            </div>
-                          ) : filteredMenus.length > 0 ? (
-                            <div>
-                              <p className="text-sm text-gray-600 mb-2">
-                                選択したアレルギーに安全なメニュー: {filteredMenus.length} 個
-                              </p>
-                              <ul className="list-disc list-inside text-sm text-gray-800 space-y-1 max-h-60 overflow-y-auto">
-                                {filteredMenus.slice(0, 100).map(menu => (
-                                  <li key={menu.id} className="flex items-center justify-between">
-                                    <span>{menu.name}</span>
-                                    <span className="text-xs text-green-600 ml-2">✓ 安全</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          ) : (
-                            <div>
-                              <p className="text-sm text-gray-600">条件を満たすメニューが見つかりませんでした。</p>
-                              <p className="text-xs text-gray-500 mt-1">
-                                アレルギー情報が登録されていないか、選択したアレルギーを含むメニューのみです。
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
                     <div>
                       <h3 className="text-xl font-semibold mb-3">レストラン紹介</h3>
-                      <p className="text-gray-600 leading-relaxed">{resolvedRestaurant.description}</p>
+                      <p className="text-gray-600 leading-relaxed">{restaurant.description}</p>
                     </div>
                     
                     <div>
                       <h3 className="text-xl font-semibold mb-3">料理ジャンル</h3>
                       <span className="inline-block bg-orange-100 text-orange-800 px-3 py-1 rounded-full">
-                        {resolvedRestaurant.cuisine}
+                        {restaurant.cuisine}
                       </span>
+                    </div>
+
+                    <div>
+                      <h3 className="text-xl font-semibold mb-3">アレルギー対応の特徴</h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        {safeAllergies.slice(0, 4).map(allergy => (
+                          <div key={allergy.id} className="flex items-center space-x-2 text-green-600">
+                            <SafeIcon icon={FiCheck} className="w-5 h-5" />
+                            <span>{allergy.icon} {allergy.name}フリー</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </motion.div>
                 )}
@@ -342,6 +176,34 @@ const RestaurantDetail = () => {
                         ))}
                       </div>
                     </div>
+
+                    {unsafeAllergies.length > 0 && (
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <div className="flex items-center space-x-2 mb-3">
+                          <SafeIcon icon={FiX} className="w-5 h-5 text-red-600" />
+                          <h3 className="text-lg font-semibold text-red-800">含まれる可能性のあるアレルギー成分</h3>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                          {unsafeAllergies.map(allergy => (
+                            <div key={allergy.id} className="flex items-center space-x-2 text-red-700">
+                              <SafeIcon icon={FiX} className="w-4 h-4" />
+                              <span className="text-sm">{allergy.icon} {allergy.name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <SafeIcon icon={FiInfo} className="w-5 h-5 text-blue-600" />
+                        <h3 className="text-lg font-semibold text-blue-800">ご注意</h3>
+                      </div>
+                      <p className="text-blue-700 text-sm">
+                        アレルギー情報は参考情報です。ご来店の際は必ず店舗に直接ご確認ください。
+                        調理器具の共用や製造工程での混入の可能性もございます。
+                      </p>
+                    </div>
                   </motion.div>
                 )}
 
@@ -365,93 +227,32 @@ const RestaurantDetail = () => {
             {/* Contact Info */}
             <div className="bg-white rounded-xl shadow-md p-6">
               <h3 className="text-xl font-semibold mb-4">店舗情報</h3>
-              {storeLocations.length > 0 ? (
-                <div className="space-y-6">
-                  {storeLocations.map((location) => (
-                    <div key={location.id} className="border border-gray-200 rounded-lg p-4">
-                      {location.branch_name && (
-                        <h4 className="font-semibold text-gray-900 mb-3">{location.branch_name}</h4>
-                      )}
-                      <div className="space-y-3">
-                        {location.address && (
-                          <div className="flex items-start space-x-3">
-                            <SafeIcon icon={FiMapPin} className="w-5 h-5 text-gray-400 mt-0.5" />
-                            <div>
-                              <p className="font-medium">住所</p>
-                              <p className="text-gray-600 text-sm">{location.address}</p>
-                            </div>
-                          </div>
-                        )}
-                        {location.phone && (
-                          <div className="flex items-start space-x-3">
-                            <SafeIcon icon={FiPhone} className="w-5 h-5 text-gray-400 mt-0.5" />
-                            <div>
-                              <p className="font-medium">電話番号</p>
-                              <p className="text-gray-600 text-sm">{location.phone}</p>
-                            </div>
-                          </div>
-                        )}
-                        {(location.hours || location.closed) && (
-                          <div className="flex items-start space-x-3">
-                            <SafeIcon icon={FiClock} className="w-5 h-5 text-gray-400 mt-0.5" />
-                            <div>
-                              <p className="font-medium">営業時間</p>
-                              {location.hours && <p className="text-gray-600 text-sm">{location.hours}</p>}
-                              {location.closed && <p className="text-gray-600 text-sm">定休日: {location.closed}</p>}
-                            </div>
-                          </div>
-                        )}
-                        {location.source_url && (
-                          <div className="flex items-start space-x-3">
-                            <SafeIcon icon={FiInfo} className="w-5 h-5 text-gray-400 mt-0.5" />
-                            <div>
-                              <p className="font-medium">アレルギー情報元</p>
-                              <a 
-                                href={location.source_url} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="text-blue-600 hover:text-blue-800 text-sm underline break-all"
-                              >
-                                {location.source_url}
-                              </a>
-                            </div>
-                          </div>
-                        )}
-                        {location.store_list_url && (
-                          <div className="flex items-start space-x-3">
-                            <SafeIcon icon={FiInfo} className="w-5 h-5 text-gray-400 mt-0.5" />
-                            <div>
-                              <p className="font-medium">店舗リスト</p>
-                              <a 
-                                href={location.store_list_url} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="text-blue-600 hover:text-blue-800 text-sm underline"
-                              >
-                                全店舗一覧を見る
-                              </a>
-                            </div>
-                          </div>
-                        )}
-                        {location.notes && (
-                          <div className="flex items-start space-x-3">
-                            <SafeIcon icon={FiInfo} className="w-5 h-5 text-gray-400 mt-0.5" />
-                            <div>
-                              <p className="font-medium">備考</p>
-                              <p className="text-gray-600 text-sm">{location.notes}</p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+              <div className="space-y-4">
+                <div className="flex items-start space-x-3">
+                  <SafeIcon icon={FiMapPin} className="w-5 h-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="font-medium">住所</p>
+                    <p className="text-gray-600 text-sm">{restaurant.address}</p>
+                  </div>
                 </div>
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  <SafeIcon icon={FiMapPin} className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                  <p>店舗情報が登録されていません</p>
+                
+                <div className="flex items-start space-x-3">
+                  <SafeIcon icon={FiPhone} className="w-5 h-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="font-medium">電話番号</p>
+                    <p className="text-gray-600 text-sm">{restaurant.phone}</p>
+                  </div>
                 </div>
-              )}
+                
+                <div className="flex items-start space-x-3">
+                  <SafeIcon icon={FiClock} className="w-5 h-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="font-medium">営業時間</p>
+                    <p className="text-gray-600 text-sm">{restaurant.hours}</p>
+                    <p className="text-gray-600 text-sm">定休日: {restaurant.closed}</p>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Quick Allergy Info */}

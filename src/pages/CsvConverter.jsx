@@ -18,6 +18,7 @@ const CsvConverter = () => {
       '●': 'direct',
       '〇': 'direct', 
       '○': 'direct',
+      '◎': 'direct',
       '※': 'trace',
       '△': 'none',
       '▲': 'none',

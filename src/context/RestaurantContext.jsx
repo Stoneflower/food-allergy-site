@@ -12,19 +12,6 @@ export const useRestaurant = () => {
 };
 
 export const RestaurantProvider = ({ children }) => {
-  const [selectedAllergies, setSelectedAllergies] = useState([]);
-  const [searchKeyword, setSearchKeyword] = useState('');
-  const [selectedArea, setSelectedArea] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [favorites, setFavorites] = useState([]);
-  const [history, setHistory] = useState([]);
-  const [allItems, setAllItems] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [allergyOptions, setAllergyOptions] = useState([]);
-  const [mandatoryAllergies, setMandatoryAllergies] = useState([]);
-  const [recommendedAllergies, setRecommendedAllergies] = useState([]);
-
   // デフォルトのアレルギー項目（フォールバック用）
   const defaultMandatoryAllergies = [
     { id: 'egg', name: '卵', icon: '🥚' },
@@ -37,6 +24,15 @@ export const RestaurantProvider = ({ children }) => {
     { id: 'walnut', name: 'くるみ', icon: '🌰' }
   ];
 
+  const [selectedAllergies, setSelectedAllergies] = useState([]);
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [selectedArea, setSelectedArea] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [favorites, setFavorites] = useState([]);
+  const [history, setHistory] = useState([]);
+  const [allItems, setAllItems] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
   const defaultRecommendedAllergies = [
     { id: 'almond', name: 'アーモンド', icon: '🌰' },
     { id: 'abalone', name: 'あわび', icon: '🐚' },
@@ -61,6 +57,10 @@ export const RestaurantProvider = ({ children }) => {
   ];
 
   const defaultAllergyOptions = [...defaultMandatoryAllergies, ...defaultRecommendedAllergies];
+
+  const [allergyOptions, setAllergyOptions] = useState(defaultAllergyOptions);
+  const [mandatoryAllergies, setMandatoryAllergies] = useState(defaultMandatoryAllergies);
+  const [recommendedAllergies, setRecommendedAllergies] = useState(defaultRecommendedAllergies);
 
   // カテゴリーデータ
   const categories = [
@@ -314,6 +314,7 @@ export const RestaurantProvider = ({ children }) => {
 
   // コンポーネントマウント時にデータを取得
   useEffect(() => {
+    console.log('useEffect実行開始');
     // まず接続テストを実行
     testSupabaseConnection().then(() => {
       console.log('Supabase接続成功、データ取得開始');

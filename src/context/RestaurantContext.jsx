@@ -529,12 +529,21 @@ export const RestaurantProvider = ({ children }) => {
       // 店舗データを変換
       if (storeData && storeData.length > 0) {
         console.log('店舗データ変換開始:', storeData);
+        console.log('最初の店舗データの構造:', storeData[0]);
         storeData.forEach(store => {
           const defaultAllergyInfo = createDefaultAllergyInfo();
           const allergyFree = Object.keys(defaultAllergyInfo).filter(key => !defaultAllergyInfo[key]);
           
           console.log('店舗データ:', store);
-          const storeName = store.store_name || store.name || '店舗名不明';
+          console.log('store.store_name:', store.store_name);
+          console.log('store.name:', store.name);
+          console.log('store.product_id:', store.product_id);
+          
+          // product_idを使ってproductsテーブルから商品名を取得
+          const relatedProduct = productData.find(product => product.id === store.product_id);
+          console.log('関連商品:', relatedProduct);
+          
+          const storeName = relatedProduct ? relatedProduct.name : (store.store_name || store.name || '店舗名不明');
           console.log('店舗名:', storeName);
           
           transformedData.push({
@@ -836,6 +845,8 @@ export const RestaurantProvider = ({ children }) => {
     }
 
     console.log('getFilteredItems - final result:', items);
+    console.log('getFilteredItems - products count:', items.filter(item => item.category === 'products').length);
+    console.log('getFilteredItems - restaurants count:', items.filter(item => item.category === 'restaurants').length);
     return items;
   };
 

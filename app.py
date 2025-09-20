@@ -71,9 +71,9 @@ SYMBOL_MAPPING = {
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
-# PaddleOCR初期化（遅延読み込み）
+# Tesseract OCR初期化（遅延読み込み）
 ocr = None
-print(f"PaddleOCR available: {PADDLEOCR_AVAILABLE}")
+print(f"Tesseract OCR available: {TESSERACT_AVAILABLE}")
 
 def detect_table_structure(image):
     """OpenCVで表の構造を検出"""
@@ -1474,7 +1474,7 @@ HTML_TEMPLATE = '''
                                         
                                         if (showFullData) {
                                             button.textContent = '最初の50件のみ表示';
-                                            table.innerHTML = \`
+                                            table.innerHTML = `
                                                 <table>
                                                     <thead>
                                                         <tr>
@@ -1498,7 +1498,7 @@ HTML_TEMPLATE = '''
                                             \`;
                                         } else {
                                             button.textContent = '全${data.total_menus}件表示';
-                                            table.innerHTML = \`
+                                            table.innerHTML = `
                                                 <table>
                                                     <thead>
                                                         <tr>
@@ -1551,7 +1551,7 @@ HTML_TEMPLATE = '''
 
 @app.route('/')
 def index():
-    return render_template_string(HTML_TEMPLATE, paddleocr_available=PADDLEOCR_AVAILABLE)
+    return render_template_string(HTML_TEMPLATE, tesseract_available=TESSERACT_AVAILABLE)
 
 @app.route('/upload', methods=['POST'])
 def upload_files():
@@ -2005,7 +2005,7 @@ def env_check():
         'supabase_key': SUPABASE_KEY[:20] + '...' if SUPABASE_KEY else None,
         'supabase_url_set': bool(SUPABASE_URL),
         'supabase_key_set': bool(SUPABASE_KEY),
-        'paddleocr_available': PADDLEOCR_AVAILABLE,
+        'tesseract_available': TESSERACT_AVAILABLE,
         'timestamp': datetime.now().isoformat()
     })
 
@@ -2076,14 +2076,14 @@ def debug():
     except Exception as e:
         return jsonify({
             'error': str(e),
-            'paddleocr_available': PADDLEOCR_AVAILABLE
+            'tesseract_available': TESSERACT_AVAILABLE
         }), 500
 
 @app.route('/csv-converter', methods=['GET', 'POST'])
 def csv_converter():
     """詳細なCSV変換機能（PDF対応）"""
     if request.method == 'GET':
-        return render_template_string(CSV_CONVERTER_TEMPLATE, paddleocr_available=PADDLEOCR_AVAILABLE)
+        return render_template_string(CSV_CONVERTER_TEMPLATE, tesseract_available=TESSERACT_AVAILABLE)
 
 @app.route('/pdf-csv-converter', methods=['GET', 'POST'])
 def pdf_csv_converter():
@@ -2112,7 +2112,7 @@ def pdf_csv_converter():
                     start_time = time.time()
                     
                     # ライブラリの利用可能性をチェック
-                    if not PADDLEOCR_AVAILABLE:
+                    if not TESSERACT_AVAILABLE:
                         print("PaddleOCRが利用できません。サンプルデータを使用します。")
                         # サンプルデータを返す
                         sample_data = [
@@ -2684,11 +2684,10 @@ def convert_to_csv(allergy_data, filename="allergy_data.csv"):
         return csv_content
 
 def extract_text_from_image_data(image_data):
-    """画像データからテキストを抽出（PaddleOCR使用）"""
+    """画像データからテキストを抽出（Tesseract OCR使用）"""
     try:
-        ocr_instance = get_ocr()
-        if not PADDLEOCR_AVAILABLE or ocr_instance is None:
-            # PaddleOCRが利用できない場合はサンプルテキストを返す
+        if not TESSERACT_AVAILABLE:
+            # Tesseract OCRが利用できない場合はサンプルテキストを返す
             return """
             メニュー一覧
             
@@ -2711,9 +2710,10 @@ def extract_text_from_image_data(image_data):
             落花生: なし
             """
         
-        # Base64データを画像ファイルに変換
+        # Base64データを画像に変換
         import base64
-        import tempfile
+        import io
+        from PIL import Image
         
         # Base64ヘッダーを除去
         if ',' in image_data:
@@ -2721,28 +2721,28 @@ def extract_text_from_image_data(image_data):
         
         # Base64をデコード
         image_bytes = base64.b64decode(image_data)
+        image = Image.open(io.BytesIO(image_bytes))
         
-        # 一時ファイルに保存
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as temp_file:
-            temp_file.write(image_bytes)
-            temp_path = temp_file.name
+        # 画像をOpenCV形式に変換
+        img_array = np.array(image)
+        img_cv = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
         
-        # PaddleOCRでテキスト抽出
-        result = ocr_instance.ocr(temp_path, cls=True)
-        extracted_text = []
+        # 表構造を検出
+        cells = detect_table_structure(img_cv)
         
-        if result and result[0]:
-            for line in result[0]:
-                if line and len(line) >= 2:
-                    text = line[1][0]
-                    confidence = line[1][1]
-                    if confidence > 0.6:  # 信頼度60%以上
-                        extracted_text.append(text)
+        extracted_text = ""
+        if cells:
+            # セルごとにOCR実行
+            for cell_region in cells:
+                cell_text = extract_text_from_cell(img_cv, cell_region)
+                if cell_text:
+                    extracted_text += cell_text + "\t"
+        else:
+            # 表が検出されない場合は全体をOCR
+            gray = cv2.cvtColor(img_cv, cv2.COLOR_BGR2GRAY)
+            extracted_text = pytesseract.image_to_string(gray, lang='jpn+eng', config='--psm 6')
         
-        # 一時ファイルを削除
-        os.unlink(temp_path)
-        
-        return '\n'.join(extracted_text)
+        return extracted_text.strip()
     except Exception as e:
         print(f"画像OCRエラー: {str(e)}")
         return ""

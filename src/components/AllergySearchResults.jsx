@@ -17,6 +17,11 @@ const AllergySearchResults = () => {
   } = useRestaurant();
 
   const filteredItems = getFilteredItems();
+  
+  // デバッグ用ログ
+  console.log('AllergySearchResults - filteredItems:', filteredItems);
+  console.log('AllergySearchResults - selectedAllergies:', selectedAllergies);
+  console.log('AllergySearchResults - allergyOptions:', allergyOptions);
 
   // アレルギー選択に基づいて商品をフィルタリング
   const getSafeProducts = (store) => {
@@ -69,10 +74,14 @@ const AllergySearchResults = () => {
   const groupedStores = React.useMemo(() => {
     const stores = {};
     
+    console.log('groupedStores - filteredItems processing:', filteredItems);
+    
     filteredItems.forEach(item => {
+      console.log('groupedStores - processing item:', item);
       if (item.category === 'products') {
         // 商品の店舗名を取得（products.nameを参照）
         const storeName = item.name || '店舗名不明';
+        console.log('groupedStores - storeName:', storeName);
         
         if (!stores[storeName]) {
           stores[storeName] = {
@@ -87,10 +96,13 @@ const AllergySearchResults = () => {
           name: item.name,
           product_allergies_matrix: item.product_allergies_matrix || []
         });
+        console.log('groupedStores - added menu item:', item.name, 'matrix:', item.product_allergies_matrix);
       }
     });
 
-    return Object.values(stores);
+    const result = Object.values(stores);
+    console.log('groupedStores - final result:', result);
+    return result;
   }, [filteredItems, selectedAllergies]);
 
   // アレルギー成分を選択していない場合は全ての商品を表示

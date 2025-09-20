@@ -780,9 +780,16 @@ export const RestaurantProvider = ({ children }) => {
   // フィルタリング機能
   const getFilteredItems = () => {
     let items = allItemsData;
+    
+    console.log('getFilteredItems - allItemsData:', allItemsData);
+    console.log('getFilteredItems - selectedCategory:', selectedCategory);
+    console.log('getFilteredItems - selectedAllergies:', selectedAllergies);
+    console.log('getFilteredItems - searchKeyword:', searchKeyword);
+    console.log('getFilteredItems - selectedArea:', selectedArea);
 
     if (selectedCategory !== 'all') {
       items = items.filter(item => item.category === selectedCategory);
+      console.log('getFilteredItems - after category filter:', items);
     }
 
     // ログインユーザーの場合はユーザー設定を考慮
@@ -795,6 +802,7 @@ export const RestaurantProvider = ({ children }) => {
       items = items.filter(item => {
         return selectedAllergies.every(allergy => !item.allergyInfo[allergy]);
       });
+      console.log('getFilteredItems - after allergy filter:', items);
     }
 
     if (searchKeyword) {
@@ -813,6 +821,7 @@ export const RestaurantProvider = ({ children }) => {
       );
     }
 
+    console.log('getFilteredItems - final result:', items);
     return items;
   };
 

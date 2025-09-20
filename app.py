@@ -2000,11 +2000,15 @@ def pdf_csv_converter():
                     processing_time = time.time() - start_time
                     print(f"PDF処理完了: {processing_time:.2f}秒")
                     
+                    # 処理されたページ数を取得
+                    processed_pages = getattr(extract_text_from_pdf_content, '_processed_pages', 0)
+                    total_pages = getattr(extract_text_from_pdf_content, '_total_pages', 0)
+                    
                     return jsonify({
                         'success': True,
                         'data': allergy_data,
                         'count': len(allergy_data),
-                        'message': f'{len(allergy_data)}件のメニューを抽出しました（処理時間: {processing_time:.1f}秒）',
+                        'message': f'{len(allergy_data)}件のメニューを抽出しました（{processed_pages}/{total_pages}ページ処理、処理時間: {processing_time:.1f}秒）',
                         'supabase_sent': supabase_sent
                     })
                     
@@ -2277,10 +2281,10 @@ def extract_text_from_pdf_content(pdf_content):
             print(f"画像変換時間: {conversion_time:.2f}秒")
             
             # ページ数制限（Render無料枠対応）
-            if len(pages) > 5:  # 5ページ制限
-                print("警告: ページ数が多すぎます（5ページ制限）")
-                pages = pages[:5]  # 最初の5ページのみ処理
-                print(f"最初の5ページのみ処理します")
+            if len(pages) > 50:  # 50ページ制限
+                print("警告: ページ数が多すぎます（50ページ制限）")
+                pages = pages[:50]  # 最初の50ページのみ処理
+                print(f"最初の50ページのみ処理します")
             
             # PPStructureで表認識モデルを初期化
             print("PPStructure初期化中...")
@@ -2291,10 +2295,22 @@ def extract_text_from_pdf_content(pdf_content):
             
             extracted_text = ""
             
-            # 各ページを処理（メモリ最適化）
+            # 各ページを処理（メモリ最適化 + 処理時間制御）
+            total_processing_time = 0
+            max_processing_time = 28  # 28秒制限（30秒以内で完了させるため、50ページ対応）
+            
+            # 処理時間予測（最初の3ページの平均から計算）
+            estimated_time_per_page = 0
+            pages_for_estimation = min(3, len(pages))
+            
             for page_num, page_image in enumerate(pages):
                 page_start = time.time()
                 print(f"ページ {page_num + 1}/{len(pages)} を処理中...")
+                
+                # 処理時間チェック
+                if total_processing_time > max_processing_time:
+                    print(f"処理時間制限に達しました（{max_processing_time}秒）。残り{len(pages) - page_num}ページをスキップします。")
+                    break
                 
                 # メモリ使用量チェック
                 memory_current = psutil.virtual_memory()
@@ -2336,16 +2352,45 @@ def extract_text_from_pdf_content(pdf_content):
                     print(f"  ページ {page_num + 1}: 表認識結果なし")
                 
                 page_time = time.time() - page_start
+                total_processing_time += page_time
                 print(f"  ページ処理時間: {page_time:.2f}秒")
+                print(f"  累積処理時間: {total_processing_time:.2f}秒")
                 print(f"  進捗: {((page_num + 1) / len(pages)) * 100:.1f}%")
+                
+                # 処理時間予測（最初の3ページの平均から計算）
+                if page_num < pages_for_estimation:
+                    estimated_time_per_page = total_processing_time / (page_num + 1)
+                    estimated_total_time = estimated_time_per_page * len(pages)
+                    print(f"  予測総処理時間: {estimated_total_time:.1f}秒")
+                    
+                    # 予測時間が制限を超える場合は警告
+                    if estimated_total_time > max_processing_time:
+                        print(f"  警告: 予測処理時間が制限を超える可能性があります")
                 
                 # メモリクリーンアップ
                 del img_array, img_cv, result
                 gc.collect()
+                
+                # 処理時間が長い場合は警告
+                if total_processing_time > 20:
+                    print(f"警告: 処理時間が長くなっています（{total_processing_time:.1f}秒）")
+                
+                # 10ページごとに強制ガベージコレクション（50ページ対応）
+                if (page_num + 1) % 10 == 0:
+                    print(f"  10ページ処理完了、メモリクリーンアップ実行")
+                    gc.collect()
+                    memory_after_cleanup = psutil.virtual_memory()
+                    print(f"  クリーンアップ後メモリ: {memory_after_cleanup.percent}%")
             
             total_time = time.time() - start_time
+            processed_pages = page_num + 1 if 'page_num' in locals() else 0
             print(f"PDF処理完了: {len(extracted_text)}文字抽出")
+            print(f"処理されたページ数: {processed_pages}/{len(pages)}")
             print(f"総処理時間: {total_time:.2f}秒")
+            
+            # 処理ページ数を関数属性として保存
+            extract_text_from_pdf_content._processed_pages = processed_pages
+            extract_text_from_pdf_content._total_pages = len(pages)
             
             # 最終メモリ使用量チェック
             memory_after = psutil.virtual_memory()

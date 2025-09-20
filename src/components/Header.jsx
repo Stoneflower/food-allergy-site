@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import SafeIcon from '../common/SafeIcon';
@@ -10,6 +10,11 @@ const { FiSearch, FiMenu, FiX, FiMapPin, FiUser, FiChevronDown, FiCamera, FiPlus
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showAllergyDropdown, setShowAllergyDropdown] = useState(false);
+  
+  // デバッグ用：showAllergyDropdownの状態変化を監視
+  useEffect(() => {
+    console.log('showAllergyDropdown状態が変更されました:', showAllergyDropdown);
+  }, [showAllergyDropdown]);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
   const {
     searchKeyword,
@@ -185,7 +190,9 @@ const Header = () => {
                     onClick={() => {
                       console.log('アレルギー選択ボタンクリック');
                       console.log('現在のshowAllergyDropdown:', showAllergyDropdown);
-                      setShowAllergyDropdown(!showAllergyDropdown);
+                      const newValue = !showAllergyDropdown;
+                      console.log('新しい値に設定:', newValue);
+                      setShowAllergyDropdown(newValue);
                     }}
                     className="h-12 w-full px-4 bg-red-50 border-l border-red-200 text-sm font-medium text-gray-700 focus:outline-none hover:bg-red-100 transition-colors flex items-center justify-between"
                   >
@@ -201,8 +208,8 @@ const Header = () => {
                   </button>
 
                   {/* Allergy Dropdown Menu */}
-                  {showAllergyDropdown && (
-                    console.log('ドロップダウンメニュー表示中') ||
+                  {showAllergyDropdown ? (
+                    console.log('ドロップダウンメニュー表示中 - showAllergyDropdown:', showAllergyDropdown) ||
                     <>
                       {/* 背景オーバーレイ */}
                       <div 
@@ -211,8 +218,8 @@ const Header = () => {
                       />
                       
                       {/* ドロップダウンメニュー */}
-                      <div className="absolute top-full left-0 bg-white border border-gray-200 rounded-b-lg shadow-2xl z-[9999]"
-                           style={{ width: '700px', maxWidth: '95vw' }}>
+                      <div className="absolute top-full left-0 bg-red-500 border-4 border-yellow-400 rounded-b-lg shadow-2xl z-[9999]"
+                           style={{ width: '700px', maxWidth: '95vw', minHeight: '200px' }}>
                         <div className="p-4">
                           <div className="flex items-center justify-between mb-3">
                             <h4 className="font-semibold text-gray-900">含まれるアレルギー成分</h4>
@@ -296,6 +303,8 @@ const Header = () => {
                         </div>
                       </div>
                     </>
+                  ) : (
+                    console.log('ドロップダウンメニュー非表示 - showAllergyDropdown:', showAllergyDropdown)
                   )}
                 </div>
 

@@ -377,31 +377,8 @@ export const RestaurantProvider = ({ children }) => {
       console.log('getFilteredItems - after search filter:', items);
     }
 
-    if (selectedAllergies.length > 0) {
-      items = items.filter(item => {
-        // product_allergies_matrixがある場合は、実際のアレルギー情報を使用
-        if (item.product_allergies_matrix && item.product_allergies_matrix.length > 0) {
-          // 選択されたアレルギーのいずれかが含まれている場合は除外
-          const hasSelectedAllergy = selectedAllergies.some(allergyId => {
-            // 各matrix要素をチェック
-            const hasAllergy = item.product_allergies_matrix.some(matrix => {
-              const allergyValue = matrix[allergyId];
-              // 'direct'の場合は含有（除外）
-              return allergyValue === 'direct';
-            });
-            return hasAllergy;
-          });
-          return !hasSelectedAllergy; // 選択されたアレルギーが含まれていない場合は表示
-        } else {
-          // product_allergies_matrixがない場合は、デフォルトのallergyInfoを使用
-          return selectedAllergies.every(allergyId => {
-            const allergyInfo = item.allergyInfo || {};
-            return allergyInfo[allergyId] === false; // アレルギー成分が含まれていない
-          });
-        }
-      });
-      console.log('getFilteredItems - after allergy filter:', items);
-    }
+    // アレルギーフィルタリングはAllergySearchResults.jsxで行うため、ここでは削除
+    // if (selectedAllergies.length > 0) { ... }
 
     if (selectedArea) {
       items = items.filter(item => 

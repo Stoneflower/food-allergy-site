@@ -198,7 +198,7 @@ CSV_CONVERTER_TEMPLATE = '''
         <h3>📊 データ入力</h3>
         <div class="form-group">
             <label>入力方式を選択:</label>
-            <select id="inputType" onchange="toggleInputType()">
+            <select id="inputType">
                 <option value="csv">CSVファイル</option>
                 <option value="json">JSONデータ</option>
                 <option value="pdf">PDFファイル</option>
@@ -211,12 +211,12 @@ CSV_CONVERTER_TEMPLATE = '''
             <label>CSVファイルをアップロード:</label>
             
             <!-- ドラッグ&ドロップエリア -->
-            <div id="csvDropZone" class="drop-zone" ondrop="handleCSVDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+            <div id="csvDropZone" class="drop-zone">
                 <div class="drop-zone-content">
                     <div class="drop-icon">📁</div>
                     <p>CSVファイルをここにドラッグ&ドロップ</p>
                     <p class="drop-subtitle">または</p>
-                    <input type="file" id="csvFile" accept=".csv" onchange="handleCSVUpload()" style="display: none;">
+                    <input type="file" id="csvFile" accept=".csv" style="display: none;">
                     <button class="btn" onclick="document.getElementById('csvFile').click()">ファイルを選択</button>
                 </div>
             </div>
@@ -240,12 +240,12 @@ CSV_CONVERTER_TEMPLATE = '''
             <label>PDFファイルをアップロード:</label>
             
             <!-- ドラッグ&ドロップエリア -->
-            <div id="pdfDropZone" class="drop-zone" ondrop="handlePDFDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+            <div id="pdfDropZone" class="drop-zone">
                 <div class="drop-zone-content">
                     <div class="drop-icon">📄</div>
                     <p>PDFファイルをここにドラッグ&ドロップ</p>
                     <p class="drop-subtitle">または</p>
-                    <input type="file" id="pdfFile" accept=".pdf" onchange="handlePDFUpload()" style="display: none;">
+                    <input type="file" id="pdfFile" accept=".pdf" style="display: none;">
                     <button class="btn" onclick="document.getElementById('pdfFile').click()">ファイルを選択</button>
                 </div>
             </div>
@@ -262,12 +262,12 @@ CSV_CONVERTER_TEMPLATE = '''
             <label>画像ファイルをアップロード（PaddleOCR処理）:</label>
             
             <!-- ドラッグ&ドロップエリア -->
-            <div id="imageDropZone" class="drop-zone" ondrop="handleImageDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+            <div id="imageDropZone" class="drop-zone">
                 <div class="drop-zone-content">
                     <div class="drop-icon">🖼️</div>
                     <p>画像ファイルをここにドラッグ&ドロップ</p>
                     <p class="drop-subtitle">または</p>
-                    <input type="file" id="imageFile" accept=".jpg,.jpeg,.png,.bmp,.heic,.heif" capture="environment" onchange="handleImageUpload()" style="display: none;">
+                    <input type="file" id="imageFile" accept=".jpg,.jpeg,.png,.bmp,.heic,.heif" capture="environment" style="display: none;">
                     <button class="btn" onclick="document.getElementById('imageFile').click()">ファイルを選択</button>
                 </div>
             </div>
@@ -413,16 +413,20 @@ CSV_CONVERTER_TEMPLATE = '''
             // ドラッグ&ドロップ共通機能
             window.handleDragOver = function(event) {
                 event.preventDefault();
+                event.stopPropagation();
                 event.currentTarget.classList.add('dragover');
             };
             
             window.handleDragLeave = function(event) {
+                event.preventDefault();
+                event.stopPropagation();
                 event.currentTarget.classList.remove('dragover');
             };
         
             // CSVファイルのドラッグ&ドロップ
             window.handleCSVDrop = function(event) {
                 event.preventDefault();
+                event.stopPropagation();
                 event.currentTarget.classList.remove('dragover');
                 
                 const files = event.dataTransfer.files;
@@ -460,7 +464,7 @@ CSV_CONVERTER_TEMPLATE = '''
         }
         
         // CSVを処理
-        function processCSV() {
+            window.processCSV = function() {
             const file = document.getElementById('csvFile').files[0];
             if (!file) return;
             
@@ -510,8 +514,9 @@ CSV_CONVERTER_TEMPLATE = '''
         
         // PDFファイルのドラッグ&ドロップ
             window.handlePDFDrop = function(event) {
-            event.preventDefault();
-            event.currentTarget.classList.remove('dragover');
+                event.preventDefault();
+                event.stopPropagation();
+                event.currentTarget.classList.remove('dragover');
             
             const files = event.dataTransfer.files;
             if (files.length > 0) {
@@ -547,7 +552,7 @@ CSV_CONVERTER_TEMPLATE = '''
         }
         
         // PDFを処理
-        function processPDF() {
+            window.processPDF = function() {
             if (!pdfData) {
                 alert('PDFファイルを選択してください');
                 return;
@@ -592,8 +597,9 @@ CSV_CONVERTER_TEMPLATE = '''
         
         // 画像ファイルのドラッグ&ドロップ
             window.handleImageDrop = function(event) {
-            event.preventDefault();
-            event.currentTarget.classList.remove('dragover');
+                event.preventDefault();
+                event.stopPropagation();
+                event.currentTarget.classList.remove('dragover');
             
             const files = event.dataTransfer.files;
             if (files.length > 0) {
@@ -633,7 +639,7 @@ CSV_CONVERTER_TEMPLATE = '''
         }
         
         // 画像をOCR処理
-        function processImage() {
+            window.processImage = function() {
             if (!imageData) {
                 alert('画像ファイルを選択してください');
                 return;
@@ -677,7 +683,7 @@ CSV_CONVERTER_TEMPLATE = '''
         }
         
         // サンプルデータを読み込み（28品目対応）
-        function loadSampleData() {
+            window.loadSampleData = function() {
             const sampleData = [
                 {
                     "menu_name": "アイスカフェラテ",
@@ -786,8 +792,8 @@ CSV_CONVERTER_TEMPLATE = '''
             updateAllergyOrderList();
         }
         
-        // アレルギー順番リストを更新
-        function updateAllergyOrderList() {
+            // アレルギー順番リストを更新
+            window.updateAllergyOrderList = function() {
             if (currentData.length === 0) return;
             
             const allergyOrderList = document.getElementById('allergyOrderList');
@@ -832,7 +838,7 @@ CSV_CONVERTER_TEMPLATE = '''
         }
         
         // ドラッグ&ドロップ機能を実装
-        function makeSortable() {
+            window.makeSortable = function() {
             const list = document.getElementById('sortableAllergies');
             let draggedElement = null;
             
@@ -859,14 +865,14 @@ CSV_CONVERTER_TEMPLATE = '''
         }
         
         // アレルギー順番を保存
-        function saveAllergyOrder() {
+            window.saveAllergyOrder = function() {
             const items = document.querySelectorAll('#sortableAllergies li');
             allergyOrder = Array.from(items).map(item => item.dataset.allergy);
             alert('アレルギー順番を保存しました');
         }
         
         // プレビューを表示
-        function showPreview() {
+            window.showPreview = function() {
             if (currentData.length === 0) {
                 alert('データがありません');
                 return;
@@ -878,7 +884,7 @@ CSV_CONVERTER_TEMPLATE = '''
         }
         
         // プレビュー変更を保存
-        function savePreviewChanges() {
+            window.savePreviewChanges = function() {
             try {
                 const newData = JSON.parse(document.getElementById('previewData').value);
                 currentData = newData;
@@ -891,12 +897,12 @@ CSV_CONVERTER_TEMPLATE = '''
         }
         
         // プレビューをリセット
-        function resetPreview() {
+            window.resetPreview = function() {
             document.getElementById('previewData').value = JSON.stringify(currentData, null, 2);
         }
         
         // お店情報を取得
-        function getStoreInfo() {
+            window.getStoreInfo = function() {
             return {
                 storeName: document.getElementById('storeName').value,
                 storeRegion: document.getElementById('storeRegion').value,
@@ -906,7 +912,7 @@ CSV_CONVERTER_TEMPLATE = '''
         }
         
         // 列のチェックボックスを更新
-        function updateColumnCheckboxes() {
+            window.updateColumnCheckboxes = function() {
             if (currentData.length === 0) return;
             
             const columns = Object.keys(currentData[0]);
@@ -925,7 +931,7 @@ CSV_CONVERTER_TEMPLATE = '''
         }
         
         // データをプレビュー
-        function previewData() {
+            window.previewData = function() {
             try {
                 const csvText = document.getElementById('csvData').value;
                 currentData = JSON.parse(csvText);
@@ -957,7 +963,7 @@ CSV_CONVERTER_TEMPLATE = '''
         }
         
         // データを変換
-        function convertData() {
+            window.convertData = function() {
             try {
                 const csvText = document.getElementById('csvData').value;
                 currentData = JSON.parse(csvText);
@@ -1014,7 +1020,7 @@ CSV_CONVERTER_TEMPLATE = '''
         }
         
         // マッピングを追加
-        function addMapping() {
+            window.addMapping = function() {
             const container = document.getElementById('mappingContainer');
             const newRow = document.createElement('div');
             newRow.className = 'mapping-row';
@@ -1028,12 +1034,12 @@ CSV_CONVERTER_TEMPLATE = '''
         }
         
         // マッピングを削除
-        function removeMapping(button) {
+            window.removeMapping = function(button) {
             button.parentElement.remove();
         }
         
         // テーブルを作成
-        function createTable(data) {
+            window.createTable = function(data) {
             if (data.length === 0) return '<p>データがありません</p>';
             
             const columns = Object.keys(data[0]);
@@ -1056,7 +1062,7 @@ CSV_CONVERTER_TEMPLATE = '''
         }
         
         // 結果を表示
-        function displayResult(data) {
+            window.displayResult = function(data) {
             document.getElementById('result').style.display = 'block';
             document.getElementById('resultContent').innerHTML = `
                 <p>データ件数: ${data.length}件</p>
@@ -1067,7 +1073,7 @@ CSV_CONVERTER_TEMPLATE = '''
         }
         
         // CSVエクスポート
-        function exportCSV() {
+            window.exportCSV = function() {
             const resultContent = document.getElementById('resultContent');
             const table = resultContent.querySelector('.table');
             if (!table) {
@@ -1090,6 +1096,96 @@ CSV_CONVERTER_TEMPLATE = '''
             link.click();
         };
         
+            // ページ全体でのドラッグ&ドロップのデフォルト動作を無効化
+            document.addEventListener('dragover', function(event) {
+                event.preventDefault();
+                event.stopPropagation();
+            });
+            
+            document.addEventListener('drop', function(event) {
+                event.preventDefault();
+                event.stopPropagation();
+            });
+            
+            // イベントハンドラーを設定
+            document.getElementById('inputType').addEventListener('change', toggleInputType);
+            document.getElementById('csvFile').addEventListener('change', handleCSVUpload);
+            document.getElementById('pdfFile').addEventListener('change', handlePDFUpload);
+            document.getElementById('imageFile').addEventListener('change', handleImageUpload);
+            
+            // ボタンのイベントリスナーを設定
+            document.getElementById('processCSVBtn')?.addEventListener('click', processCSV);
+            document.getElementById('processPDFBtn')?.addEventListener('click', processPDF);
+            document.getElementById('processImageBtn')?.addEventListener('click', processImage);
+            
+            // その他のボタンイベント
+            const loadSampleBtn = document.querySelector('button[onclick="loadSampleData()"]');
+            if (loadSampleBtn) {
+                loadSampleBtn.addEventListener('click', loadSampleData);
+                loadSampleBtn.removeAttribute('onclick');
+            }
+            
+            const previewBtn = document.querySelector('button[onclick="previewData()"]');
+            if (previewBtn) {
+                previewBtn.addEventListener('click', previewData);
+                previewBtn.removeAttribute('onclick');
+            }
+            
+            const saveAllergyBtn = document.querySelector('button[onclick="saveAllergyOrder()"]');
+            if (saveAllergyBtn) {
+                saveAllergyBtn.addEventListener('click', saveAllergyOrder);
+                saveAllergyBtn.removeAttribute('onclick');
+            }
+            
+            const addMappingBtn = document.querySelector('button[onclick="addMapping()"]');
+            if (addMappingBtn) {
+                addMappingBtn.addEventListener('click', addMapping);
+                addMappingBtn.removeAttribute('onclick');
+            }
+            
+            const savePreviewBtn = document.querySelector('button[onclick="savePreviewChanges()"]');
+            if (savePreviewBtn) {
+                savePreviewBtn.addEventListener('click', savePreviewChanges);
+                savePreviewBtn.removeAttribute('onclick');
+            }
+            
+            const resetPreviewBtn = document.querySelector('button[onclick="resetPreview()"]');
+            if (resetPreviewBtn) {
+                resetPreviewBtn.addEventListener('click', resetPreview);
+                resetPreviewBtn.removeAttribute('onclick');
+            }
+            
+            const showPreviewBtn = document.querySelector('button[onclick="showPreview()"]');
+            if (showPreviewBtn) {
+                showPreviewBtn.addEventListener('click', showPreview);
+                showPreviewBtn.removeAttribute('onclick');
+            }
+            
+            const convertBtn = document.querySelector('button[onclick="convertData()"]');
+            if (convertBtn) {
+                convertBtn.addEventListener('click', convertData);
+                convertBtn.removeAttribute('onclick');
+            }
+            
+            const exportBtn = document.querySelector('button[onclick="exportCSV()"]');
+            if (exportBtn) {
+                exportBtn.addEventListener('click', exportCSV);
+                exportBtn.removeAttribute('onclick');
+            }
+            
+            // ドラッグ&ドロップイベントを設定
+            document.getElementById('csvDropZone').addEventListener('dragover', handleDragOver);
+            document.getElementById('csvDropZone').addEventListener('dragleave', handleDragLeave);
+            document.getElementById('csvDropZone').addEventListener('drop', handleCSVDrop);
+            
+            document.getElementById('pdfDropZone').addEventListener('dragover', handleDragOver);
+            document.getElementById('pdfDropZone').addEventListener('dragleave', handleDragLeave);
+            document.getElementById('pdfDropZone').addEventListener('drop', handlePDFDrop);
+            
+            document.getElementById('imageDropZone').addEventListener('dragover', handleDragOver);
+            document.getElementById('imageDropZone').addEventListener('dragleave', handleDragLeave);
+            document.getElementById('imageDropZone').addEventListener('drop', handleImageDrop);
+            
         }); // DOMContentLoaded終了
     </script>
 </body>

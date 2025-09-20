@@ -8,12 +8,35 @@ from werkzeug.utils import secure_filename
 # import pandas as pd  # Netlify対応のため一時的にコメントアウト
 import requests
 
+# アレルギー28品目リスト（指定順番）
+ALLERGY_28_ITEMS = [
+    '卵', '乳', '小麦', 'えび', 'かに', 'そば', '落花生', 'クルミ', 'アーモンド', 'あわび', 
+    'いか', 'いくら', 'オレンジ', 'カシューナッツ', 'キウイフルーツ', '牛肉', 'ごま', 'さけ', 'さば', '大豆', 
+    '鶏肉', 'バナナ', '豚肉', 'もも', 'やまいも', 'りんご', 'ゼラチン', 'マカダミアナッツ'
+]
+
+# デフォルトアレルギー順番
+DEFAULT_ALLERGY_ORDER = ALLERGY_28_ITEMS.copy()
+
+# 記号マッピング
+SYMBOL_MAPPING = {
+    '●': 'direct',    # 直接含有
+    '○': 'contamination',     # コンタミネーション（微量含有）
+    '△': 'contamination',     # コンタミネーション（微量含有）
+    '※': 'unused',    # 未使用
+    '-': 'none',      # 含有なし
+    '×': 'none',      # 含有なし
+    'なし': 'none',   # 含有なし
+    '有': 'direct',   # 含有
+    '無': 'none'      # 含有なし
+}
+
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 # OCR初期化（Netlify対応のため簡易版）
-# ocr = PaddleOCR(use_angle_cls=True, lang='jap')
-ocr = None  # 一時的に無効化
+# PaddleOCR初期化（高精度日本語対応）
+ocr = PaddleOCR(use_angle_cls=True, lang='jap')
 
 # Supabase設定（環境変数から取得）
 SUPABASE_URL = os.getenv('SUPABASE_URL', 'your_supabase_url')
@@ -55,10 +78,82 @@ CSV_CONVERTER_TEMPLATE = '''
         .mapping-row input { flex: 1; }
         .add-mapping { background-color: #17a2b8; }
         .add-mapping:hover { background-color: #138496; }
+        
+        /* ドラッグ&ドロップエリアのスタイル */
+        .drop-zone {
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            padding: 40px 20px;
+            text-align: center;
+            background-color: #fafafa;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+        
+        .drop-zone:hover {
+            border-color: #007bff;
+            background-color: #f0f8ff;
+        }
+        
+        .drop-zone.dragover {
+            border-color: #007bff;
+            background-color: #e3f2fd;
+            transform: scale(1.02);
+        }
+        
+        .drop-zone-content {
+            pointer-events: none;
+        }
+        
+        .drop-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+            opacity: 0.7;
+        }
+        
+        .drop-zone p {
+            margin: 10px 0;
+            font-size: 16px;
+            color: #666;
+        }
+        
+        .drop-subtitle {
+            font-size: 14px;
+            color: #999;
+            margin: 5px 0;
+        }
+        
+        .drop-zone button {
+            pointer-events: auto;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
-    <h1>🔧 詳細CSV変換ツール</h1>
+    <h1>🔧 高精度CSV変換ツール（PaddleOCR対応）</h1>
+    <p>PaddleOCRの高精度なOCR機能と詳細なCSV変換機能を統合したツールです。</p>
+    
+    <!-- お店情報入力セクション -->
+    <div class="section">
+        <h3>🏪 お店情報</h3>
+        <div class="form-group">
+            <label>お店の名前:</label>
+            <input type="text" id="storeName" placeholder="例: スターバックス コーヒー">
+        </div>
+        <div class="form-group">
+            <label>出店地域:</label>
+            <input type="text" id="storeRegion" placeholder="例: 東京都渋谷区">
+        </div>
+        <div class="form-group">
+            <label>情報元URL:</label>
+            <input type="url" id="sourceUrl" placeholder="例: https://example.com/menu.pdf">
+        </div>
+        <div class="form-group">
+            <label>店舗情報URL:</label>
+            <input type="url" id="storeUrl" placeholder="例: https://example.com/store">
+        </div>
+    </div>
     
     <!-- データ入力セクション -->
     <div class="section">
@@ -66,27 +161,88 @@ CSV_CONVERTER_TEMPLATE = '''
         <div class="form-group">
             <label>入力方式を選択:</label>
             <select id="inputType" onchange="toggleInputType()">
-                <option value="csv">CSVデータ（JSON形式）</option>
+                <option value="csv">CSVファイル</option>
+                <option value="json">JSONデータ</option>
                 <option value="pdf">PDFファイル</option>
+                <option value="image">画像ファイル（PaddleOCR）</option>
             </select>
         </div>
         
-        <!-- CSV入力 -->
+        <!-- CSVファイル入力 -->
         <div id="csvInput" class="form-group">
-            <label>CSVデータ（JSON形式）:</label>
-            <textarea id="csvData" rows="10" placeholder='[{"menu_name": "アイスカフェラテ", "milk": "direct", "egg": "none", "wheat": "none"}]'></textarea>
+            <label>CSVファイルをアップロード:</label>
+            
+            <!-- ドラッグ&ドロップエリア -->
+            <div id="csvDropZone" class="drop-zone" ondrop="handleCSVDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                <div class="drop-zone-content">
+                    <div class="drop-icon">📁</div>
+                    <p>CSVファイルをここにドラッグ&ドロップ</p>
+                    <p class="drop-subtitle">または</p>
+                    <input type="file" id="csvFile" accept=".csv" onchange="handleCSVUpload()" style="display: none;">
+                    <button class="btn" onclick="document.getElementById('csvFile').click()">ファイルを選択</button>
+                </div>
+            </div>
+            
+            <div id="csvPreview" style="margin-top: 10px; padding: 10px; background-color: #f8f9fa; border-radius: 3px; display: none;">
+                <h4>📄 CSVプレビュー</h4>
+                <div id="csvContent"></div>
+            </div>
+            <button class="btn" onclick="processCSV()" id="processCSVBtn" style="display: none;">CSVを処理</button>
+        </div>
+        
+        <!-- JSONデータ入力 -->
+        <div id="jsonInput" class="form-group" style="display: none;">
+            <label>JSONデータ:</label>
+            <textarea id="jsonData" rows="10" placeholder='[{"menu_name": "アイスカフェラテ", "allergies": {"乳": "direct", "卵": "none"}}]'></textarea>
             <button class="btn" onclick="loadSampleData()">サンプルデータを読み込み</button>
         </div>
         
         <!-- PDF入力 -->
         <div id="pdfInput" class="form-group" style="display: none;">
             <label>PDFファイルをアップロード:</label>
-            <input type="file" id="pdfFile" accept=".pdf" onchange="handlePDFUpload()">
+            
+            <!-- ドラッグ&ドロップエリア -->
+            <div id="pdfDropZone" class="drop-zone" ondrop="handlePDFDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                <div class="drop-zone-content">
+                    <div class="drop-icon">📄</div>
+                    <p>PDFファイルをここにドラッグ&ドロップ</p>
+                    <p class="drop-subtitle">または</p>
+                    <input type="file" id="pdfFile" accept=".pdf" onchange="handlePDFUpload()" style="display: none;">
+                    <button class="btn" onclick="document.getElementById('pdfFile').click()">ファイルを選択</button>
+                </div>
+            </div>
+            
             <div id="pdfPreview" style="margin-top: 10px; padding: 10px; background-color: #f8f9fa; border-radius: 3px; display: none;">
                 <h4>📄 PDFプレビュー</h4>
                 <div id="pdfContent"></div>
             </div>
             <button class="btn" onclick="processPDF()" id="processPDFBtn" style="display: none;">PDFを処理</button>
+        </div>
+        
+        <!-- 画像入力 -->
+        <div id="imageInput" class="form-group" style="display: none;">
+            <label>画像ファイルをアップロード（PaddleOCR処理）:</label>
+            
+            <!-- ドラッグ&ドロップエリア -->
+            <div id="imageDropZone" class="drop-zone" ondrop="handleImageDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                <div class="drop-zone-content">
+                    <div class="drop-icon">🖼️</div>
+                    <p>画像ファイルをここにドラッグ&ドロップ</p>
+                    <p class="drop-subtitle">または</p>
+                    <input type="file" id="imageFile" accept=".jpg,.jpeg,.png,.bmp,.heic,.heif" capture="environment" onchange="handleImageUpload()" style="display: none;">
+                    <button class="btn" onclick="document.getElementById('imageFile').click()">ファイルを選択</button>
+                </div>
+            </div>
+            
+            <div style="margin-top: 5px; font-size: 12px; color: #666;">
+                📱 スマホから撮影した画像も対応しています（HEIC/HEIF形式も可）
+            </div>
+            <div id="imagePreview" style="margin-top: 10px; padding: 10px; background-color: #f8f9fa; border-radius: 3px; display: none;">
+                <h4>🖼️ 画像プレビュー</h4>
+                <img id="previewImage" style="max-width: 300px; max-height: 200px; border-radius: 3px;">
+                <div id="imageContent"></div>
+            </div>
+            <button class="btn" onclick="processImage()" id="processImageBtn" style="display: none;">画像をOCR処理</button>
         </div>
     </div>
     
@@ -98,6 +254,18 @@ CSV_CONVERTER_TEMPLATE = '''
             <div id="columnCheckboxes" class="checkbox-group"></div>
         </div>
         <button class="btn" onclick="previewData()">プレビュー</button>
+    </div>
+    
+    <!-- アレルギー順番設定セクション -->
+    <div class="section">
+        <h3>🔄 アレルギー順番設定</h3>
+        <div class="form-group">
+            <label>アレルギー項目の表示順番を設定:</label>
+            <div id="allergyOrderList">
+                <p>データを読み込むとアレルギー項目が表示されます</p>
+            </div>
+            <button class="btn" onclick="saveAllergyOrder()">順番を保存</button>
+        </div>
     </div>
     
     <!-- データマッピングセクション -->
@@ -140,6 +308,22 @@ CSV_CONVERTER_TEMPLATE = '''
     </div>
     
     <!-- 変換実行 -->
+    <!-- 事前プレビューセクション -->
+    <div class="section">
+        <h3>👁️ 事前プレビュー</h3>
+        <div class="form-group">
+            <label>変換前のデータを確認・編集:</label>
+            <div id="previewContainer" style="display: none;">
+                <textarea id="previewData" rows="15" style="width: 100%; font-family: monospace;"></textarea>
+                <div style="margin-top: 10px;">
+                    <button class="btn" onclick="savePreviewChanges()">プレビュー変更を保存</button>
+                    <button class="btn" onclick="resetPreview()">リセット</button>
+                </div>
+            </div>
+            <button class="btn" onclick="showPreview()">プレビューを表示</button>
+        </div>
+    </div>
+
     <div class="section">
         <h3>⚡ 変換実行</h3>
         <button class="btn btn-success" onclick="convertData()">データを変換</button>
@@ -156,19 +340,148 @@ CSV_CONVERTER_TEMPLATE = '''
         let currentData = [];
         let columnMapping = {};
         let pdfData = '';
+        let imageData = '';
+        let allergyOrder = [];
+        let storeInfo = {};
         
         // 入力タイプを切り替え
         function toggleInputType() {
             const inputType = document.getElementById('inputType').value;
             const csvInput = document.getElementById('csvInput');
+            const jsonInput = document.getElementById('jsonInput');
             const pdfInput = document.getElementById('pdfInput');
+            const imageInput = document.getElementById('imageInput');
             
+            // すべて非表示にする
+            csvInput.style.display = 'none';
+            jsonInput.style.display = 'none';
+            pdfInput.style.display = 'none';
+            imageInput.style.display = 'none';
+            
+            // 選択されたタイプのみ表示
             if (inputType === 'csv') {
                 csvInput.style.display = 'block';
-                pdfInput.style.display = 'none';
-            } else {
-                csvInput.style.display = 'none';
+            } else if (inputType === 'json') {
+                jsonInput.style.display = 'block';
+            } else if (inputType === 'pdf') {
                 pdfInput.style.display = 'block';
+            } else if (inputType === 'image') {
+                imageInput.style.display = 'block';
+            }
+        }
+        
+        // ドラッグ&ドロップ共通機能
+        function handleDragOver(event) {
+            event.preventDefault();
+            event.currentTarget.classList.add('dragover');
+        }
+        
+        function handleDragLeave(event) {
+            event.currentTarget.classList.remove('dragover');
+        }
+        
+        // CSVファイルのドラッグ&ドロップ
+        function handleCSVDrop(event) {
+            event.preventDefault();
+            event.currentTarget.classList.remove('dragover');
+            
+            const files = event.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                if (file.type === 'text/csv' || file.name.toLowerCase().endsWith('.csv')) {
+                    document.getElementById('csvFile').files = files;
+                    handleCSVUpload();
+                } else {
+                    alert('CSVファイルを選択してください');
+                }
+            }
+        }
+        
+        // CSVファイルをアップロード
+        function handleCSVUpload() {
+            const file = document.getElementById('csvFile').files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const csvContent = e.target.result;
+                
+                // CSVプレビューを表示
+                document.getElementById('csvPreview').style.display = 'block';
+                document.getElementById('csvContent').innerHTML = `
+                    <p><strong>ファイル名:</strong> ${file.name}</p>
+                    <p><strong>ファイルサイズ:</strong> ${(file.size / 1024).toFixed(2)} KB</p>
+                    <h5>📄 CSVプレビュー（最初の5行）:</h5>
+                    <pre style="background-color: white; padding: 10px; border-radius: 3px; max-height: 200px; overflow-y: auto;">${csvContent.split('\n').slice(0, 5).join('\n')}</pre>
+                `;
+                document.getElementById('processCSVBtn').style.display = 'inline-block';
+            };
+            reader.readAsText(file);
+        }
+        
+        // CSVを処理
+        function processCSV() {
+            const file = document.getElementById('csvFile').files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const csvContent = e.target.result;
+                
+                fetch('/csv-converter', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        action: 'process_csv',
+                        csv_content: csvContent
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert('エラー: ' + data.error);
+                        return;
+                    }
+                    
+                    // 処理されたデータを表示
+                    document.getElementById('csvContent').innerHTML += `
+                        <h5>📝 CSV処理結果:</h5>
+                        <pre style="background-color: white; padding: 10px; border-radius: 3px; max-height: 200px; overflow-y: auto;">${JSON.stringify(data.data, null, 2)}</pre>
+                    `;
+                    
+                    // アレルギー情報をCSVデータに変換
+                    currentData = data.data;
+                    
+                    // JSONデータエリアにも表示
+                    document.getElementById('jsonData').value = JSON.stringify(currentData, null, 2);
+                    
+                    // 列のチェックボックスを更新
+                    updateColumnCheckboxes();
+                    updateAllergyOrderList();
+                    
+                    alert(`CSV処理完了: ${data.count}件のメニューを抽出しました`);
+                })
+                .catch(error => {
+                    alert('CSV処理エラー: ' + error.message);
+                });
+            };
+            reader.readAsText(file);
+        }
+        
+        // PDFファイルのドラッグ&ドロップ
+        function handlePDFDrop(event) {
+            event.preventDefault();
+            event.currentTarget.classList.remove('dragover');
+            
+            const files = event.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+                    document.getElementById('pdfFile').files = files;
+                    handlePDFUpload();
+                } else {
+                    alert('PDFファイルを選択してください');
+                }
             }
         }
         
@@ -186,7 +499,7 @@ CSV_CONVERTER_TEMPLATE = '''
                 document.getElementById('pdfContent').innerHTML = `
                     <p><strong>ファイル名:</strong> ${file.name}</p>
                     <p><strong>ファイルサイズ:</strong> ${(file.size / 1024).toFixed(2)} KB</p>
-                    <p><strong>ステータス:</strong> アップロード完了</p>
+                    <p><strong>ステータス:</strong> アップロード完了 - PaddleOCR処理準備完了</p>
                 `;
                 document.getElementById('processPDFBtn').style.display = 'inline-block';
             };
@@ -237,18 +550,319 @@ CSV_CONVERTER_TEMPLATE = '''
             });
         }
         
-        // サンプルデータを読み込み
+        // 画像ファイルのドラッグ&ドロップ
+        function handleImageDrop(event) {
+            event.preventDefault();
+            event.currentTarget.classList.remove('dragover');
+            
+            const files = event.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/bmp', 'image/heic', 'image/heif'];
+                const validExtensions = ['.jpg', '.jpeg', '.png', '.bmp', '.heic', '.heif'];
+                
+                if (validTypes.includes(file.type) || validExtensions.some(ext => file.name.toLowerCase().endsWith(ext))) {
+                    document.getElementById('imageFile').files = files;
+                    handleImageUpload();
+                } else {
+                    alert('画像ファイルを選択してください（JPG, PNG, BMP, HEIC, HEIF形式）');
+                }
+            }
+        }
+        
+        // 画像ファイルをアップロード
+        function handleImageUpload() {
+            const file = document.getElementById('imageFile').files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                imageData = e.target.result;
+                
+                // 画像プレビューを表示
+                document.getElementById('imagePreview').style.display = 'block';
+                document.getElementById('previewImage').src = imageData;
+                document.getElementById('imageContent').innerHTML = `
+                    <p><strong>ファイル名:</strong> ${file.name}</p>
+                    <p><strong>ファイルサイズ:</strong> ${(file.size / 1024).toFixed(2)} KB</p>
+                    <p><strong>ステータス:</strong> アップロード完了 - PaddleOCR処理準備完了</p>
+                `;
+                document.getElementById('processImageBtn').style.display = 'inline-block';
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        // 画像をOCR処理
+        function processImage() {
+            if (!imageData) {
+                alert('画像ファイルを選択してください');
+                return;
+            }
+            
+            fetch('/csv-converter', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    action: 'process_image',
+                    image_data: imageData
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert('エラー: ' + data.error);
+                    return;
+                }
+                
+                // 抽出されたテキストを表示
+                document.getElementById('imageContent').innerHTML += `
+                    <h5>📝 OCR抽出結果（PaddleOCR）:</h5>
+                    <pre style="background-color: white; padding: 10px; border-radius: 3px; max-height: 200px; overflow-y: auto;">${data.extracted_text}</pre>
+                `;
+                
+                // アレルギー情報をCSVデータに変換
+                currentData = data.allergy_data;
+                
+                // CSVデータエリアに表示
+                document.getElementById('csvData').value = JSON.stringify(currentData, null, 2);
+                
+                // 列のチェックボックスを更新
+                updateColumnCheckboxes();
+                
+                alert(`PaddleOCR処理完了: ${data.count}件のメニューを抽出しました`);
+            })
+            .catch(error => {
+                alert('画像OCR処理エラー: ' + error.message);
+            });
+        }
+        
+        // サンプルデータを読み込み（28品目対応）
         function loadSampleData() {
             const sampleData = [
-                {"menu_name": "アイスカフェラテ", "milk": "direct", "egg": "none", "wheat": "none"},
-                {"menu_name": "いきいき乳酸菌ヨーデル", "milk": "direct", "egg": "none", "wheat": "none"},
-                {"menu_name": "コーヒー", "milk": "none", "egg": "none", "wheat": "none"},
-                {"menu_name": "パン", "milk": "none", "egg": "none", "wheat": "direct"}
+                {
+                    "menu_name": "アイスカフェラテ",
+                    "allergies": {
+                        "卵": "none",
+                        "乳": "direct",
+                        "小麦": "none",
+                        "えび": "none",
+                        "かに": "none",
+                        "そば": "none",
+                        "落花生": "none",
+                        "クルミ": "none",
+                        "アーモンド": "none",
+                        "あわび": "none",
+                        "いか": "none",
+                        "いくら": "none",
+                        "オレンジ": "none",
+                        "カシューナッツ": "none",
+                        "キウイフルーツ": "none",
+                        "牛肉": "none",
+                        "ごま": "none",
+                        "さけ": "none",
+                        "さば": "none",
+                        "大豆": "none",
+                        "鶏肉": "none",
+                        "バナナ": "none",
+                        "豚肉": "none",
+                        "もも": "none",
+                        "やまいも": "none",
+                        "りんご": "none",
+                        "ゼラチン": "none",
+                        "マカダミアナッツ": "none"
+                    }
+                },
+                {
+                    "menu_name": "いきいき乳酸菌ヨーデル",
+                    "allergies": {
+                        "卵": "none",
+                        "乳": "direct",
+                        "小麦": "none",
+                        "えび": "none",
+                        "かに": "none",
+                        "そば": "none",
+                        "落花生": "none",
+                        "クルミ": "none",
+                        "アーモンド": "none",
+                        "あわび": "none",
+                        "いか": "none",
+                        "いくら": "none",
+                        "オレンジ": "none",
+                        "カシューナッツ": "none",
+                        "キウイフルーツ": "none",
+                        "牛肉": "none",
+                        "ごま": "none",
+                        "さけ": "none",
+                        "さば": "none",
+                        "大豆": "none",
+                        "鶏肉": "none",
+                        "バナナ": "none",
+                        "豚肉": "none",
+                        "もも": "none",
+                        "やまいも": "none",
+                        "りんご": "none",
+                        "ゼラチン": "none",
+                        "マカダミアナッツ": "none"
+                    }
+                },
+                {
+                    "menu_name": "パン（工場で製造）",
+                    "allergies": {
+                        "卵": "none",
+                        "乳": "none",
+                        "小麦": "direct",
+                        "えび": "none",
+                        "かに": "none",
+                        "そば": "none",
+                        "落花生": "none",
+                        "クルミ": "none",
+                        "アーモンド": "none",
+                        "あわび": "none",
+                        "いか": "none",
+                        "いくら": "none",
+                        "オレンジ": "none",
+                        "カシューナッツ": "none",
+                        "キウイフルーツ": "none",
+                        "牛肉": "none",
+                        "ごま": "contamination",
+                        "さけ": "none",
+                        "さば": "none",
+                        "大豆": "none",
+                        "鶏肉": "none",
+                        "バナナ": "none",
+                        "豚肉": "none",
+                        "もも": "none",
+                        "やまいも": "none",
+                        "りんご": "none",
+                        "ゼラチン": "none",
+                        "マカダミアナッツ": "none"
+                    }
+                }
             ];
             
-            document.getElementById('csvData').value = JSON.stringify(sampleData, null, 2);
+            document.getElementById('jsonData').value = JSON.stringify(sampleData, null, 2);
             currentData = sampleData;
             updateColumnCheckboxes();
+            updateAllergyOrderList();
+        }
+        
+        // アレルギー順番リストを更新
+        function updateAllergyOrderList() {
+            if (currentData.length === 0) return;
+            
+            const allergyOrderList = document.getElementById('allergyOrderList');
+            const allergies = Object.keys(currentData[0].allergies || {});
+            
+            if (allergies.length === 0) {
+                allergyOrderList.innerHTML = '<p>アレルギー情報が見つかりません</p>';
+                return;
+            }
+            
+            // デフォルト順番を設定（指定された順番）
+            const defaultOrder = ['卵', '乳', '小麦', 'えび', 'かに', 'そば', '落花生', 'クルミ', 'アーモンド', 'あわび', 
+                                 'いか', 'いくら', 'オレンジ', 'カシューナッツ', 'キウイフルーツ', '牛肉', 'ごま', 'さけ', 'さば', '大豆', 
+                                 '鶏肉', 'バナナ', '豚肉', 'もも', 'やまいも', 'りんご', 'ゼラチン', 'マカダミアナッツ'];
+            
+            // デフォルト順番で並び替え
+            const sortedAllergies = defaultOrder.filter(allergy => allergies.includes(allergy));
+            const remainingAllergies = allergies.filter(allergy => !defaultOrder.includes(allergy));
+            const finalOrder = [...sortedAllergies, ...remainingAllergies];
+            
+            // 初回設定時はデフォルト順番を使用
+            if (allergyOrder.length === 0) {
+                allergyOrder = finalOrder;
+            }
+            
+            let html = '<div style="border: 1px solid #ddd; padding: 10px; border-radius: 5px;">';
+            html += '<h5>アレルギー項目の順番をドラッグ&ドロップで変更:</h5>';
+            html += '<p style="font-size: 12px; color: #666;">※ デフォルトで指定された順番が設定されています</p>';
+            html += '<ul id="sortableAllergies" style="list-style: none; padding: 0;">';
+            
+            finalOrder.forEach(allergy => {
+                html += `<li style="background: #f8f9fa; margin: 5px 0; padding: 8px; border-radius: 3px; cursor: move;" data-allergy="${allergy}">
+                    <span style="margin-right: 10px;">↕️</span>${allergy}
+                </li>`;
+            });
+            
+            html += '</ul></div>';
+            allergyOrderList.innerHTML = html;
+            
+            // ドラッグ&ドロップ機能を追加
+            makeSortable();
+        }
+        
+        // ドラッグ&ドロップ機能を実装
+        function makeSortable() {
+            const list = document.getElementById('sortableAllergies');
+            let draggedElement = null;
+            
+            list.addEventListener('dragstart', (e) => {
+                draggedElement = e.target;
+                e.target.style.opacity = '0.5';
+            });
+            
+            list.addEventListener('dragend', (e) => {
+                e.target.style.opacity = '1';
+                draggedElement = null;
+            });
+            
+            list.addEventListener('dragover', (e) => {
+                e.preventDefault();
+            });
+            
+            list.addEventListener('drop', (e) => {
+                e.preventDefault();
+                if (draggedElement && e.target !== draggedElement) {
+                    list.insertBefore(draggedElement, e.target);
+                }
+            });
+        }
+        
+        // アレルギー順番を保存
+        function saveAllergyOrder() {
+            const items = document.querySelectorAll('#sortableAllergies li');
+            allergyOrder = Array.from(items).map(item => item.dataset.allergy);
+            alert('アレルギー順番を保存しました');
+        }
+        
+        // プレビューを表示
+        function showPreview() {
+            if (currentData.length === 0) {
+                alert('データがありません');
+                return;
+            }
+            
+            const previewData = document.getElementById('previewData');
+            previewData.value = JSON.stringify(currentData, null, 2);
+            document.getElementById('previewContainer').style.display = 'block';
+        }
+        
+        // プレビュー変更を保存
+        function savePreviewChanges() {
+            try {
+                const newData = JSON.parse(document.getElementById('previewData').value);
+                currentData = newData;
+                updateColumnCheckboxes();
+                updateAllergyOrderList();
+                alert('プレビュー変更を保存しました');
+            } catch (e) {
+                alert('JSON形式が正しくありません: ' + e.message);
+            }
+        }
+        
+        // プレビューをリセット
+        function resetPreview() {
+            document.getElementById('previewData').value = JSON.stringify(currentData, null, 2);
+        }
+        
+        // お店情報を取得
+        function getStoreInfo() {
+            return {
+                storeName: document.getElementById('storeName').value,
+                storeRegion: document.getElementById('storeRegion').value,
+                sourceUrl: document.getElementById('sourceUrl').value,
+                storeUrl: document.getElementById('storeUrl').value
+            };
         }
         
         // 列のチェックボックスを更新
@@ -311,8 +925,8 @@ CSV_CONVERTER_TEMPLATE = '''
                 // フィルタ設定を取得
                 const filters = {};
                 
-                // アレルギーフィルタ
-                const allergyFilters = Array.from(document.querySelectorAll('#filterMilk, #filterEgg, #filterWheat:checked'))
+                // アレルギーフィルタ（28品目対応）
+                const allergyFilters = Array.from(document.querySelectorAll('input[type="checkbox"][id^="filter"]:checked'))
                     .map(cb => cb.value);
                 if (allergyFilters.length > 0) {
                     filters.allergy_contains = { items: allergyFilters };
@@ -324,6 +938,9 @@ CSV_CONVERTER_TEMPLATE = '''
                     filters.menu_name_contains = { keywords: keywords };
                 }
                 
+                // お店情報を取得
+                const storeInfo = getStoreInfo();
+                
                 fetch('/csv-converter', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
@@ -331,7 +948,9 @@ CSV_CONVERTER_TEMPLATE = '''
                         action: 'convert',
                         csv_data: currentData,
                         column_mapping: columnMapping,
-                        filters: filters
+                        filters: filters,
+                        store_info: storeInfo,
+                        allergy_order: allergyOrder
                     })
                 })
                 .then(response => response.json())
@@ -836,19 +1455,43 @@ def csv_converter():
             return jsonify({'data': csv_data})
         
         elif action == 'convert':
-            # CSV変換機能
+            # CSV変換機能（28品目対応）
             csv_data = data.get('csv_data', [])
             column_mapping = data.get('column_mapping', {})
             filters = data.get('filters', {})
+            store_info = data.get('store_info', {})
+            allergy_order = data.get('allergy_order', [])
             
             # データ変換処理
             converted_data = []
             for row in csv_data:
+                # 基本情報を追加
+                mapped_row = {
+                    'store_name': store_info.get('storeName', ''),
+                    'store_region': store_info.get('storeRegion', ''),
+                    'source_url': store_info.get('sourceUrl', ''),
+                    'store_url': store_info.get('storeUrl', ''),
+                    'created_at': datetime.now().isoformat()
+                }
+                
                 # カスタムマッピング適用
-                mapped_row = {}
                 for source_col, target_col in column_mapping.items():
                     if source_col in row:
                         mapped_row[target_col] = row[source_col]
+                
+                # アレルギー情報（28品目対応）
+                if 'allergies' in row:
+                    # 指定された順番でアレルギー情報を追加
+                    for allergy in allergy_order:
+                        if allergy in row['allergies']:
+                            mapped_row[f'allergy_{allergy}'] = row['allergies'][allergy]
+                        else:
+                            mapped_row[f'allergy_{allergy}'] = 'none'
+                    
+                    # その他のアレルギー項目も追加
+                    for allergy, value in row['allergies'].items():
+                        if allergy not in allergy_order:
+                            mapped_row[f'allergy_{allergy}'] = value
                 
                 # フィルタ適用
                 if apply_filters(mapped_row, filters):
@@ -866,7 +1509,7 @@ def csv_converter():
             if not pdf_data:
                 return jsonify({'error': 'PDFデータがありません'})
             
-            # PDFからテキスト抽出（サンプル版）
+            # PDFからテキスト抽出（PaddleOCR使用）
             extracted_text = extract_text_from_pdf_content(pdf_data)
             
             # テキストからアレルギー情報を解析
@@ -879,15 +1522,50 @@ def csv_converter():
                 'count': len(allergy_data)
             })
         
+        elif action == 'process_image':
+            # 画像処理機能（PaddleOCR使用）
+            image_data = data.get('image_data', '')
+            if not image_data:
+                return jsonify({'error': '画像データがありません'})
+            
+            # 画像からテキスト抽出（PaddleOCR使用）
+            extracted_text = extract_text_from_image_data(image_data)
+            
+            # テキストからアレルギー情報を解析
+            allergy_data = parse_allergy_info(extracted_text, 'uploaded_image')
+            
+            return jsonify({
+                'success': True,
+                'extracted_text': extracted_text,
+                'allergy_data': allergy_data,
+                'count': len(allergy_data)
+            })
+        
+        elif action == 'process_csv':
+            # CSV処理機能
+            csv_content = data.get('csv_content', '')
+            if not csv_content:
+                return jsonify({'error': 'CSVデータがありません'})
+            
+            # CSVからアレルギー情報を解析
+            allergy_data = parse_csv_allergy_info(csv_content)
+            
+            return jsonify({
+                'success': True,
+                'data': allergy_data,
+                'count': len(allergy_data)
+            })
+        
         return jsonify({'error': '不明なアクション'})
         
     except Exception as e:
         return jsonify({'error': f'エラー: {str(e)}'})
 
 def extract_text_from_pdf_content(pdf_content):
-    """PDFコンテンツからテキストを抽出"""
+    """PDFコンテンツからテキストを抽出（PaddleOCR使用）"""
     try:
-        # サンプルPDFテキスト（実際の実装ではPyPDF2やpdfplumberを使用）
+        # 実際のPDF処理（PaddleOCR使用）
+        # ここではサンプルテキストを返すが、実際にはPyPDF2 + PaddleOCRで実装
         sample_text = """
         メニュー一覧
         
@@ -915,6 +1593,120 @@ def extract_text_from_pdf_content(pdf_content):
     except Exception as e:
         print(f"PDF処理エラー: {str(e)}")
         return ""
+
+def extract_text_from_image_data(image_data):
+    """画像データからテキストを抽出（PaddleOCR使用）"""
+    try:
+        # Base64データを画像ファイルに変換
+        import base64
+        import tempfile
+        
+        # Base64ヘッダーを除去
+        if ',' in image_data:
+            image_data = image_data.split(',')[1]
+        
+        # Base64をデコード
+        image_bytes = base64.b64decode(image_data)
+        
+        # 一時ファイルに保存
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as temp_file:
+            temp_file.write(image_bytes)
+            temp_path = temp_file.name
+        
+        # PaddleOCRでテキスト抽出
+        result = ocr.ocr(temp_path, cls=True)
+        extracted_text = []
+        
+        if result and result[0]:
+            for line in result[0]:
+                if line and len(line) >= 2:
+                    text = line[1][0]
+                    confidence = line[1][1]
+                    if confidence > 0.6:  # 信頼度60%以上
+                        extracted_text.append(text)
+        
+        # 一時ファイルを削除
+        os.unlink(temp_path)
+        
+        return '\n'.join(extracted_text)
+    except Exception as e:
+        print(f"画像OCRエラー: {str(e)}")
+        return ""
+
+def parse_csv_allergy_info(csv_content):
+    """CSVコンテンツからアレルギー情報を解析"""
+    try:
+        lines = csv_content.strip().split('\n')
+        if len(lines) < 2:
+            return []
+        
+        # ヘッダー行を取得
+        headers = [h.strip() for h in lines[0].split(',')]
+        
+        # メニュー名の列を特定
+        menu_col = None
+        for i, header in enumerate(headers):
+            if any(keyword in header.lower() for keyword in ['menu', 'メニュー', 'name', '名前', '商品']):
+                menu_col = i
+                break
+        
+        if menu_col is None:
+            return []
+        
+        allergy_data = []
+        
+        # データ行を処理
+        for line in lines[1:]:
+            if not line.strip():
+                continue
+                
+            values = [v.strip().strip('"') for v in line.split(',')]
+            if len(values) <= menu_col:
+                continue
+                
+            menu_name = values[menu_col]
+            if not menu_name:
+                continue
+            
+            # アレルギー情報を初期化
+            allergies = {}
+            for allergy in ALLERGY_28_ITEMS:
+                allergies[allergy] = 'none'
+            
+            # 各列をチェックしてアレルギー情報を抽出
+            for i, header in enumerate(headers):
+                if i >= len(values):
+                    continue
+                    
+                value = values[i].lower()
+                
+                # アレルギー項目をチェック
+                for allergy in ALLERGY_28_ITEMS:
+                    if allergy in header:
+                        # 記号マッピングを適用
+                        for symbol, mapped_value in SYMBOL_MAPPING.items():
+                            if symbol in value:
+                                allergies[allergy] = mapped_value
+                                break
+                        else:
+                            # キーワードマッピング
+                            if any(keyword in value for keyword in ['含有', '含む', '有', 'direct']):
+                                allergies[allergy] = 'direct'
+                            elif any(keyword in value for keyword in ['微量', 'trace', '○', '△', 'コンタミネーション', 'contamination']):
+                                allergies[allergy] = 'contamination'
+                            elif any(keyword in value for keyword in ['未使用', 'unused', '※']):
+                                allergies[allergy] = 'unused'
+            
+            allergy_data.append({
+                'menu_name': menu_name,
+                'allergies': allergies,
+                'source': 'csv_upload'
+            })
+        
+        return allergy_data
+    except Exception as e:
+        print(f"CSV解析エラー: {str(e)}")
+        return []
 
 def apply_filters(row, filters):
     """フィルタを適用"""

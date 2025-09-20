@@ -154,6 +154,29 @@
             PDFファイルをアップロードして、アレルギー情報をCSV形式でダウンロードできます
         </p>
         
+        <!-- 店舗情報入力 -->
+        <div class="store-info-section" style="margin-bottom: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 8px;">
+            <h3>🏪 店舗情報</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div>
+                    <label for="storeName">お店の名前:</label>
+                    <input type="text" id="storeName" placeholder="例: 松屋" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                </div>
+                <div>
+                    <label for="storeRegion">出店地域:</label>
+                    <input type="text" id="storeRegion" placeholder="例: 東京都" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                </div>
+                <div>
+                    <label for="sourceUrl">情報元URL:</label>
+                    <input type="url" id="sourceUrl" placeholder="例: https://example.com" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                </div>
+                <div>
+                    <label for="storeUrl">店舗情報URL:</label>
+                    <input type="url" id="storeUrl" placeholder="例: https://store.example.com" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                </div>
+            </div>
+        </div>
+
         <!-- アップロードセクション -->
         <div class="upload-section" id="uploadSection">
             <div id="uploadContent">
@@ -280,6 +303,14 @@
             reader.onload = function(e) {
                 const pdfContent = e.target.result.split(',')[1]; // Base64部分のみ取得
                 
+                // 店舗情報を取得
+                const storeInfo = {
+                    store_name: document.getElementById('storeName').value || 'PDF Import',
+                    store_region: document.getElementById('storeRegion').value || '',
+                    source_url: document.getElementById('sourceUrl').value || '',
+                    store_url: document.getElementById('storeUrl').value || ''
+                };
+                
                 // サーバーにPDF処理を依頼
                 fetch('/pdf-csv-converter', {
                     method: 'POST',
@@ -288,7 +319,8 @@
                     },
                     body: JSON.stringify({
                         action: 'process_pdf',
-                        pdf_content: pdfContent
+                        pdf_content: pdfContent,
+                        store_info: storeInfo
                     })
                 })
                 .then(response => response.json())
@@ -296,7 +328,13 @@
                     if (data.success) {
                         extractedData = data.data;
                         showPreview(extractedData);
-                        showStatus(data.message, 'success');
+                        let statusMessage = data.message;
+                        if (data.supabase_sent) {
+                            statusMessage += ' ✅ Supabaseに送信完了';
+                        } else {
+                            statusMessage += ' ❌ Supabase送信失敗';
+                        }
+                        showStatus(statusMessage, data.supabase_sent ? 'success' : 'warning');
                     } else {
                         showStatus('PDF処理エラー: ' + data.error, 'error');
                     }
@@ -315,21 +353,27 @@
             document.getElementById('previewSection').style.display = 'none';
         }
         
-        // プログレスバーアニメーション
+        // プログレスバーアニメーション（1000件対応）
         function animateProgress() {
             const progressBar = document.getElementById('progressBar');
             let progress = 0;
             
             const interval = setInterval(() => {
-                progress += Math.random() * 15;
-                if (progress > 90) progress = 90;
+                progress += Math.random() * 8;  // 進行速度を調整
+                if (progress > 80) progress = 80;  // 最大値を80%に調整
                 
                 progressBar.style.width = progress + '%';
                 
-                if (progress >= 90) {
+                if (progress >= 80) {
                     clearInterval(interval);
                 }
-            }, 200);
+            }, 250);  // 間隔を短縮
+            
+            // プログレスバーをリセットする関数を追加
+            window.resetProgress = function() {
+                clearInterval(interval);
+                progressBar.style.width = '0%';
+            };
         }
         
         // ステータス表示
@@ -493,15 +537,77 @@
             
             tableHTML += '</tbody></table></div>';
             
-            previewContent.innerHTML = `
-                <p><strong>抽出されたメニュー数:</strong> ${data.length}件</p>
-                <p><strong>アレルギー項目数:</strong> ${allergyItems.length}項目</p>
-                <p><strong>色分け:</strong> <span style="background-color: #ffebee; color: #c62828; padding: 2px 5px;">●</span> = 直接含有, 
-                <span style="background-color: #fff3e0; color: #ef6c00; padding: 2px 5px;">○△</span> = コンタミネーション, 
-                <span style="background-color: #f3e5f5; color: #7b1fa2; padding: 2px 5px;">※</span> = 未使用,
-                <span style="background-color: #e8f5e8; color: #2e7d32; padding: 2px 5px;">-無なし</span> = 含有なし</p>
-                ${tableHTML}
-            `;
+            // 全件表示機能を追加
+            let currentDisplayLimit = 200;  // 初期表示制限
+            let showAll = false;
+            
+            function updateDisplay() {
+                const displayData = showAll ? data : data.slice(0, currentDisplayLimit);
+                const hasMoreData = data.length > currentDisplayLimit && !showAll;
+                
+                // テーブルを再生成
+                let tableHTML = '<div class="csv-preview"><table><thead><tr>';
+                tableHTML += '<th>メニュー名</th>';
+                allergyItems.forEach(item => {
+                    tableHTML += `<th>${item}</th>`;
+                });
+                tableHTML += '</tr></thead><tbody>';
+                
+                displayData.forEach(row => {
+                    tableHTML += '<tr>';
+                    tableHTML += `<td><strong>${row.menu_name || '不明'}</strong></td>`;
+                    allergyItems.forEach(allergy => {
+                        const value = row.allergies && row.allergies[allergy] ? row.allergies[allergy] : '-';
+                        let cellClass = '';
+                        if (value === '●') {
+                            cellClass = 'style="background-color: #ffebee; color: #c62828; font-weight: bold;"';
+                        } else if (value === '○' || value === '△') {
+                            cellClass = 'style="background-color: #fff3e0; color: #ef6c00; font-weight: bold;"';
+                        } else if (value === '※') {
+                            cellClass = 'style="background-color: #f3e5f5; color: #7b1fa2;"';
+                        } else if (value === '有') {
+                            cellClass = 'style="background-color: #ffebee; color: #c62828; font-weight: bold;"';
+                        } else if (value === '無' || value === 'なし') {
+                            cellClass = 'style="background-color: #e8f5e8; color: #2e7d32;"';
+                        }
+                        tableHTML += `<td ${cellClass}>${value}</td>`;
+                    });
+                    tableHTML += '</tr>';
+                });
+                tableHTML += '</tbody></table></div>';
+                
+                previewContent.innerHTML = `
+                    <p><strong>抽出されたメニュー数:</strong> ${data.length}件</p>
+                    <p><strong>アレルギー項目数:</strong> ${allergyItems.length}項目</p>
+                    <p><strong>表示:</strong> ${showAll ? `全${data.length}件表示中` : `${displayData.length}件表示中（全${data.length}件）`}</p>
+                    <p><strong>色分け:</strong> <span style="background-color: #ffebee; color: #c62828; padding: 2px 5px;">●</span> = 直接含有, 
+                    <span style="background-color: #fff3e0; color: #ef6c00; padding: 2px 5px;">○△</span> = コンタミネーション, 
+                    <span style="background-color: #f3e5f5; color: #7b1fa2; padding: 2px 5px;">※</span> = 未使用,
+                    <span style="background-color: #e8f5e8; color: #2e7d32; padding: 2px 5px;">-無なし</span> = 含有なし</p>
+                    <div style="margin-bottom: 10px;">
+                        ${hasMoreData ? `<button onclick="showAllData()" style="background-color: #007bff; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-right: 10px;">全${data.length}件表示</button>` : ''}
+                        ${showAll ? `<button onclick="showLimitedData()" style="background-color: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">最初の${currentDisplayLimit}件のみ表示</button>` : ''}
+                    </div>
+                    <div style="max-height: 600px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px;">
+                        ${tableHTML}
+                    </div>
+                `;
+            }
+            
+            // 全件表示関数
+            window.showAllData = function() {
+                showAll = true;
+                updateDisplay();
+            };
+            
+            // 制限表示関数
+            window.showLimitedData = function() {
+                showAll = false;
+                updateDisplay();
+            };
+            
+            // 初期表示
+            updateDisplay();
             
             previewSection.style.display = 'block';
             

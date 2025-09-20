@@ -95,18 +95,23 @@ const AllergySearchResults = () => {
     }
 
     const contaminations = [];
-    menuItem.product_allergies_matrix.forEach(matrix => {
-      // 選択されたアレルギーのみをチェック
-      if (matrix.presence_type === 'trace' && selectedAllergies.includes(matrix.allergy_item_id)) {
-        const allergy = allergyOptions.find(a => 
-          a.id === matrix.allergy_item_id || a.id === matrix.item_id
-        );
-        if (allergy) {
-          contaminations.push(`${allergy.name}コンタミネーション`);
+    const matrix = menuItem.product_allergies_matrix[0]; // 最初の要素を使用
+    
+    if (matrix) {
+      selectedAllergies.forEach(allergyId => {
+        const allergyValue = matrix[allergyId];
+        console.log(`コンタミネーション確認 - 商品: ${menuItem.name}, アレルギー: ${allergyId}, 値: ${allergyValue}`);
+        if (allergyValue === 'trace') {
+          const allergy = allergyOptions.find(a => a.id === allergyId);
+          if (allergy) {
+            contaminations.push(`${allergy.name}コンタミネーション`);
+            console.log(`コンタミネーション発見: ${allergy.name}コンタミネーション`);
+          }
         }
-      }
-    });
+      });
+    }
 
+    console.log(`商品 ${menuItem.name} のコンタミネーション:`, contaminations);
     return contaminations;
   };
 

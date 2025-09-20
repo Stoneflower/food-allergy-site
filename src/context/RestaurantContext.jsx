@@ -528,13 +528,18 @@ export const RestaurantProvider = ({ children }) => {
       
       // 店舗データを変換
       if (storeData && storeData.length > 0) {
+        console.log('店舗データ変換開始:', storeData);
         storeData.forEach(store => {
           const defaultAllergyInfo = createDefaultAllergyInfo();
           const allergyFree = Object.keys(defaultAllergyInfo).filter(key => !defaultAllergyInfo[key]);
           
+          console.log('店舗データ:', store);
+          const storeName = store.name || store.store_name || '店舗名不明';
+          console.log('店舗名:', storeName);
+          
           transformedData.push({
             id: store.id,
-            name: store.name || store.store_name || '店舗名不明',
+            name: storeName,
             image: store.image_url || 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400',
             rating: 4.0, // デフォルト値
             reviewCount: 0,
@@ -555,16 +560,19 @@ export const RestaurantProvider = ({ children }) => {
             }
           });
         });
+        console.log('店舗データ変換完了:', transformedData.filter(item => item.category === 'restaurants'));
       }
 
       // 商品データを変換
       if (productData && productData.length > 0) {
+        console.log('商品データ変換開始:', productData);
         productData.forEach(product => {
           const defaultAllergyInfo = createDefaultAllergyInfo();
           const allergyFree = Object.keys(defaultAllergyInfo).filter(key => !defaultAllergyInfo[key]);
           
           // この商品のproduct_allergies_matrixを取得
           const productMatrix = matrixData.filter(matrix => matrix.product_id === product.id);
+          console.log(`商品 ${product.name} のmatrix:`, productMatrix);
           
           transformedData.push({
             id: product.id + 10000, // 店舗IDと重複しないように
@@ -591,6 +599,7 @@ export const RestaurantProvider = ({ children }) => {
             }
           });
         });
+        console.log('商品データ変換完了:', transformedData.filter(item => item.category === 'products'));
       }
 
       setAllItems(transformedData);

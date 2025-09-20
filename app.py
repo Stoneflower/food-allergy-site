@@ -7,6 +7,7 @@ from flask import Flask, request, jsonify, render_template_string
 from werkzeug.utils import secure_filename
 # import pandas as pd  # Netlify対応のため一時的にコメントアウト
 import requests
+from paddleocr import PaddleOCR
 
 # アレルギー28品目リスト（指定順番）
 ALLERGY_28_ITEMS = [
@@ -34,7 +35,6 @@ SYMBOL_MAPPING = {
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
-# OCR初期化（Netlify対応のため簡易版）
 # PaddleOCR初期化（高精度日本語対応）
 ocr = PaddleOCR(use_angle_cls=True, lang='jap')
 

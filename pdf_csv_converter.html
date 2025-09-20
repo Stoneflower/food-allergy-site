@@ -615,47 +615,45 @@
             document.getElementById('progressBar').style.width = '100%';
         }
         
-        // CSVダウンロード
+        // CSVダウンロード（サーバーサイド処理）
         function downloadCSV() {
             if (!extractedData) {
                 showStatus('ダウンロードするデータがありません', 'error');
                 return;
             }
             
-            // CSV形式に変換
-            const allergyItems = ['卵', '乳', '小麦', 'えび', 'かに', 'そば', '落花生', 'クルミ', 'アーモンド', 'あわび', 'いか', 'いくら', 'オレンジ', 'カシューナッツ', 'キウイフルーツ', '牛肉', 'ごま', 'さけ', 'さば', '大豆', '鶏肉', 'バナナ', '豚肉', 'もも', 'やまいも', 'りんご', 'ゼラチン', 'マカダミアナッツ'];
-            const headers = ['メニュー名', ...allergyItems];
-            let csvContent = headers.join(',') + '\n';
+            showStatus('CSVファイルを生成中...', 'info');
             
-            extractedData.forEach(row => {
-                const values = [];
-                
-                // メニュー名
-                const menuName = row.menu_name || '不明';
-                values.push(menuName.includes(',') ? '"' + menuName.replace(/"/g, '""') + '"' : menuName);
-                
-                // アレルギー情報
-                allergyItems.forEach(allergy => {
-                    const value = row.allergies && row.allergies[allergy] ? row.allergies[allergy] : '-';
-                    values.push(value);
-                });
-                
-                csvContent += values.join(',') + '\n';
+            // サーバーにCSV生成を依頼
+            fetch('/pdf-csv-converter', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    action: 'download_csv',
+                    data: extractedData
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // CSVファイルをダウンロード
+                    const blob = new Blob([data.csv_content], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = data.filename;
+                    link.click();
+                    
+                    showStatus('CSVファイルをダウンロードしました！', 'success');
+                } else {
+                    showStatus('CSV生成エラー: ' + data.error, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('CSV生成エラー:', error);
+                showStatus('CSV生成中にエラーが発生しました: ' + error.message, 'error');
             });
-            
-            // ファイル名を生成
-            const fileName = currentFile ? 
-                currentFile.name.replace('.pdf', '') + '_allergy_data.csv' : 
-                'allergy_data.csv';
-            
-            // ダウンロード
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = fileName;
-            link.click();
-            
-            showStatus('CSVファイルをダウンロードしました！', 'success');
         }
         
         // ツールリセット

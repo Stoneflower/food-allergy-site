@@ -1,9 +1,9 @@
 Flask==3.0.0
 requests
 python-dotenv
-opencv-python-headless
-paddlepaddle
+pdf2image
 paddleocr
-PyMuPDF==1.23.14
+paddlepaddle
+opencv-python-headless
+pandas
 Pillow>=10.0.0
-numpy

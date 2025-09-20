@@ -8,14 +8,18 @@ from werkzeug.utils import secure_filename
 # import pandas as pd  # Netlify対応のため一時的にコメントアウト
 import requests
 
-# PaddleOCRをオプショナルインポート
+# 必要なライブラリをオプショナルインポート
 try:
-    from paddleocr import PaddleOCR
+    from paddleocr import PaddleOCR, PPStructure, save_structure_res
+    from pdf2image import convert_from_path
+    import pandas as pd
+    import cv2
+    import numpy as np
     PADDLEOCR_AVAILABLE = True
-    print("PaddleOCR imported successfully")
-except ImportError:
+    print("PaddleOCR and related libraries imported successfully")
+except ImportError as e:
     PADDLEOCR_AVAILABLE = False
-    print("PaddleOCR not available, using sample data mode")
+    print(f"Libraries not available: {e}, using sample data mode")
 
 # アレルギー28品目リスト（指定順番）
 ALLERGY_28_ITEMS = [
@@ -1997,6 +2001,21 @@ def pdf_csv_converter():
                     'supabase_sent': supabase_sent
                 })
             
+            elif action == 'download_csv':
+                # CSVダウンロード
+                allergy_data = data.get('data', [])
+                if not allergy_data:
+                    return jsonify({'error': 'ダウンロードするデータがありません'}), 400
+                
+                # CSV形式に変換
+                csv_content = convert_to_csv(allergy_data)
+                
+                return jsonify({
+                    'success': True,
+                    'csv_content': csv_content,
+                    'filename': f'allergy_data_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
+                })
+            
             return jsonify({'error': '無効なアクション'}), 400
             
         except Exception as e:
@@ -2159,7 +2178,7 @@ def pdf_csv_converter():
         return jsonify({'error': f'エラー: {str(e)}'})
 
 def extract_text_from_pdf_content(pdf_content):
-    """PDFコンテンツからテキストを抽出（PaddleOCR使用）"""
+    """PDFコンテンツからテキストを抽出（pdf2image + PPStructure使用）"""
     try:
         if not PADDLEOCR_AVAILABLE:
             # PaddleOCRが利用できない場合はサンプルテキストを返す
@@ -2196,77 +2215,72 @@ def extract_text_from_pdf_content(pdf_content):
             """
             return sample_text.strip()
         
-        # 実際のPDF処理（PyMuPDF + PaddleOCR使用）
+        # 新しいPDF処理（pdf2image + PPStructure使用）
         import base64
         import io
+        import tempfile
+        import os
         from PIL import Image
-        import fitz  # PyMuPDF
         
-        print("PDF処理開始...")
+        print("PDF処理開始（pdf2image + PPStructure）...")
         
         # Base64デコード
         pdf_bytes = base64.b64decode(pdf_content)
-        pdf_document = fitz.open(stream=pdf_bytes, filetype="pdf")
         
-        extracted_text = ""
-        total_pages = len(pdf_document)
-        print(f"PDFページ数: {total_pages}")
+        # 一時ファイルにPDFを保存
+        with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_pdf:
+            temp_pdf.write(pdf_bytes)
+            temp_pdf_path = temp_pdf.name
         
-        # 各ページを処理
-        for page_num in range(total_pages):
-            page = pdf_document[page_num]
-            print(f"ページ {page_num + 1}/{total_pages} を処理中...")
+        try:
+            # PDFを画像に変換
+            print("PDFを画像に変換中...")
+            pages = convert_from_path(temp_pdf_path, dpi=300)
+            print(f"PDFページ数: {len(pages)}")
             
-            # テキスト抽出を試行
-            page_text = page.get_text()
-            if page_text.strip():
-                extracted_text += f"\n--- ページ {page_num + 1} ---\n"
-                extracted_text += page_text
-                print(f"ページ {page_num + 1}: テキスト抽出成功 ({len(page_text)}文字)")
-            else:
-                # テキストが抽出できない場合は画像として処理
-                print(f"ページ {page_num + 1}: テキスト抽出失敗、画像として処理")
+            # PPStructureで表認識モデルを初期化
+            print("PPStructure初期化中...")
+            table_engine = PPStructure(show_log=True)
+            
+            extracted_text = ""
+            
+            # 各ページを処理
+            for page_num, page_image in enumerate(pages):
+                print(f"ページ {page_num + 1}/{len(pages)} を処理中...")
                 
-                # ページを画像に変換
-                mat = fitz.Matrix(2.0, 2.0)  # 解像度を上げる
-                pix = page.get_pixmap(matrix=mat)
-                img_data = pix.tobytes("png")
+                # 画像をOpenCV形式に変換
+                img_array = np.array(page_image)
+                img_cv = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
                 
-                # PaddleOCRで画像からテキスト抽出
-                ocr = get_ocr()
-                if ocr:
-                    try:
-                        # 画像をPIL形式に変換
-                        img = Image.open(io.BytesIO(img_data))
-                        
-                        # OCR実行
-                        result = ocr.ocr(img, cls=True)
-                        
-                        if result and result[0]:
-                            page_ocr_text = ""
-                            for line in result[0]:
-                                if len(line) >= 2:
-                                    text = line[1][0]
-                                    confidence = line[1][1]
-                                    if confidence > 0.6:  # 信頼度が60%以上
-                                        page_ocr_text += text + "\n"
-                            
-                            if page_ocr_text.strip():
-                                extracted_text += f"\n--- ページ {page_num + 1} (OCR) ---\n"
-                                extracted_text += page_ocr_text
-                                print(f"ページ {page_num + 1}: OCR成功 ({len(page_ocr_text)}文字)")
-                            else:
-                                print(f"ページ {page_num + 1}: OCR結果なし")
-                        else:
-                            print(f"ページ {page_num + 1}: OCR失敗")
-                    except Exception as ocr_error:
-                        print(f"ページ {page_num + 1}: OCRエラー - {str(ocr_error)}")
+                # 表構造を解析
+                result = table_engine(img_cv)
+                
+                # 結果をテキストに変換
+                page_text = ""
+                for item in result:
+                    if 'res' in item:
+                        # 表のセルごとのテキストを抽出
+                        for cell in item['res']:
+                            if 'text' in cell:
+                                page_text += cell['text'] + "\t"
+                        page_text += "\n"
+                    elif 'text' in item:
+                        # 通常のテキスト
+                        page_text += item['text'] + "\n"
+                
+                if page_text.strip():
+                    extracted_text += f"\n--- ページ {page_num + 1} ---\n"
+                    extracted_text += page_text
+                    print(f"ページ {page_num + 1}: 表認識成功 ({len(page_text)}文字)")
                 else:
-                    print(f"ページ {page_num + 1}: PaddleOCR利用不可")
-        
-        pdf_document.close()
-        
-        print(f"PDF処理完了: {len(extracted_text)}文字抽出")
+                    print(f"ページ {page_num + 1}: 表認識結果なし")
+            
+            print(f"PDF処理完了: {len(extracted_text)}文字抽出")
+            
+        finally:
+            # 一時ファイルを削除
+            if os.path.exists(temp_pdf_path):
+                os.unlink(temp_pdf_path)
         
         # 抽出されたテキストが少ない場合はサンプルデータを追加
         if len(extracted_text.strip()) < 100:
@@ -2369,13 +2383,56 @@ def extract_text_from_pdf_content(pdf_content):
         return extracted_text.strip()
     except ImportError as import_error:
         print(f"PDF処理ライブラリインポートエラー: {str(import_error)}")
-        print("PyMuPDFまたはPILがインストールされていません")
+        print("pdf2imageまたはPPStructureがインストールされていません")
         return ""
     except Exception as e:
         print(f"PDF処理エラー: {str(e)}")
         import traceback
         traceback.print_exc()
         return ""
+
+def convert_to_csv(allergy_data, filename="allergy_data.csv"):
+    """アレルギーデータをCSV形式に変換"""
+    try:
+        if not PADDLEOCR_AVAILABLE:
+            # pandasが利用できない場合は手動でCSVを作成
+            csv_content = "メニュー名," + ",".join(ALLERGY_28_ITEMS) + "\n"
+            for item in allergy_data:
+                csv_content += f"{item['menu_name']},"
+                for allergy in ALLERGY_28_ITEMS:
+                    value = item['allergies'].get(allergy, '-')
+                    csv_content += f"{value},"
+                csv_content += "\n"
+            return csv_content
+        
+        # pandasを使用してCSVを作成
+        import pandas as pd
+        
+        # データをDataFrameに変換
+        rows = []
+        for item in allergy_data:
+            row = {'メニュー名': item['menu_name']}
+            for allergy in ALLERGY_28_ITEMS:
+                row[allergy] = item['allergies'].get(allergy, '-')
+            rows.append(row)
+        
+        df = pd.DataFrame(rows)
+        
+        # CSV文字列として返す
+        csv_content = df.to_csv(index=False, encoding='utf-8-sig')
+        return csv_content
+        
+    except Exception as e:
+        print(f"CSV変換エラー: {str(e)}")
+        # フォールバック: 手動でCSVを作成
+        csv_content = "メニュー名," + ",".join(ALLERGY_28_ITEMS) + "\n"
+        for item in allergy_data:
+            csv_content += f"{item['menu_name']},"
+            for allergy in ALLERGY_28_ITEMS:
+                value = item['allergies'].get(allergy, '-')
+                csv_content += f"{value},"
+            csv_content += "\n"
+        return csv_content
 
 def extract_text_from_image_data(image_data):
     """画像データからテキストを抽出（PaddleOCR使用）"""

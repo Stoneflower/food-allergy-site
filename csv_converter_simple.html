@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV変換ツール</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .form-group { margin: 10px 0; }
+        .btn { padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        .btn:hover { background-color: #0056b3; }
+        .drop-zone { border: 2px dashed #ccc; padding: 20px; text-align: center; margin: 10px 0; }
+        .drop-zone.dragover { border-color: #007bff; background-color: #f0f8ff; }
+        input[type="file"] { display: none; }
+        .preview { margin: 10px 0; padding: 10px; background-color: #f8f9fa; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h1>🔧 高精度CSV変換ツール</h1>
+    
+    <div class="section">
+        <h3>📊 データ入力</h3>
+        <div class="form-group">
+            <label>入力方式を選択:</label>
+            <select id="inputType" onchange="toggleInputType()">
+                <option value="csv">CSVファイル</option>
+                <option value="json">JSONデータ</option>
+                <option value="pdf">PDFファイル</option>
+                <option value="image">画像ファイル</option>
+            </select>
+        </div>
+        
+        <!-- CSV入力 -->
+        <div id="csvInput" class="form-group">
+            <label>CSVファイルをアップロード:</label>
+            <div id="csvDropZone" class="drop-zone" ondrop="handleCSVDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                <p>📁 CSVファイルをここにドラッグ&ドロップ</p>
+                <p>または</p>
+                <input type="file" id="csvFile" accept=".csv" onchange="handleCSVUpload()">
+                <button class="btn" onclick="document.getElementById('csvFile').click()">ファイルを選択</button>
+            </div>
+            <div id="csvPreview" class="preview" style="display: none;">
+                <h4>📄 CSVプレビュー</h4>
+                <div id="csvContent"></div>
+                <button class="btn" onclick="processCSV()">CSVを処理</button>
+            </div>
+        </div>
+        
+        <!-- JSON入力 -->
+        <div id="jsonInput" class="form-group" style="display: none;">
+            <label>JSONデータ:</label>
+            <textarea id="jsonData" rows="10" style="width: 100%;"></textarea>
+            <button class="btn" onclick="loadSampleData()">サンプルデータを読み込み</button>
+        </div>
+        
+        <!-- PDF入力 -->
+        <div id="pdfInput" class="form-group" style="display: none;">
+            <label>PDFファイルをアップロード:</label>
+            <div id="pdfDropZone" class="drop-zone" ondrop="handlePDFDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                <p>📄 PDFファイルをここにドラッグ&ドロップ</p>
+                <p>または</p>
+                <input type="file" id="pdfFile" accept=".pdf" onchange="handlePDFUpload()">
+                <button class="btn" onclick="document.getElementById('pdfFile').click()">ファイルを選択</button>
+            </div>
+            <div id="pdfPreview" class="preview" style="display: none;">
+                <h4>📄 PDFプレビュー</h4>
+                <div id="pdfContent"></div>
+                <button class="btn" onclick="processPDF()">PDFを処理</button>
+            </div>
+        </div>
+        
+        <!-- 画像入力 -->
+        <div id="imageInput" class="form-group" style="display: none;">
+            <label>画像ファイルをアップロード:</label>
+            <div id="imageDropZone" class="drop-zone" ondrop="handleImageDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                <p>🖼️ 画像ファイルをここにドラッグ&ドロップ</p>
+                <p>または</p>
+                <input type="file" id="imageFile" accept=".jpg,.jpeg,.png,.bmp,.heic,.heif" onchange="handleImageUpload()">
+                <button class="btn" onclick="document.getElementById('imageFile').click()">ファイルを選択</button>
+            </div>
+            <div id="imagePreview" class="preview" style="display: none;">
+                <h4>🖼️ 画像プレビュー</h4>
+                <img id="previewImage" style="max-width: 300px; max-height: 200px;">
+                <div id="imageContent"></div>
+                <button class="btn" onclick="processImage()">画像をOCR処理</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="section">
+        <h3>📋 列の選択</h3>
+        <div id="columnCheckboxes"></div>
+        <button class="btn" onclick="previewData()">プレビュー</button>
+    </div>
+    
+    <div class="section">
+        <h3>⚡ 変換実行</h3>
+        <button class="btn" onclick="convertData()">データを変換</button>
+        <button class="btn" onclick="exportCSV()">CSVエクスポート</button>
+    </div>
+    
+    <div id="result" class="section" style="display: none;">
+        <h3>📊 変換結果</h3>
+        <div id="resultContent"></div>
+    </div>
+
+    <script>
+        let currentData = [];
+        
+        // 入力タイプを切り替え
+        function toggleInputType() {
+            console.log('toggleInputType called');
+            const inputType = document.getElementById('inputType').value;
+            const csvInput = document.getElementById('csvInput');
+            const jsonInput = document.getElementById('jsonInput');
+            const pdfInput = document.getElementById('pdfInput');
+            const imageInput = document.getElementById('imageInput');
+            
+            // すべて非表示にする
+            csvInput.style.display = 'none';
+            jsonInput.style.display = 'none';
+            pdfInput.style.display = 'none';
+            imageInput.style.display = 'none';
+            
+            // 選択されたタイプのみ表示
+            if (inputType === 'csv') {
+                csvInput.style.display = 'block';
+            } else if (inputType === 'json') {
+                jsonInput.style.display = 'block';
+            } else if (inputType === 'pdf') {
+                pdfInput.style.display = 'block';
+            } else if (inputType === 'image') {
+                imageInput.style.display = 'block';
+            }
+        }
+        
+        // ドラッグ&ドロップ共通機能
+        function handleDragOver(event) {
+            console.log('handleDragOver called');
+            event.preventDefault();
+            event.stopPropagation();
+            event.currentTarget.classList.add('dragover');
+        }
+        
+        function handleDragLeave(event) {
+            console.log('handleDragLeave called');
+            event.preventDefault();
+            event.stopPropagation();
+            event.currentTarget.classList.remove('dragover');
+        }
+        
+        // CSVファイルのドラッグ&ドロップ
+        function handleCSVDrop(event) {
+            console.log('handleCSVDrop called');
+            event.preventDefault();
+            event.stopPropagation();
+            event.currentTarget.classList.remove('dragover');
+            
+            const files = event.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                if (file.type === 'text/csv' || file.name.toLowerCase().endsWith('.csv')) {
+                    document.getElementById('csvFile').files = files;
+                    handleCSVUpload();
+                } else {
+                    alert('CSVファイルを選択してください');
+                }
+            }
+        }
+        
+        // CSVファイルをアップロード
+        function handleCSVUpload() {
+            console.log('handleCSVUpload called');
+            const file = document.getElementById('csvFile').files[0];
+            if (!file) {
+                console.log('No file selected');
+                return;
+            }
+            console.log('File selected:', file.name, 'Type:', file.type);
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const csvContent = e.target.result;
+                
+                // CSVプレビューを表示
+                console.log('Displaying CSV preview');
+                document.getElementById('csvPreview').style.display = 'block';
+                document.getElementById('csvContent').innerHTML = `
+                    <p><strong>ファイル名:</strong> ${file.name}</p>
+                    <p><strong>ファイルサイズ:</strong> ${(file.size / 1024).toFixed(2)} KB</p>
+                    <h5>📄 CSVプレビュー（最初の5行）:</h5>
+                    <pre style="background-color: white; padding: 10px; border-radius: 3px; max-height: 200px; overflow-y: auto;">${csvContent.split('\n').slice(0, 5).join('\n')}</pre>
+                `;
+            };
+            reader.readAsText(file);
+        }
+        
+        // PDFファイルのドラッグ&ドロップ
+        function handlePDFDrop(event) {
+            console.log('handlePDFDrop called');
+            event.preventDefault();
+            event.stopPropagation();
+            event.currentTarget.classList.remove('dragover');
+            
+            const files = event.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+                    document.getElementById('pdfFile').files = files;
+                    handlePDFUpload();
+                } else {
+                    alert('PDFファイルを選択してください');
+                }
+            }
+        }
+        
+        // PDFファイルをアップロード
+        function handlePDFUpload() {
+            console.log('handlePDFUpload called');
+            const file = document.getElementById('pdfFile').files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('pdfPreview').style.display = 'block';
+                document.getElementById('pdfContent').innerHTML = `
+                    <p><strong>ファイル名:</strong> ${file.name}</p>
+                    <p><strong>ファイルサイズ:</strong> ${(file.size / 1024).toFixed(2)} KB</p>
+                `;
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        // 画像ファイルのドラッグ&ドロップ
+        function handleImageDrop(event) {
+            console.log('handleImageDrop called');
+            event.preventDefault();
+            event.stopPropagation();
+            event.currentTarget.classList.remove('dragover');
+            
+            const files = event.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/bmp', 'image/heic', 'image/heif'];
+                if (validTypes.includes(file.type) || file.name.toLowerCase().match(/\.(jpg|jpeg|png|bmp|heic|heif)$/)) {
+                    document.getElementById('imageFile').files = files;
+                    handleImageUpload();
+                } else {
+                    alert('画像ファイルを選択してください');
+                }
+            }
+        }
+        
+        // 画像ファイルをアップロード
+        function handleImageUpload() {
+            console.log('handleImageUpload called');
+            const file = document.getElementById('imageFile').files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('imagePreview').style.display = 'block';
+                document.getElementById('previewImage').src = e.target.result;
+                document.getElementById('imageContent').innerHTML = `
+                    <p><strong>ファイル名:</strong> ${file.name}</p>
+                    <p><strong>ファイルサイズ:</strong> ${(file.size / 1024).toFixed(2)} KB</p>
+                `;
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        // サンプルデータを読み込み
+        function loadSampleData() {
+            console.log('loadSampleData called');
+            const sampleData = [
+                {
+                    "menu_name": "アイスカフェラテ",
+                    "allergies": {
+                        "卵": "none",
+                        "乳": "direct",
+                        "小麦": "none"
+                    }
+                }
+            ];
+            document.getElementById('jsonData').value = JSON.stringify(sampleData, null, 2);
+        }
+        
+        // CSVを処理
+        function processCSV() {
+            console.log('processCSV called');
+            alert('CSV処理機能は実装中です');
+        }
+        
+        // PDFを処理
+        function processPDF() {
+            console.log('processPDF called');
+            alert('PDF処理機能は実装中です');
+        }
+        
+        // 画像をOCR処理
+        function processImage() {
+            console.log('processImage called');
+            alert('画像OCR処理機能は実装中です');
+        }
+        
+        // データをプレビュー
+        function previewData() {
+            console.log('previewData called');
+            alert('プレビュー機能は実装中です');
+        }
+        
+        // データを変換
+        function convertData() {
+            console.log('convertData called');
+            alert('データ変換機能は実装中です');
+        }
+        
+        // CSVエクスポート
+        function exportCSV() {
+            console.log('exportCSV called');
+            alert('CSVエクスポート機能は実装中です');
+        }
+        
+        // ページ全体でのドラッグ&ドロップのデフォルト動作を無効化
+        document.addEventListener('dragover', function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+        });
+        
+        document.addEventListener('drop', function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+        });
+        
+        console.log('CSV Converter script loaded');
+    </script>
+</body>
+</html>

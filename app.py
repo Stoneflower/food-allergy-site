@@ -375,21 +375,22 @@ CSV_CONVERTER_TEMPLATE = '''
     </div>
 
     <script>
+        // グローバル変数
+        let currentData = [];
+        let columnMapping = {};
+        let pdfData = '';
+        let imageData = '';
+        let allergyOrder = [];
+        let storeInfo = {};
+        
         // DOMContentLoadedイベントで初期化
         document.addEventListener('DOMContentLoaded', function() {
             console.log('CSV Converter: DOMContentLoaded event fired');
             
-            let currentData = [];
-            let columnMapping = {};
-            let pdfData = '';
-            let imageData = '';
-            let allergyOrder = [];
-            let storeInfo = {};
-            
-            // 入力タイプを切り替え
-            window.toggleInputType = function() {
-                console.log('toggleInputType called');
-                const inputType = document.getElementById('inputType').value;
+        // 入力タイプを切り替え
+        function toggleInputType() {
+            console.log('toggleInputType called');
+            const inputType = document.getElementById('inputType').value;
             const csvInput = document.getElementById('csvInput');
             const jsonInput = document.getElementById('jsonInput');
             const pdfInput = document.getElementById('pdfInput');
@@ -456,29 +457,29 @@ CSV_CONVERTER_TEMPLATE = '''
                     return;
                 }
                 console.log('File selected:', file.name, 'Type:', file.type);
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const csvContent = e.target.result;
                 
-                // CSVプレビューを表示
-                console.log('Displaying CSV preview');
-                document.getElementById('csvPreview').style.display = 'block';
-                document.getElementById('csvContent').innerHTML = `
-                    <p><strong>ファイル名:</strong> ${file.name}</p>
-                    <p><strong>ファイルサイズ:</strong> ${(file.size / 1024).toFixed(2)} KB</p>
-                    <h5>📄 CSVプレビュー（最初の5行）:</h5>
-                    <pre style="background-color: white; padding: 10px; border-radius: 3px; max-height: 200px; overflow-y: auto;">${csvContent.split('\n').slice(0, 5).join('\n')}</pre>
-                `;
-                document.getElementById('processCSVBtn').style.display = 'inline-block';
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const csvContent = e.target.result;
+                    
+                    // CSVプレビューを表示
+                    console.log('Displaying CSV preview');
+                    document.getElementById('csvPreview').style.display = 'block';
+                    document.getElementById('csvContent').innerHTML = `
+                        <p><strong>ファイル名:</strong> ${file.name}</p>
+                        <p><strong>ファイルサイズ:</strong> ${(file.size / 1024).toFixed(2)} KB</p>
+                        <h5>📄 CSVプレビュー（最初の5行）:</h5>
+                        <pre style="background-color: white; padding: 10px; border-radius: 3px; max-height: 200px; overflow-y: auto;">${csvContent.split('\n').slice(0, 5).join('\n')}</pre>
+                    `;
+                    document.getElementById('processCSVBtn').style.display = 'inline-block';
+                };
+                reader.readAsText(file);
             };
-            reader.readAsText(file);
-        }
         
-        // CSVを処理
+            // CSVを処理
             window.processCSV = function() {
-            const file = document.getElementById('csvFile').files[0];
-            if (!file) return;
+                const file = document.getElementById('csvFile').files[0];
+                if (!file) return;
             
             const reader = new FileReader();
             reader.onload = function(e) {
@@ -1301,7 +1302,13 @@ HTML_TEMPLATE = '''
     <div style="margin: 20px 0; padding: 15px; background-color: #e7f3ff; border-radius: 5px;">
         <h3>🔧 詳細CSV変換ツール</h3>
         <p>データの詳細な変換・フィルタリング機能をご利用いただけます。</p>
-        <a href="/csv-converter" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 3px; display: inline-block;">CSV変換ツールを開く</a>
+        <a href="/csv-converter" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 3px; display: inline-block; margin-right: 10px;">CSV変換ツールを開く</a>
+    </div>
+    
+    <div style="margin: 20px 0; padding: 15px; background-color: #f0f8ff; border-radius: 5px;">
+        <h3>📄 PDF → CSV 変換ツール</h3>
+        <p>PDFファイルをアップロードして、アレルギー情報をCSV形式でダウンロードできます。</p>
+        <a href="/pdf-csv-converter" style="background-color: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 3px; display: inline-block;">PDF→CSV変換ツールを開く</a>
     </div>
     
     <div class="upload-area" id="uploadArea">
@@ -1648,6 +1655,15 @@ def csv_converter():
     """詳細なCSV変換機能（PDF対応）"""
     if request.method == 'GET':
         return render_template_string(CSV_CONVERTER_TEMPLATE, paddleocr_available=PADDLEOCR_AVAILABLE)
+
+@app.route('/pdf-csv-converter', methods=['GET', 'POST'])
+def pdf_csv_converter():
+    """PDFからCSV変換に特化したツール"""
+    if request.method == 'GET':
+        # PDF to CSV変換ツールのHTMLテンプレートを読み込み
+        with open('pdf_csv_converter.html', 'r', encoding='utf-8') as f:
+            template = f.read()
+        return template
     
     try:
         data = request.json

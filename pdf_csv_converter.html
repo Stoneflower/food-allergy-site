@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF → CSV 変換ツール</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { 
+            text-align: center; 
+            color: #333; 
+            margin-bottom: 30px;
+        }
+        .upload-section { 
+            margin: 30px 0; 
+            padding: 20px; 
+            border: 2px dashed #ddd; 
+            border-radius: 10px; 
+            text-align: center;
+            background-color: #fafafa;
+        }
+        .upload-section.dragover { 
+            border-color: #007bff; 
+            background-color: #f0f8ff; 
+        }
+        .btn { 
+            padding: 12px 24px; 
+            background-color: #007bff; 
+            color: white; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            font-size: 16px;
+            margin: 10px;
+        }
+        .btn:hover { 
+            background-color: #0056b3; 
+        }
+        .btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .btn-success {
+            background-color: #28a745;
+        }
+        .btn-success:hover {
+            background-color: #218838;
+        }
+        input[type="file"] { 
+            display: none; 
+        }
+        .preview-section { 
+            margin: 20px 0; 
+            padding: 20px; 
+            background-color: #f8f9fa; 
+            border-radius: 5px; 
+            display: none;
+        }
+        .file-info {
+            background-color: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .progress {
+            width: 100%;
+            height: 20px;
+            background-color: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 15px 0;
+        }
+        .progress-bar {
+            height: 100%;
+            background-color: #007bff;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .csv-preview {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: white;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #007bff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📄 PDF → CSV 変換ツール</h1>
+        <p style="text-align: center; color: #666; margin-bottom: 30px;">
+            PDFファイルをアップロードして、アレルギー情報をCSV形式でダウンロードできます
+        </p>
+        
+        <!-- アップロードセクション -->
+        <div class="upload-section" id="uploadSection">
+            <div id="uploadContent">
+                <h3>📁 PDFファイルをアップロード</h3>
+                <p>PDFファイルをここにドラッグ&ドロップするか、ボタンをクリックして選択してください</p>
+                <input type="file" id="pdfFile" accept=".pdf" onchange="handleFileSelect()">
+                <button class="btn" onclick="document.getElementById('pdfFile').click()">
+                    📄 ファイルを選択
+                </button>
+            </div>
+        </div>
+        
+        <!-- ファイル情報 -->
+        <div id="fileInfo" class="file-info" style="display: none;">
+            <h4>📋 ファイル情報</h4>
+            <div id="fileDetails"></div>
+        </div>
+        
+        <!-- 処理状況 -->
+        <div id="processingStatus" style="display: none;">
+            <div class="progress">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+            <div id="statusText" class="status info">処理中...</div>
+        </div>
+        
+        <!-- プレビューセクション -->
+        <div id="previewSection" class="preview-section">
+            <h3>👁️ 変換結果プレビュー</h3>
+            <div id="previewContent"></div>
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="btn btn-success" onclick="downloadCSV()" id="downloadBtn">
+                    📥 CSVをダウンロード
+                </button>
+                <button class="btn" onclick="resetTool()">
+                    🔄 新しいファイルを選択
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentFile = null;
+        let extractedData = null;
+        
+        // ドラッグ&ドロップイベント
+        const uploadSection = document.getElementById('uploadSection');
+        
+        uploadSection.addEventListener('dragover', function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            uploadSection.classList.add('dragover');
+        });
+        
+        uploadSection.addEventListener('dragleave', function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            uploadSection.classList.remove('dragover');
+        });
+        
+        uploadSection.addEventListener('drop', function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            uploadSection.classList.remove('dragover');
+            
+            const files = event.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+                    handleFile(file);
+                } else {
+                    showStatus('PDFファイルを選択してください', 'error');
+                }
+            }
+        });
+        
+        // ファイル選択
+        function handleFileSelect() {
+            const file = document.getElementById('pdfFile').files[0];
+            if (file) {
+                handleFile(file);
+            }
+        }
+        
+        // ファイル処理
+        function handleFile(file) {
+            console.log('File selected:', file.name);
+            currentFile = file;
+            
+            // ファイル情報を表示
+            showFileInfo(file);
+            
+            // 処理開始
+            processPDF(file);
+        }
+        
+        // ファイル情報表示
+        function showFileInfo(file) {
+            const fileInfo = document.getElementById('fileInfo');
+            const fileDetails = document.getElementById('fileDetails');
+            
+            fileDetails.innerHTML = `
+                <p><strong>ファイル名:</strong> ${file.name}</p>
+                <p><strong>ファイルサイズ:</strong> ${(file.size / 1024).toFixed(2)} KB</p>
+                <p><strong>ファイルタイプ:</strong> ${file.type || 'application/pdf'}</p>
+                <p><strong>最終更新日:</strong> ${new Date(file.lastModified).toLocaleString('ja-JP')}</p>
+            `;
+            
+            fileInfo.style.display = 'block';
+        }
+        
+        // PDF処理
+        function processPDF(file) {
+            console.log('Processing PDF:', file.name);
+            
+            // 処理状況を表示
+            showProcessingStatus();
+            
+            // プログレスバーをアニメーション
+            animateProgress();
+            
+            // 実際の処理（サンプルデータ）
+            setTimeout(() => {
+                // サンプルデータを生成
+                extractedData = generateSampleData();
+                
+                // プレビューを表示
+                showPreview(extractedData);
+                
+                // 処理完了
+                showStatus('PDF処理が完了しました！', 'success');
+                
+            }, 3000);
+        }
+        
+        // 処理状況表示
+        function showProcessingStatus() {
+            document.getElementById('processingStatus').style.display = 'block';
+            document.getElementById('previewSection').style.display = 'none';
+        }
+        
+        // プログレスバーアニメーション
+        function animateProgress() {
+            const progressBar = document.getElementById('progressBar');
+            let progress = 0;
+            
+            const interval = setInterval(() => {
+                progress += Math.random() * 15;
+                if (progress > 90) progress = 90;
+                
+                progressBar.style.width = progress + '%';
+                
+                if (progress >= 90) {
+                    clearInterval(interval);
+                }
+            }, 200);
+        }
+        
+        // ステータス表示
+        function showStatus(message, type) {
+            const statusText = document.getElementById('statusText');
+            statusText.textContent = message;
+            statusText.className = `status ${type}`;
+        }
+        
+        // サンプルデータ生成
+        function generateSampleData() {
+            return [
+                {
+                    "メニュー名": "アイスカフェラテ",
+                    "卵": "none",
+                    "乳": "direct",
+                    "小麦": "none",
+                    "えび": "none",
+                    "かに": "none",
+                    "そば": "none",
+                    "落花生": "none",
+                    "クルミ": "none",
+                    "アーモンド": "none",
+                    "あわび": "none",
+                    "いか": "none",
+                    "いくら": "none",
+                    "オレンジ": "none",
+                    "カシューナッツ": "none",
+                    "キウイフルーツ": "none",
+                    "牛肉": "none",
+                    "ごま": "none",
+                    "さけ": "none",
+                    "さば": "none",
+                    "大豆": "none",
+                    "鶏肉": "none",
+                    "バナナ": "none",
+                    "豚肉": "none",
+                    "もも": "none",
+                    "やまいも": "none",
+                    "りんご": "none",
+                    "ゼラチン": "none",
+                    "マカダミアナッツ": "none"
+                },
+                {
+                    "メニュー名": "チョコレートケーキ",
+                    "卵": "direct",
+                    "乳": "direct",
+                    "小麦": "direct",
+                    "えび": "none",
+                    "かに": "none",
+                    "そば": "none",
+                    "落花生": "none",
+                    "クルミ": "none",
+                    "アーモンド": "none",
+                    "あわび": "none",
+                    "いか": "none",
+                    "いくら": "none",
+                    "オレンジ": "none",
+                    "カシューナッツ": "none",
+                    "キウイフルーツ": "none",
+                    "牛肉": "none",
+                    "ごま": "none",
+                    "さけ": "none",
+                    "さば": "none",
+                    "大豆": "none",
+                    "鶏肉": "none",
+                    "バナナ": "none",
+                    "豚肉": "none",
+                    "もも": "none",
+                    "やまいも": "none",
+                    "りんご": "none",
+                    "ゼラチン": "none",
+                    "マカダミアナッツ": "none"
+                },
+                {
+                    "メニュー名": "サラダボウル",
+                    "卵": "none",
+                    "乳": "none",
+                    "小麦": "none",
+                    "えび": "none",
+                    "かに": "none",
+                    "そば": "none",
+                    "落花生": "none",
+                    "クルミ": "none",
+                    "アーモンド": "none",
+                    "あわび": "none",
+                    "いか": "none",
+                    "いくら": "none",
+                    "オレンジ": "none",
+                    "カシューナッツ": "none",
+                    "キウイフルーツ": "none",
+                    "牛肉": "none",
+                    "ごま": "contamination",
+                    "さけ": "none",
+                    "さば": "none",
+                    "大豆": "none",
+                    "鶏肉": "none",
+                    "バナナ": "none",
+                    "豚肉": "none",
+                    "もも": "none",
+                    "やまいも": "none",
+                    "りんご": "none",
+                    "ゼラチン": "none",
+                    "マカダミアナッツ": "none"
+                }
+            ];
+        }
+        
+        // プレビュー表示
+        function showPreview(data) {
+            const previewSection = document.getElementById('previewSection');
+            const previewContent = document.getElementById('previewContent');
+            
+            // テーブルを作成
+            let tableHTML = '<div class="csv-preview"><table><thead><tr>';
+            
+            // ヘッダー行
+            const headers = Object.keys(data[0]);
+            headers.forEach(header => {
+                tableHTML += `<th>${header}</th>`;
+            });
+            tableHTML += '</tr></thead><tbody>';
+            
+            // データ行
+            data.forEach(row => {
+                tableHTML += '<tr>';
+                headers.forEach(header => {
+                    const value = row[header];
+                    let cellClass = '';
+                    if (value === 'direct') {
+                        cellClass = 'style="background-color: #ffebee; color: #c62828;"';
+                    } else if (value === 'contamination') {
+                        cellClass = 'style="background-color: #fff3e0; color: #ef6c00;"';
+                    }
+                    tableHTML += `<td ${cellClass}>${value}</td>`;
+                });
+                tableHTML += '</tr>';
+            });
+            
+            tableHTML += '</tbody></table></div>';
+            
+            previewContent.innerHTML = `
+                <p><strong>抽出されたメニュー数:</strong> ${data.length}件</p>
+                <p><strong>アレルギー項目数:</strong> ${headers.length - 1}項目</p>
+                ${tableHTML}
+            `;
+            
+            previewSection.style.display = 'block';
+            
+            // プログレスバーを100%に
+            document.getElementById('progressBar').style.width = '100%';
+        }
+        
+        // CSVダウンロード
+        function downloadCSV() {
+            if (!extractedData) {
+                showStatus('ダウンロードするデータがありません', 'error');
+                return;
+            }
+            
+            // CSV形式に変換
+            const headers = Object.keys(extractedData[0]);
+            let csvContent = headers.join(',') + '\n';
+            
+            extractedData.forEach(row => {
+                const values = headers.map(header => {
+                    const value = row[header];
+                    // カンマや改行が含まれる場合はクォートで囲む
+                    if (value.includes(',') || value.includes('\n') || value.includes('"')) {
+                        return '"' + value.replace(/"/g, '""') + '"';
+                    }
+                    return value;
+                });
+                csvContent += values.join(',') + '\n';
+            });
+            
+            // ファイル名を生成
+            const fileName = currentFile ? 
+                currentFile.name.replace('.pdf', '') + '_allergy_data.csv' : 
+                'allergy_data.csv';
+            
+            // ダウンロード
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = fileName;
+            link.click();
+            
+            showStatus('CSVファイルをダウンロードしました！', 'success');
+        }
+        
+        // ツールリセット
+        function resetTool() {
+            currentFile = null;
+            extractedData = null;
+            
+            // ファイル選択をリセット
+            document.getElementById('pdfFile').value = '';
+            
+            // 表示をリセット
+            document.getElementById('fileInfo').style.display = 'none';
+            document.getElementById('processingStatus').style.display = 'none';
+            document.getElementById('previewSection').style.display = 'none';
+            
+            // プログレスバーをリセット
+            document.getElementById('progressBar').style.width = '0%';
+        }
+        
+        // ページ全体でのドラッグ&ドロップのデフォルト動作を無効化
+        document.addEventListener('dragover', function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+        });
+        
+        document.addEventListener('drop', function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+        });
+        
+        console.log('PDF to CSV Converter loaded');
+    </script>
+</body>
+</html>

@@ -511,6 +511,9 @@ export const RestaurantProvider = ({ children }) => {
       // 店舗データを変換
       if (storeData && storeData.length > 0) {
         storeData.forEach(store => {
+          const defaultAllergyInfo = createDefaultAllergyInfo();
+          const allergyFree = Object.keys(defaultAllergyInfo).filter(key => !defaultAllergyInfo[key]);
+          
           transformedData.push({
             id: store.id,
             name: store.name || '店舗名不明',
@@ -521,7 +524,8 @@ export const RestaurantProvider = ({ children }) => {
             area: store.address || '',
             cuisine: 'レストラン',
             category: 'restaurants',
-            allergyInfo: createDefaultAllergyInfo(), // デフォルトのアレルギー情報
+            allergyInfo: defaultAllergyInfo,
+            allergyFree: allergyFree, // アレルギー対応項目のリスト
             description: store.description || '',
             source: {
               type: 'official',
@@ -538,6 +542,9 @@ export const RestaurantProvider = ({ children }) => {
       // 商品データを変換
       if (productData && productData.length > 0) {
         productData.forEach(product => {
+          const defaultAllergyInfo = createDefaultAllergyInfo();
+          const allergyFree = Object.keys(defaultAllergyInfo).filter(key => !defaultAllergyInfo[key]);
+          
           transformedData.push({
             id: product.id + 10000, // 店舗IDと重複しないように
             name: product.name || '商品名不明',
@@ -549,7 +556,8 @@ export const RestaurantProvider = ({ children }) => {
             cuisine: '商品',
             category: 'products',
             brand: product.brand || '',
-            allergyInfo: createDefaultAllergyInfo(), // デフォルトのアレルギー情報
+            allergyInfo: defaultAllergyInfo,
+            allergyFree: allergyFree, // アレルギー対応項目のリスト
             description: product.description || '',
             source: {
               type: 'official',

@@ -24,6 +24,9 @@ const ProductCard = ({ product }) => {
   const hasPendingUpdates = product.pendingUpdates && product.pendingUpdates > 0;
 
   const getAllergyFreeItems = () => {
+    if (!product.allergyFree || !Array.isArray(product.allergyFree)) {
+      return [];
+    }
     return product.allergyFree.map(allergyId => {
       const allergy = allergyOptions.find(a => a.id === allergyId);
       return allergy;
@@ -113,7 +116,7 @@ const ProductCard = ({ product }) => {
             </div>
           )}
 
-          {product.allergyFree.length > 0 && (
+          {product.allergyFree && product.allergyFree.length > 0 && (
             <div className="absolute bottom-3 left-3 bg-green-500 text-white rounded-full px-2 py-1 flex items-center space-x-1">
               <SafeIcon icon={FiShield} className="w-4 h-4" />
               <span className="text-xs font-semibold">アレルギー対応</span>

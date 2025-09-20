@@ -15,6 +15,9 @@ const RestaurantCard = ({ restaurant }) => {
   const [showSourceDetails, setShowSourceDetails] = useState(false);
 
   const getAllergyFreeItems = () => {
+    if (!restaurant.allergyFree || !Array.isArray(restaurant.allergyFree)) {
+      return [];
+    }
     return restaurant.allergyFree.map(allergyId => {
       const allergy = allergyOptions.find(a => a.id === allergyId);
       return allergy;
@@ -74,7 +77,7 @@ const RestaurantCard = ({ restaurant }) => {
               <SourceBadge source={restaurant.source} />
             </div>
             
-            {restaurant.allergyFree.length > 0 && (
+            {restaurant.allergyFree && restaurant.allergyFree.length > 0 && (
               <div className="absolute bottom-3 left-3 bg-green-500 text-white rounded-full px-2 py-1 flex items-center space-x-1">
                 <SafeIcon icon={FiShield} className="w-4 h-4" />
                 <span className="text-xs font-semibold">アレルギー対応</span>

@@ -217,7 +217,7 @@ CSV_CONVERTER_TEMPLATE = '''
                     <p>CSVファイルをここにドラッグ&ドロップ</p>
                     <p class="drop-subtitle">または</p>
                     <input type="file" id="csvFile" accept=".csv" style="display: none;">
-                    <button class="btn" onclick="document.getElementById('csvFile').click()">ファイルを選択</button>
+                    <button class="btn" id="csvFileBtn">ファイルを選択</button>
                 </div>
             </div>
             
@@ -225,14 +225,14 @@ CSV_CONVERTER_TEMPLATE = '''
                 <h4>📄 CSVプレビュー</h4>
                 <div id="csvContent"></div>
             </div>
-            <button class="btn" onclick="processCSV()" id="processCSVBtn" style="display: none;">CSVを処理</button>
+            <button class="btn" id="processCSVBtn" style="display: none;">CSVを処理</button>
         </div>
         
         <!-- JSONデータ入力 -->
         <div id="jsonInput" class="form-group" style="display: none;">
             <label>JSONデータ:</label>
             <textarea id="jsonData" rows="10" placeholder='[{"menu_name": "アイスカフェラテ", "allergies": {"乳": "direct", "卵": "none"}}]'></textarea>
-            <button class="btn" onclick="loadSampleData()">サンプルデータを読み込み</button>
+            <button class="btn" id="loadSampleBtn">サンプルデータを読み込み</button>
         </div>
         
         <!-- PDF入力 -->
@@ -246,7 +246,7 @@ CSV_CONVERTER_TEMPLATE = '''
                     <p>PDFファイルをここにドラッグ&ドロップ</p>
                     <p class="drop-subtitle">または</p>
                     <input type="file" id="pdfFile" accept=".pdf" style="display: none;">
-                    <button class="btn" onclick="document.getElementById('pdfFile').click()">ファイルを選択</button>
+                    <button class="btn" id="pdfFileBtn">ファイルを選択</button>
                 </div>
             </div>
             
@@ -254,7 +254,7 @@ CSV_CONVERTER_TEMPLATE = '''
                 <h4>📄 PDFプレビュー</h4>
                 <div id="pdfContent"></div>
             </div>
-            <button class="btn" onclick="processPDF()" id="processPDFBtn" style="display: none;">PDFを処理</button>
+            <button class="btn" id="processPDFBtn" style="display: none;">PDFを処理</button>
         </div>
         
         <!-- 画像入力 -->
@@ -268,7 +268,7 @@ CSV_CONVERTER_TEMPLATE = '''
                     <p>画像ファイルをここにドラッグ&ドロップ</p>
                     <p class="drop-subtitle">または</p>
                     <input type="file" id="imageFile" accept=".jpg,.jpeg,.png,.bmp,.heic,.heif" capture="environment" style="display: none;">
-                    <button class="btn" onclick="document.getElementById('imageFile').click()">ファイルを選択</button>
+                    <button class="btn" id="imageFileBtn">ファイルを選択</button>
                 </div>
             </div>
             
@@ -280,7 +280,7 @@ CSV_CONVERTER_TEMPLATE = '''
                 <img id="previewImage" style="max-width: 300px; max-height: 200px; border-radius: 3px;">
                 <div id="imageContent"></div>
             </div>
-            <button class="btn" onclick="processImage()" id="processImageBtn" style="display: none;">画像をOCR処理</button>
+            <button class="btn" id="processImageBtn" style="display: none;">画像をOCR処理</button>
         </div>
     </div>
     
@@ -291,7 +291,7 @@ CSV_CONVERTER_TEMPLATE = '''
             <label>表示する列を選択:</label>
             <div id="columnCheckboxes" class="checkbox-group"></div>
         </div>
-        <button class="btn" onclick="previewData()">プレビュー</button>
+        <button class="btn" id="previewBtn">プレビュー</button>
     </div>
     
     <!-- アレルギー順番設定セクション -->
@@ -302,7 +302,7 @@ CSV_CONVERTER_TEMPLATE = '''
             <div id="allergyOrderList">
                 <p>データを読み込むとアレルギー項目が表示されます</p>
             </div>
-            <button class="btn" onclick="saveAllergyOrder()">順番を保存</button>
+            <button class="btn" id="saveAllergyBtn">順番を保存</button>
         </div>
     </div>
     
@@ -314,7 +314,7 @@ CSV_CONVERTER_TEMPLATE = '''
                 <input type="text" placeholder="元の列名" class="source-column">
                 <span>→</span>
                 <input type="text" placeholder="新しい列名" class="target-column">
-                <button class="btn add-mapping" onclick="addMapping()">追加</button>
+                <button class="btn add-mapping" id="addMappingBtn">追加</button>
             </div>
         </div>
     </div>
@@ -354,18 +354,18 @@ CSV_CONVERTER_TEMPLATE = '''
             <div id="previewContainer" style="display: none;">
                 <textarea id="previewData" rows="15" style="width: 100%; font-family: monospace;"></textarea>
                 <div style="margin-top: 10px;">
-                    <button class="btn" onclick="savePreviewChanges()">プレビュー変更を保存</button>
-                    <button class="btn" onclick="resetPreview()">リセット</button>
+                    <button class="btn" id="savePreviewBtn">プレビュー変更を保存</button>
+                    <button class="btn" id="resetPreviewBtn">リセット</button>
                 </div>
             </div>
-            <button class="btn" onclick="showPreview()">プレビューを表示</button>
+            <button class="btn" id="showPreviewBtn">プレビューを表示</button>
         </div>
     </div>
 
     <div class="section">
         <h3>⚡ 変換実行</h3>
-        <button class="btn btn-success" onclick="convertData()">データを変換</button>
-        <button class="btn" onclick="exportCSV()">CSVエクスポート</button>
+        <button class="btn btn-success" id="convertBtn">データを変換</button>
+        <button class="btn" id="exportBtn">CSVエクスポート</button>
     </div>
     
     <!-- 結果表示 -->
@@ -377,6 +377,8 @@ CSV_CONVERTER_TEMPLATE = '''
     <script>
         // DOMContentLoadedイベントで初期化
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('CSV Converter: DOMContentLoaded event fired');
+            
             let currentData = [];
             let columnMapping = {};
             let pdfData = '';
@@ -386,7 +388,8 @@ CSV_CONVERTER_TEMPLATE = '''
             
             // 入力タイプを切り替え
             window.toggleInputType = function() {
-            const inputType = document.getElementById('inputType').value;
+                console.log('toggleInputType called');
+                const inputType = document.getElementById('inputType').value;
             const csvInput = document.getElementById('csvInput');
             const jsonInput = document.getElementById('jsonInput');
             const pdfInput = document.getElementById('pdfInput');
@@ -412,12 +415,14 @@ CSV_CONVERTER_TEMPLATE = '''
         
             // ドラッグ&ドロップ共通機能
             window.handleDragOver = function(event) {
+                console.log('handleDragOver called');
                 event.preventDefault();
                 event.stopPropagation();
                 event.currentTarget.classList.add('dragover');
             };
             
             window.handleDragLeave = function(event) {
+                console.log('handleDragLeave called');
                 event.preventDefault();
                 event.stopPropagation();
                 event.currentTarget.classList.remove('dragover');
@@ -425,6 +430,7 @@ CSV_CONVERTER_TEMPLATE = '''
         
             // CSVファイルのドラッグ&ドロップ
             window.handleCSVDrop = function(event) {
+                console.log('handleCSVDrop called');
                 event.preventDefault();
                 event.stopPropagation();
                 event.currentTarget.classList.remove('dragover');
@@ -443,14 +449,20 @@ CSV_CONVERTER_TEMPLATE = '''
             
             // CSVファイルをアップロード
             window.handleCSVUpload = function() {
-            const file = document.getElementById('csvFile').files[0];
-            if (!file) return;
+                console.log('handleCSVUpload called');
+                const file = document.getElementById('csvFile').files[0];
+                if (!file) {
+                    console.log('No file selected');
+                    return;
+                }
+                console.log('File selected:', file.name, 'Type:', file.type);
             
             const reader = new FileReader();
             reader.onload = function(e) {
                 const csvContent = e.target.result;
                 
                 // CSVプレビューを表示
+                console.log('Displaying CSV preview');
                 document.getElementById('csvPreview').style.display = 'block';
                 document.getElementById('csvContent').innerHTML = `
                     <p><strong>ファイル名:</strong> ${file.name}</p>
@@ -871,9 +883,10 @@ CSV_CONVERTER_TEMPLATE = '''
             alert('アレルギー順番を保存しました');
         }
         
-        // プレビューを表示
+            // プレビューを表示
             window.showPreview = function() {
-            if (currentData.length === 0) {
+                console.log('showPreview called');
+                if (currentData.length === 0) {
                 alert('データがありません');
                 return;
             }
@@ -930,9 +943,10 @@ CSV_CONVERTER_TEMPLATE = '''
             });
         }
         
-        // データをプレビュー
+            // データをプレビュー
             window.previewData = function() {
-            try {
+                console.log('previewData called');
+                try {
                 const csvText = document.getElementById('csvData').value;
                 currentData = JSON.parse(csvText);
                 
@@ -1028,7 +1042,7 @@ CSV_CONVERTER_TEMPLATE = '''
                 <input type="text" placeholder="元の列名" class="source-column">
                 <span>→</span>
                 <input type="text" placeholder="新しい列名" class="target-column">
-                <button class="btn add-mapping" onclick="removeMapping(this)">削除</button>
+                <button class="btn add-mapping remove-mapping">削除</button>
             `;
             container.appendChild(newRow);
         }
@@ -1108,75 +1122,130 @@ CSV_CONVERTER_TEMPLATE = '''
             });
             
             // イベントハンドラーを設定
-            document.getElementById('inputType').addEventListener('change', toggleInputType);
-            document.getElementById('csvFile').addEventListener('change', handleCSVUpload);
-            document.getElementById('pdfFile').addEventListener('change', handlePDFUpload);
-            document.getElementById('imageFile').addEventListener('change', handleImageUpload);
+            console.log('Setting up event listeners...');
             
-            // ボタンのイベントリスナーを設定
+            const inputTypeEl = document.getElementById('inputType');
+            if (inputTypeEl) {
+                inputTypeEl.addEventListener('change', toggleInputType);
+                console.log('inputType event listener added');
+            }
+            
+            const csvFileEl = document.getElementById('csvFile');
+            if (csvFileEl) {
+                csvFileEl.addEventListener('change', handleCSVUpload);
+                console.log('csvFile event listener added');
+            }
+            
+            const pdfFileEl = document.getElementById('pdfFile');
+            if (pdfFileEl) {
+                pdfFileEl.addEventListener('change', handlePDFUpload);
+                console.log('pdfFile event listener added');
+            }
+            
+            const imageFileEl = document.getElementById('imageFile');
+            if (imageFileEl) {
+                imageFileEl.addEventListener('change', handleImageUpload);
+                console.log('imageFile event listener added');
+            }
+            
+            // ファイル選択ボタンのイベントリスナー
+            const csvFileBtn = document.getElementById('csvFileBtn');
+            if (csvFileBtn) {
+                csvFileBtn.addEventListener('click', () => {
+                    console.log('CSV file button clicked');
+                    document.getElementById('csvFile').click();
+                });
+                console.log('CSV file button event listener added');
+            } else {
+                console.log('CSV file button not found');
+            }
+            document.getElementById('pdfFileBtn')?.addEventListener('click', () => {
+                document.getElementById('pdfFile').click();
+            });
+            document.getElementById('imageFileBtn')?.addEventListener('click', () => {
+                document.getElementById('imageFile').click();
+            });
+            document.getElementById('fileInputBtn')?.addEventListener('click', () => {
+                document.getElementById('fileInput').click();
+            });
+            
+            // 処理ボタンのイベントリスナー
             document.getElementById('processCSVBtn')?.addEventListener('click', processCSV);
             document.getElementById('processPDFBtn')?.addEventListener('click', processPDF);
             document.getElementById('processImageBtn')?.addEventListener('click', processImage);
             
             // その他のボタンイベント
-            const loadSampleBtn = document.querySelector('button[onclick="loadSampleData()"]');
+            const loadSampleBtn = document.getElementById('loadSampleBtn');
             if (loadSampleBtn) {
                 loadSampleBtn.addEventListener('click', loadSampleData);
-                loadSampleBtn.removeAttribute('onclick');
+                console.log('loadSampleBtn event listener added');
             }
             
-            const previewBtn = document.querySelector('button[onclick="previewData()"]');
+            const previewBtn = document.getElementById('previewBtn');
             if (previewBtn) {
                 previewBtn.addEventListener('click', previewData);
-                previewBtn.removeAttribute('onclick');
+                console.log('previewBtn event listener added');
             }
             
-            const saveAllergyBtn = document.querySelector('button[onclick="saveAllergyOrder()"]');
-            if (saveAllergyBtn) {
-                saveAllergyBtn.addEventListener('click', saveAllergyOrder);
-                saveAllergyBtn.removeAttribute('onclick');
-            }
-            
-            const addMappingBtn = document.querySelector('button[onclick="addMapping()"]');
-            if (addMappingBtn) {
-                addMappingBtn.addEventListener('click', addMapping);
-                addMappingBtn.removeAttribute('onclick');
-            }
-            
-            const savePreviewBtn = document.querySelector('button[onclick="savePreviewChanges()"]');
-            if (savePreviewBtn) {
-                savePreviewBtn.addEventListener('click', savePreviewChanges);
-                savePreviewBtn.removeAttribute('onclick');
-            }
-            
-            const resetPreviewBtn = document.querySelector('button[onclick="resetPreview()"]');
-            if (resetPreviewBtn) {
-                resetPreviewBtn.addEventListener('click', resetPreview);
-                resetPreviewBtn.removeAttribute('onclick');
-            }
-            
-            const showPreviewBtn = document.querySelector('button[onclick="showPreview()"]');
+            const showPreviewBtn = document.getElementById('showPreviewBtn');
             if (showPreviewBtn) {
                 showPreviewBtn.addEventListener('click', showPreview);
-                showPreviewBtn.removeAttribute('onclick');
+                console.log('showPreviewBtn event listener added');
             }
             
-            const convertBtn = document.querySelector('button[onclick="convertData()"]');
+            const saveAllergyBtn = document.getElementById('saveAllergyBtn');
+            if (saveAllergyBtn) {
+                saveAllergyBtn.addEventListener('click', saveAllergyOrder);
+                console.log('saveAllergyBtn event listener added');
+            }
+            
+            const addMappingBtn = document.getElementById('addMappingBtn');
+            if (addMappingBtn) {
+                addMappingBtn.addEventListener('click', addMapping);
+                console.log('addMappingBtn event listener added');
+            }
+            
+            const savePreviewBtn = document.getElementById('savePreviewBtn');
+            if (savePreviewBtn) {
+                savePreviewBtn.addEventListener('click', savePreviewChanges);
+                console.log('savePreviewBtn event listener added');
+            }
+            
+            const resetPreviewBtn = document.getElementById('resetPreviewBtn');
+            if (resetPreviewBtn) {
+                resetPreviewBtn.addEventListener('click', resetPreview);
+                console.log('resetPreviewBtn event listener added');
+            }
+            
+            const convertBtn = document.getElementById('convertBtn');
             if (convertBtn) {
                 convertBtn.addEventListener('click', convertData);
-                convertBtn.removeAttribute('onclick');
+                console.log('convertBtn event listener added');
             }
             
-            const exportBtn = document.querySelector('button[onclick="exportCSV()"]');
+            const exportBtn = document.getElementById('exportBtn');
             if (exportBtn) {
                 exportBtn.addEventListener('click', exportCSV);
-                exportBtn.removeAttribute('onclick');
+                console.log('exportBtn event listener added');
             }
             
+            // 削除ボタンのイベントリスナー（動的に追加される要素用）
+            document.addEventListener('click', function(event) {
+                if (event.target.classList.contains('remove-mapping')) {
+                    removeMapping(event.target);
+                }
+            });
+            
             // ドラッグ&ドロップイベントを設定
-            document.getElementById('csvDropZone').addEventListener('dragover', handleDragOver);
-            document.getElementById('csvDropZone').addEventListener('dragleave', handleDragLeave);
-            document.getElementById('csvDropZone').addEventListener('drop', handleCSVDrop);
+            const csvDropZone = document.getElementById('csvDropZone');
+            if (csvDropZone) {
+                csvDropZone.addEventListener('dragover', handleDragOver);
+                csvDropZone.addEventListener('dragleave', handleDragLeave);
+                csvDropZone.addEventListener('drop', handleCSVDrop);
+                console.log('CSV drop zone event listeners added');
+            } else {
+                console.log('CSV drop zone not found');
+            }
             
             document.getElementById('pdfDropZone').addEventListener('dragover', handleDragOver);
             document.getElementById('pdfDropZone').addEventListener('dragleave', handleDragLeave);
@@ -1185,6 +1254,8 @@ CSV_CONVERTER_TEMPLATE = '''
             document.getElementById('imageDropZone').addEventListener('dragover', handleDragOver);
             document.getElementById('imageDropZone').addEventListener('dragleave', handleDragLeave);
             document.getElementById('imageDropZone').addEventListener('drop', handleImageDrop);
+            
+            console.log('All event listeners set up successfully');
             
         }); // DOMContentLoaded終了
     </script>
@@ -1236,7 +1307,7 @@ HTML_TEMPLATE = '''
     <div class="upload-area" id="uploadArea">
         <p>📁 ファイルをドラッグ&ドロップまたはクリックして選択</p>
         <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.pdf" multiple style="display: none;">
-        <button onclick="document.getElementById('fileInput').click()">ファイル選択</button>
+        <button id="fileInputBtn">ファイル選択</button>
     </div>
     
     <div id="result"></div>

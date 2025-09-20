@@ -375,15 +375,17 @@ CSV_CONVERTER_TEMPLATE = '''
     </div>
 
     <script>
-        let currentData = [];
-        let columnMapping = {};
-        let pdfData = '';
-        let imageData = '';
-        let allergyOrder = [];
-        let storeInfo = {};
-        
-        // 入力タイプを切り替え
-        function toggleInputType() {
+        // DOMContentLoadedイベントで初期化
+        document.addEventListener('DOMContentLoaded', function() {
+            let currentData = [];
+            let columnMapping = {};
+            let pdfData = '';
+            let imageData = '';
+            let allergyOrder = [];
+            let storeInfo = {};
+            
+            // 入力タイプを切り替え
+            window.toggleInputType = function() {
             const inputType = document.getElementById('inputType').value;
             const csvInput = document.getElementById('csvInput');
             const jsonInput = document.getElementById('jsonInput');
@@ -408,35 +410,35 @@ CSV_CONVERTER_TEMPLATE = '''
             }
         }
         
-        // ドラッグ&ドロップ共通機能
-        function handleDragOver(event) {
-            event.preventDefault();
-            event.currentTarget.classList.add('dragover');
-        }
-        
-        function handleDragLeave(event) {
-            event.currentTarget.classList.remove('dragover');
-        }
-        
-        // CSVファイルのドラッグ&ドロップ
-        function handleCSVDrop(event) {
-            event.preventDefault();
-            event.currentTarget.classList.remove('dragover');
+            // ドラッグ&ドロップ共通機能
+            window.handleDragOver = function(event) {
+                event.preventDefault();
+                event.currentTarget.classList.add('dragover');
+            };
             
-            const files = event.dataTransfer.files;
-            if (files.length > 0) {
-                const file = files[0];
-                if (file.type === 'text/csv' || file.name.toLowerCase().endsWith('.csv')) {
-                    document.getElementById('csvFile').files = files;
-                    handleCSVUpload();
-                } else {
-                    alert('CSVファイルを選択してください');
-                }
-            }
-        }
+            window.handleDragLeave = function(event) {
+                event.currentTarget.classList.remove('dragover');
+            };
         
-        // CSVファイルをアップロード
-        function handleCSVUpload() {
+            // CSVファイルのドラッグ&ドロップ
+            window.handleCSVDrop = function(event) {
+                event.preventDefault();
+                event.currentTarget.classList.remove('dragover');
+                
+                const files = event.dataTransfer.files;
+                if (files.length > 0) {
+                    const file = files[0];
+                    if (file.type === 'text/csv' || file.name.toLowerCase().endsWith('.csv')) {
+                        document.getElementById('csvFile').files = files;
+                        handleCSVUpload();
+                    } else {
+                        alert('CSVファイルを選択してください');
+                    }
+                }
+            };
+            
+            // CSVファイルをアップロード
+            window.handleCSVUpload = function() {
             const file = document.getElementById('csvFile').files[0];
             if (!file) return;
             
@@ -507,7 +509,7 @@ CSV_CONVERTER_TEMPLATE = '''
         }
         
         // PDFファイルのドラッグ&ドロップ
-        function handlePDFDrop(event) {
+            window.handlePDFDrop = function(event) {
             event.preventDefault();
             event.currentTarget.classList.remove('dragover');
             
@@ -524,7 +526,7 @@ CSV_CONVERTER_TEMPLATE = '''
         }
         
         // PDFファイルをアップロード
-        function handlePDFUpload() {
+            window.handlePDFUpload = function() {
             const file = document.getElementById('pdfFile').files[0];
             if (!file) return;
             
@@ -589,7 +591,7 @@ CSV_CONVERTER_TEMPLATE = '''
         }
         
         // 画像ファイルのドラッグ&ドロップ
-        function handleImageDrop(event) {
+            window.handleImageDrop = function(event) {
             event.preventDefault();
             event.currentTarget.classList.remove('dragover');
             
@@ -609,7 +611,7 @@ CSV_CONVERTER_TEMPLATE = '''
         }
         
         // 画像ファイルをアップロード
-        function handleImageUpload() {
+            window.handleImageUpload = function() {
             const file = document.getElementById('imageFile').files[0];
             if (!file) return;
             
@@ -1086,7 +1088,9 @@ CSV_CONVERTER_TEMPLATE = '''
             link.href = URL.createObjectURL(blob);
             link.download = 'converted_data.csv';
             link.click();
-        }
+        };
+        
+        }); // DOMContentLoaded終了
     </script>
 </body>
 </html>
@@ -1115,9 +1119,17 @@ HTML_TEMPLATE = '''
     </style>
 </head>
 <body>
-    <h1>🍽️ アレルギー情報 OCR 変換ツール（Netlify版）</h1>
+    <h1>🍽️ アレルギー情報 OCR 変換ツール（Render版）</h1>
     <p>画像やPDFファイルをアップロードして、アレルギー情報をCSV形式でSupabaseに送信します。</p>
-    <p><strong>注意:</strong> 現在はデモ版です。実際のOCR処理はRender版で利用可能です。</p>
+    {% if paddleocr_available %}
+    <div style="background-color: #d4edda; border: 1px solid #c3e6cb; padding: 10px; border-radius: 5px; margin-bottom: 20px;">
+        <strong>✅ 本番版:</strong> PaddleOCRの高精度OCR機能が利用可能です。
+    </div>
+    {% else %}
+    <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; border-radius: 5px; margin-bottom: 20px;">
+        <strong>⚠️ 注意:</strong> PaddleOCRが利用できない環境です。サンプルデータで動作しています。
+    </div>
+    {% endif %}
     
     <div style="margin: 20px 0; padding: 15px; background-color: #e7f3ff; border-radius: 5px;">
         <h3>🔧 詳細CSV変換ツール</h3>
@@ -1231,7 +1243,7 @@ HTML_TEMPLATE = '''
 
 @app.route('/')
 def index():
-    return render_template_string(HTML_TEMPLATE)
+    return render_template_string(HTML_TEMPLATE, paddleocr_available=PADDLEOCR_AVAILABLE)
 
 @app.route('/upload', methods=['POST'])
 def upload_files():
@@ -1398,9 +1410,9 @@ def parse_allergy_info(text, filename):
 def send_to_supabase(allergy_data, batch_id):
     """Supabaseにデータを送信"""
     try:
-        print(f"Supabase送信開始: URL={SUPABASE_URL}, KEY={SUPABASE_KEY[:20]}...")
+        print(f"Supabase送信開始: URL={SUPABASE_URL}, KEY={SUPABASE_KEY[:20] if SUPABASE_KEY else 'None'}...")
         
-        if not SUPABASE_URL or not SUPABASE_KEY:
+        if not SUPABASE_URL or not SUPABASE_KEY or SUPABASE_URL == 'your_supabase_url' or SUPABASE_KEY == 'your_supabase_key':
             print("Supabase設定が不完全です")
             print(f"URL: {SUPABASE_URL}")
             print(f"KEY: {SUPABASE_KEY[:20] if SUPABASE_KEY else 'None'}...")

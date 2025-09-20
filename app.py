@@ -383,6 +383,17 @@ def send_to_supabase(allergy_data, batch_id):
 def health_check():
     return jsonify({'status': 'healthy', 'timestamp': datetime.now().isoformat()})
 
+@app.route('/env-check')
+def env_check():
+    """環境変数の確認用エンドポイント"""
+    return jsonify({
+        'supabase_url': SUPABASE_URL,
+        'supabase_key': SUPABASE_KEY[:20] + '...' if SUPABASE_KEY else None,
+        'supabase_url_set': bool(SUPABASE_URL),
+        'supabase_key_set': bool(SUPABASE_KEY),
+        'timestamp': datetime.now().isoformat()
+    })
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)

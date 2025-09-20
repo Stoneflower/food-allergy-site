@@ -9,6 +9,7 @@ import About from './pages/About';
 import Upload from './pages/Upload';
 import FoodSearch from './pages/FoodSearch';
 import IntegratedPDFProcessor from './components/IntegratedPDFProcessor';
+import CsvConverter from './pages/CsvConverter';
 import AdminTools from './pages/AdminTools';
 import { RestaurantProvider } from './context/RestaurantContext';
 import './App.css';
@@ -28,6 +29,7 @@ function App() {
             <Route path="/about" element={<About />} />
             <Route path="/upload" element={<Upload />} />
             <Route path="/pdf-processor" element={<IntegratedPDFProcessor />} />
+            <Route path="/csv-converter" element={<CsvConverter />} />
             <Route path="/admin-tools" element={<AdminTools />} />
           </Routes>
         </div>

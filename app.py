@@ -1982,24 +1982,41 @@ def pdf_csv_converter():
                 if not pdf_content:
                     return jsonify({'error': 'PDFコンテンツが提供されていません'}), 400
                 
-                # PDFからテキストを抽出
-                extracted_text = extract_text_from_pdf_content(pdf_content)
-                
-                # アレルギー情報を解析
-                allergy_data = parse_allergy_info(extracted_text, 'pdf_upload')
-                
-                # Supabaseに送信
-                supabase_sent = False
-                if allergy_data:
-                    supabase_sent = send_to_supabase(allergy_data, f"pdf_{datetime.now().strftime('%Y%m%d_%H%M%S')}", store_info)
-                
-                return jsonify({
-                    'success': True,
-                    'data': allergy_data,
-                    'count': len(allergy_data),
-                    'message': f'{len(allergy_data)}件のメニューを抽出しました',
-                    'supabase_sent': supabase_sent
-                })
+                try:
+                    print("PDF処理開始...")
+                    start_time = time.time()
+                    
+                    # PDFからテキストを抽出
+                    extracted_text = extract_text_from_pdf_content(pdf_content)
+                    
+                    # アレルギー情報を解析
+                    allergy_data = parse_allergy_info(extracted_text, 'pdf_upload')
+                    
+                    # Supabaseに送信
+                    supabase_sent = False
+                    if allergy_data:
+                        supabase_sent = send_to_supabase(allergy_data, f"pdf_{datetime.now().strftime('%Y%m%d_%H%M%S')}", store_info)
+                    
+                    processing_time = time.time() - start_time
+                    print(f"PDF処理完了: {processing_time:.2f}秒")
+                    
+                    return jsonify({
+                        'success': True,
+                        'data': allergy_data,
+                        'count': len(allergy_data),
+                        'message': f'{len(allergy_data)}件のメニューを抽出しました（処理時間: {processing_time:.1f}秒）',
+                        'supabase_sent': supabase_sent
+                    })
+                    
+                except Exception as e:
+                    processing_time = time.time() - start_time
+                    print(f"PDF処理エラー: {str(e)} (処理時間: {processing_time:.2f}秒)")
+                    import traceback
+                    traceback.print_exc()
+                    return jsonify({
+                        'success': False,
+                        'error': f'PDF処理エラー: {str(e)}'
+                    }), 500
             
             elif action == 'download_csv':
                 # CSVダウンロード
@@ -2215,49 +2232,92 @@ def extract_text_from_pdf_content(pdf_content):
             """
             return sample_text.strip()
         
-        # 新しいPDF処理（pdf2image + PPStructure使用）
+        # Render無料枠対応のPDF処理（メモリ最適化）
         import base64
         import io
         import tempfile
         import os
+        import time
+        import gc
         from PIL import Image
         
-        print("PDF処理開始（pdf2image + PPStructure）...")
+        print("=" * 50)
+        print("PDF処理開始（Render無料枠対応）...")
+        print(f"開始時刻: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+        
+        # メモリ使用量チェック
+        import psutil
+        memory_before = psutil.virtual_memory()
+        print(f"処理前メモリ使用量: {memory_before.percent}% ({memory_before.used / 1024 / 1024:.1f}MB)")
         
         # Base64デコード
+        print("Base64デコード中...")
         pdf_bytes = base64.b64decode(pdf_content)
+        print(f"PDFサイズ: {len(pdf_bytes)} bytes")
+        
+        # PDFサイズチェック（Render無料枠制限対応）
+        if len(pdf_bytes) > 10 * 1024 * 1024:  # 10MB制限
+            print("警告: PDFサイズが大きすぎます（10MB制限）")
+            return "PDFサイズが大きすぎます。10MB以下のファイルを使用してください。"
         
         # 一時ファイルにPDFを保存
+        print("一時ファイル作成中...")
         with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_pdf:
             temp_pdf.write(pdf_bytes)
             temp_pdf_path = temp_pdf.name
+        print(f"一時ファイル: {temp_pdf_path}")
         
         try:
-            # PDFを画像に変換
+            # PDFを画像に変換（高精度維持）
             print("PDFを画像に変換中...")
-            pages = convert_from_path(temp_pdf_path, dpi=300)
+            start_time = time.time()
+            pages = convert_from_path(temp_pdf_path, dpi=300)  # 高精度維持
+            conversion_time = time.time() - start_time
             print(f"PDFページ数: {len(pages)}")
+            print(f"画像変換時間: {conversion_time:.2f}秒")
+            
+            # ページ数制限（Render無料枠対応）
+            if len(pages) > 5:  # 5ページ制限
+                print("警告: ページ数が多すぎます（5ページ制限）")
+                pages = pages[:5]  # 最初の5ページのみ処理
+                print(f"最初の5ページのみ処理します")
             
             # PPStructureで表認識モデルを初期化
             print("PPStructure初期化中...")
+            init_start = time.time()
             table_engine = PPStructure(show_log=True)
+            init_time = time.time() - init_start
+            print(f"PPStructure初期化時間: {init_time:.2f}秒")
             
             extracted_text = ""
             
-            # 各ページを処理
+            # 各ページを処理（メモリ最適化）
             for page_num, page_image in enumerate(pages):
+                page_start = time.time()
                 print(f"ページ {page_num + 1}/{len(pages)} を処理中...")
                 
+                # メモリ使用量チェック
+                memory_current = psutil.virtual_memory()
+                if memory_current.percent > 90:  # 90%以上で警告
+                    print(f"警告: メモリ使用量が高いです ({memory_current.percent}%)")
+                
                 # 画像をOpenCV形式に変換
+                print(f"  画像変換中...")
                 img_array = np.array(page_image)
                 img_cv = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
+                print(f"  画像サイズ: {img_cv.shape}")
                 
                 # 表構造を解析
+                print(f"  表構造解析中...")
+                ocr_start = time.time()
                 result = table_engine(img_cv)
+                ocr_time = time.time() - ocr_start
+                print(f"  OCR時間: {ocr_time:.2f}秒")
+                print(f"  解析結果数: {len(result)}")
                 
                 # 結果をテキストに変換
                 page_text = ""
-                for item in result:
+                for i, item in enumerate(result):
                     if 'res' in item:
                         # 表のセルごとのテキストを抽出
                         for cell in item['res']:
@@ -2271,16 +2331,41 @@ def extract_text_from_pdf_content(pdf_content):
                 if page_text.strip():
                     extracted_text += f"\n--- ページ {page_num + 1} ---\n"
                     extracted_text += page_text
-                    print(f"ページ {page_num + 1}: 表認識成功 ({len(page_text)}文字)")
+                    print(f"  ページ {page_num + 1}: 表認識成功 ({len(page_text)}文字)")
                 else:
-                    print(f"ページ {page_num + 1}: 表認識結果なし")
+                    print(f"  ページ {page_num + 1}: 表認識結果なし")
+                
+                page_time = time.time() - page_start
+                print(f"  ページ処理時間: {page_time:.2f}秒")
+                print(f"  進捗: {((page_num + 1) / len(pages)) * 100:.1f}%")
+                
+                # メモリクリーンアップ
+                del img_array, img_cv, result
+                gc.collect()
             
+            total_time = time.time() - start_time
             print(f"PDF処理完了: {len(extracted_text)}文字抽出")
+            print(f"総処理時間: {total_time:.2f}秒")
+            
+            # 最終メモリ使用量チェック
+            memory_after = psutil.virtual_memory()
+            print(f"処理後メモリ使用量: {memory_after.percent}% ({memory_after.used / 1024 / 1024:.1f}MB)")
+            print("=" * 50)
+            
+        except Exception as pdf_error:
+            print(f"PDF処理中にエラー: {str(pdf_error)}")
+            import traceback
+            traceback.print_exc()
+            raise pdf_error
             
         finally:
             # 一時ファイルを削除
             if os.path.exists(temp_pdf_path):
                 os.unlink(temp_pdf_path)
+                print(f"一時ファイル削除: {temp_pdf_path}")
+            
+            # メモリクリーンアップ
+            gc.collect()
         
         # 抽出されたテキストが少ない場合はサンプルデータを追加
         if len(extracted_text.strip()) < 100:

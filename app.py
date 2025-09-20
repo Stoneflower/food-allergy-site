@@ -6,7 +6,9 @@ from datetime import datetime
 from flask import Flask, request, jsonify, render_template_string
 from werkzeug.utils import secure_filename
 import pandas as pd
-from PIL import Image
+from PIL import Image, ImageEnhance, ImageFilter
+import cv2
+import numpy as np
 import PyPDF2
 import requests
 from paddleocr import PaddleOCR
@@ -223,10 +225,41 @@ def allowed_file(filename):
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'pdf'}
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+def preprocess_image(image_path):
+    """画像の前処理でOCR精度を向上"""
+    try:
+        # OpenCVで画像を読み込み
+        img = cv2.imread(image_path)
+        
+        # グレースケール変換
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        
+        # ガウシアンブラーでノイズ除去
+        blurred = cv2.GaussianBlur(gray, (3, 3), 0)
+        
+        # アダプティブ閾値処理
+        thresh = cv2.adaptiveThreshold(
+            blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
+            cv2.THRESH_BINARY, 11, 2
+        )
+        
+        # 前処理済み画像を保存
+        processed_path = image_path.replace('.', '_processed.')
+        cv2.imwrite(processed_path, thresh)
+        
+        return processed_path
+    except Exception as e:
+        print(f"画像前処理エラー: {str(e)}")
+        return image_path
+
 def extract_text_from_image(image_path):
     """画像からテキストを抽出"""
     try:
-        result = ocr.ocr(image_path, cls=True)
+        # 画像前処理
+        processed_path = preprocess_image(image_path)
+        
+        # PaddleOCRでテキスト抽出
+        result = ocr.ocr(processed_path, cls=True)
         extracted_text = []
         
         if result and result[0]:
@@ -234,8 +267,12 @@ def extract_text_from_image(image_path):
                 if line and len(line) >= 2:
                     text = line[1][0]
                     confidence = line[1][1]
-                    if confidence > 0.7:  # 信頼度70%以上
+                    if confidence > 0.6:  # 信頼度60%以上（前処理により精度向上）
                         extracted_text.append(text)
+        
+        # 前処理済み画像を削除
+        if processed_path != image_path and os.path.exists(processed_path):
+            os.remove(processed_path)
         
         return '\n'.join(extracted_text)
     except Exception as e:

@@ -358,7 +358,11 @@
                 .then(response => {
                     console.log('Response received:', response.status, response.statusText);
                     if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
+                        // エラーレスポンスの詳細を取得
+                        return response.text().then(text => {
+                            console.error('Error response body:', text);
+                            throw new Error(`HTTP error! status: ${response.status}, body: ${text}`);
+                        });
                     }
                     return response.json();
                 })

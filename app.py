@@ -10,16 +10,33 @@ import requests
 
 # 必要なライブラリをオプショナルインポート
 try:
+    print("ライブラリインポート開始...")
     from paddleocr import PaddleOCR, PPStructure, save_structure_res
+    print("PaddleOCR imported successfully")
+    
     from pdf2image import convert_from_path
+    print("pdf2image imported successfully")
+    
     import pandas as pd
+    print("pandas imported successfully")
+    
     import cv2
+    print("cv2 imported successfully")
+    
     import numpy as np
+    print("numpy imported successfully")
+    
+    import psutil
+    print("psutil imported successfully")
+    
     PADDLEOCR_AVAILABLE = True
-    print("PaddleOCR and related libraries imported successfully")
+    print("All libraries imported successfully")
 except ImportError as e:
     PADDLEOCR_AVAILABLE = False
-    print(f"Libraries not available: {e}, using sample data mode")
+    print(f"Library import failed: {e}")
+    print(f"Error type: {type(e)}")
+    import traceback
+    traceback.print_exc()
 
 # アレルギー28品目リスト（指定順番）
 ALLERGY_28_ITEMS = [
@@ -1951,8 +1968,73 @@ def env_check():
         'supabase_key': SUPABASE_KEY[:20] + '...' if SUPABASE_KEY else None,
         'supabase_url_set': bool(SUPABASE_URL),
         'supabase_key_set': bool(SUPABASE_KEY),
+        'paddleocr_available': PADDLEOCR_AVAILABLE,
         'timestamp': datetime.now().isoformat()
     })
+
+@app.route('/debug')
+def debug():
+    """デバッグ情報用エンドポイント"""
+    try:
+        import sys
+        import os
+        
+        debug_info = {
+            'python_version': sys.version,
+            'paddleocr_available': PADDLEOCR_AVAILABLE,
+            'working_directory': os.getcwd(),
+            'environment_variables': {
+                'PORT': os.environ.get('PORT'),
+                'SUPABASE_URL': bool(os.environ.get('SUPABASE_URL')),
+                'SUPABASE_KEY': bool(os.environ.get('SUPABASE_KEY'))
+            }
+        }
+        
+        # ライブラリのインポートテスト
+        if PADDLEOCR_AVAILABLE:
+            try:
+                from paddleocr import PaddleOCR
+                debug_info['paddleocr_import'] = 'success'
+            except Exception as e:
+                debug_info['paddleocr_import'] = f'failed: {str(e)}'
+                
+            try:
+                from pdf2image import convert_from_path
+                debug_info['pdf2image_import'] = 'success'
+            except Exception as e:
+                debug_info['pdf2image_import'] = f'failed: {str(e)}'
+                
+            try:
+                import pandas as pd
+                debug_info['pandas_import'] = 'success'
+            except Exception as e:
+                debug_info['pandas_import'] = f'failed: {str(e)}'
+                
+            try:
+                import cv2
+                debug_info['cv2_import'] = 'success'
+            except Exception as e:
+                debug_info['cv2_import'] = f'failed: {str(e)}'
+                
+            try:
+                import numpy as np
+                debug_info['numpy_import'] = 'success'
+            except Exception as e:
+                debug_info['numpy_import'] = f'failed: {str(e)}'
+                
+            try:
+                import psutil
+                debug_info['psutil_import'] = 'success'
+            except Exception as e:
+                debug_info['psutil_import'] = f'failed: {str(e)}'
+        
+        return jsonify(debug_info)
+        
+    except Exception as e:
+        return jsonify({
+            'error': str(e),
+            'paddleocr_available': PADDLEOCR_AVAILABLE
+        }), 500
 
 @app.route('/csv-converter', methods=['GET', 'POST'])
 def csv_converter():
@@ -1986,16 +2068,42 @@ def pdf_csv_converter():
                     print("PDF処理開始...")
                     start_time = time.time()
                     
+                    # ライブラリの利用可能性をチェック
+                    if not PADDLEOCR_AVAILABLE:
+                        print("PaddleOCRが利用できません。サンプルデータを使用します。")
+                        # サンプルデータを返す
+                        sample_data = [
+                            {
+                                'menu_name': '牛丼（並盛）',
+                                'allergies': {allergy: '-' for allergy in ALLERGY_28_ITEMS},
+                                'source_file': 'pdf_upload',
+                                'extracted_at': datetime.now().isoformat()
+                            }
+                        ]
+                        return jsonify({
+                            'success': True,
+                            'data': sample_data,
+                            'count': len(sample_data),
+                            'message': f'{len(sample_data)}件のサンプルメニューを生成しました（PaddleOCR利用不可）',
+                            'supabase_sent': False
+                        })
+                    
                     # PDFからテキストを抽出
+                    print("PDFテキスト抽出開始...")
                     extracted_text = extract_text_from_pdf_content(pdf_content)
+                    print(f"抽出テキスト長: {len(extracted_text)}")
                     
                     # アレルギー情報を解析
+                    print("アレルギー情報解析開始...")
                     allergy_data = parse_allergy_info(extracted_text, 'pdf_upload')
+                    print(f"解析結果: {len(allergy_data)}件")
                     
                     # Supabaseに送信
                     supabase_sent = False
                     if allergy_data:
+                        print("Supabase送信開始...")
                         supabase_sent = send_to_supabase(allergy_data, f"pdf_{datetime.now().strftime('%Y%m%d_%H%M%S')}", store_info)
+                        print(f"Supabase送信結果: {supabase_sent}")
                     
                     processing_time = time.time() - start_time
                     print(f"PDF処理完了: {processing_time:.2f}秒")
@@ -2011,6 +2119,16 @@ def pdf_csv_converter():
                         'message': f'{len(allergy_data)}件のメニューを抽出しました（{processed_pages}/{total_pages}ページ処理、処理時間: {processing_time:.1f}秒）',
                         'supabase_sent': supabase_sent
                     })
+                    
+                except ImportError as import_error:
+                    processing_time = time.time() - start_time
+                    print(f"ライブラリインポートエラー: {str(import_error)} (処理時間: {processing_time:.2f}秒)")
+                    import traceback
+                    traceback.print_exc()
+                    return jsonify({
+                        'success': False,
+                        'error': f'ライブラリインポートエラー: {str(import_error)}'
+                    }), 500
                     
                 except Exception as e:
                     processing_time = time.time() - start_time

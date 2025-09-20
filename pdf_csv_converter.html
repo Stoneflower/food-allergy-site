@@ -275,18 +275,38 @@
             // プログレスバーをアニメーション
             animateProgress();
             
-            // 実際の処理（サンプルデータ）
-            setTimeout(() => {
-                // サンプルデータを生成
-                extractedData = generateSampleData();
+            // PDFファイルをBase64に変換
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const pdfContent = e.target.result.split(',')[1]; // Base64部分のみ取得
                 
-                // プレビューを表示
-                showPreview(extractedData);
-                
-                // 処理完了
-                showStatus('PDF処理が完了しました！', 'success');
-                
-            }, 3000);
+                // サーバーにPDF処理を依頼
+                fetch('/pdf-csv-converter', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'process_pdf',
+                        pdf_content: pdfContent
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        extractedData = data.data;
+                        showPreview(extractedData);
+                        showStatus(data.message, 'success');
+                    } else {
+                        showStatus('PDF処理エラー: ' + data.error, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('PDF処理エラー:', error);
+                    showStatus('PDF処理中にエラーが発生しました: ' + error.message, 'error');
+                });
+            };
+            reader.readAsDataURL(file);
         }
         
         // 処理状況表示
@@ -423,29 +443,51 @@
             const previewSection = document.getElementById('previewSection');
             const previewContent = document.getElementById('previewContent');
             
+            // データ構造を確認
+            console.log('Preview data:', data);
+            
+            if (!data || data.length === 0) {
+                previewContent.innerHTML = '<p>データがありません</p>';
+                previewSection.style.display = 'block';
+                return;
+            }
+            
             // テーブルを作成
             let tableHTML = '<div class="csv-preview"><table><thead><tr>';
             
-            // ヘッダー行
-            const headers = Object.keys(data[0]);
-            headers.forEach(header => {
-                tableHTML += `<th>${header}</th>`;
+            // ヘッダー行（メニュー名 + アレルギー項目）
+            tableHTML += '<th>メニュー名</th>';
+            const allergyItems = ['卵', '乳', '小麦', 'えび', 'かに', 'そば', '落花生', 'クルミ', 'アーモンド', 'あわび', 'いか', 'いくら', 'オレンジ', 'カシューナッツ', 'キウイフルーツ', '牛肉', 'ごま', 'さけ', 'さば', '大豆', '鶏肉', 'バナナ', '豚肉', 'もも', 'やまいも', 'りんご', 'ゼラチン', 'マカダミアナッツ'];
+            allergyItems.forEach(item => {
+                tableHTML += `<th>${item}</th>`;
             });
             tableHTML += '</tr></thead><tbody>';
             
             // データ行
             data.forEach(row => {
                 tableHTML += '<tr>';
-                headers.forEach(header => {
-                    const value = row[header];
+                
+                // メニュー名
+                tableHTML += `<td><strong>${row.menu_name || '不明'}</strong></td>`;
+                
+                // アレルギー情報
+                allergyItems.forEach(allergy => {
+                    const value = row.allergies && row.allergies[allergy] ? row.allergies[allergy] : '-';
                     let cellClass = '';
-                    if (value === 'direct') {
-                        cellClass = 'style="background-color: #ffebee; color: #c62828;"';
-                    } else if (value === 'contamination') {
-                        cellClass = 'style="background-color: #fff3e0; color: #ef6c00;"';
+                    if (value === '●') {
+                        cellClass = 'style="background-color: #ffebee; color: #c62828; font-weight: bold;"';
+                    } else if (value === '○' || value === '△') {
+                        cellClass = 'style="background-color: #fff3e0; color: #ef6c00; font-weight: bold;"';
+                    } else if (value === '※') {
+                        cellClass = 'style="background-color: #f3e5f5; color: #7b1fa2;"';
+                    } else if (value === '有') {
+                        cellClass = 'style="background-color: #ffebee; color: #c62828; font-weight: bold;"';
+                    } else if (value === '無' || value === 'なし') {
+                        cellClass = 'style="background-color: #e8f5e8; color: #2e7d32;"';
                     }
                     tableHTML += `<td ${cellClass}>${value}</td>`;
                 });
+                
                 tableHTML += '</tr>';
             });
             
@@ -453,7 +495,11 @@
             
             previewContent.innerHTML = `
                 <p><strong>抽出されたメニュー数:</strong> ${data.length}件</p>
-                <p><strong>アレルギー項目数:</strong> ${headers.length - 1}項目</p>
+                <p><strong>アレルギー項目数:</strong> ${allergyItems.length}項目</p>
+                <p><strong>色分け:</strong> <span style="background-color: #ffebee; color: #c62828; padding: 2px 5px;">●</span> = 直接含有, 
+                <span style="background-color: #fff3e0; color: #ef6c00; padding: 2px 5px;">○△</span> = コンタミネーション, 
+                <span style="background-color: #f3e5f5; color: #7b1fa2; padding: 2px 5px;">※</span> = 未使用,
+                <span style="background-color: #e8f5e8; color: #2e7d32; padding: 2px 5px;">-無なし</span> = 含有なし</p>
                 ${tableHTML}
             `;
             
@@ -471,18 +517,23 @@
             }
             
             // CSV形式に変換
-            const headers = Object.keys(extractedData[0]);
+            const allergyItems = ['卵', '乳', '小麦', 'えび', 'かに', 'そば', '落花生', 'クルミ', 'アーモンド', 'あわび', 'いか', 'いくら', 'オレンジ', 'カシューナッツ', 'キウイフルーツ', '牛肉', 'ごま', 'さけ', 'さば', '大豆', '鶏肉', 'バナナ', '豚肉', 'もも', 'やまいも', 'りんご', 'ゼラチン', 'マカダミアナッツ'];
+            const headers = ['メニュー名', ...allergyItems];
             let csvContent = headers.join(',') + '\n';
             
             extractedData.forEach(row => {
-                const values = headers.map(header => {
-                    const value = row[header];
-                    // カンマや改行が含まれる場合はクォートで囲む
-                    if (value.includes(',') || value.includes('\n') || value.includes('"')) {
-                        return '"' + value.replace(/"/g, '""') + '"';
-                    }
-                    return value;
+                const values = [];
+                
+                // メニュー名
+                const menuName = row.menu_name || '不明';
+                values.push(menuName.includes(',') ? '"' + menuName.replace(/"/g, '""') + '"' : menuName);
+                
+                // アレルギー情報
+                allergyItems.forEach(allergy => {
+                    const value = row.allergies && row.allergies[allergy] ? row.allergies[allergy] : '-';
+                    values.push(value);
                 });
+                
                 csvContent += values.join(',') + '\n';
             });
             

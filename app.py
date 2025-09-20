@@ -29,15 +29,16 @@ DEFAULT_ALLERGY_ORDER = ALLERGY_28_ITEMS.copy()
 
 # 記号マッピング
 SYMBOL_MAPPING = {
-    '●': 'direct',    # 直接含有
-    '○': 'contamination',     # コンタミネーション（微量含有）
-    '△': 'contamination',     # コンタミネーション（微量含有）
-    '※': 'unused',    # 未使用
-    '-': 'none',      # 含有なし
-    '×': 'none',      # 含有なし
-    'なし': 'none',   # 含有なし
-    '有': 'direct',   # 含有
-    '無': 'none'      # 含有なし
+    # 記号はそのまま保持（変換しない）
+    '●': '●',    # 直接含有
+    '○': '○',    # コンタミネーション（微量含有）
+    '△': '△',    # コンタミネーション（微量含有）
+    '※': '※',    # 未使用
+    '-': '-',     # 含有なし
+    '×': '×',     # 含有なし
+    'なし': 'なし',   # 含有なし
+    '有': '有',   # 含有
+    '無': '無'      # 含有なし
 }
 
 app = Flask(__name__)
@@ -1665,6 +1666,36 @@ def pdf_csv_converter():
             template = f.read()
         return template
     
+    if request.method == 'POST':
+        try:
+            data = request.json
+            action = data.get('action')
+            
+            if action == 'process_pdf':
+                # PDFファイルの処理
+                pdf_content = data.get('pdf_content')
+                if not pdf_content:
+                    return jsonify({'error': 'PDFコンテンツが提供されていません'}), 400
+                
+                # PDFからテキストを抽出
+                extracted_text = extract_text_from_pdf_content(pdf_content)
+                
+                # アレルギー情報を解析
+                allergy_data = parse_allergy_info(extracted_text, 'pdf_upload')
+                
+                return jsonify({
+                    'success': True,
+                    'data': allergy_data,
+                    'count': len(allergy_data),
+                    'message': f'{len(allergy_data)}件のメニューを抽出しました'
+                })
+            
+            return jsonify({'error': '無効なアクション'}), 400
+            
+        except Exception as e:
+            print(f"PDF処理エラー: {str(e)}")
+            return jsonify({'error': f'PDF処理中にエラーが発生しました: {str(e)}'}), 500
+    
     try:
         data = request.json
         action = data.get('action')
@@ -1982,13 +2013,13 @@ def parse_csv_allergy_info(csv_content):
                                 allergies[allergy] = mapped_value
                                 break
                         else:
-                            # キーワードマッピング
-                            if any(keyword in value for keyword in ['含有', '含む', '有', 'direct']):
-                                allergies[allergy] = 'direct'
-                            elif any(keyword in value for keyword in ['微量', 'trace', '○', '△', 'コンタミネーション', 'contamination']):
-                                allergies[allergy] = 'contamination'
-                            elif any(keyword in value for keyword in ['未使用', 'unused', '※']):
-                                allergies[allergy] = 'unused'
+                            # キーワードマッピング（記号をそのまま保持）
+                            if any(keyword in value for keyword in ['含有', '含む', '有']):
+                                allergies[allergy] = '●'
+                            elif any(keyword in value for keyword in ['微量', 'コンタミネーション']):
+                                allergies[allergy] = '○'
+                            elif any(keyword in value for keyword in ['未使用']):
+                                allergies[allergy] = '※'
             
             allergy_data.append({
                 'menu_name': menu_name,

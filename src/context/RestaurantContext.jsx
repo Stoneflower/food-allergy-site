@@ -516,7 +516,7 @@ export const RestaurantProvider = ({ children }) => {
           
           transformedData.push({
             id: store.id,
-            name: store.name || '店舗名不明',
+            name: store.name || store.store_name || '店舗名不明',
             image: store.image_url || 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400',
             rating: 4.0, // デフォルト値
             reviewCount: 0,

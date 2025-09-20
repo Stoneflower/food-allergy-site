@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import AllergyFilter from '../components/AllergyFilter';
 import CategoryFilter from '../components/CategoryFilter';
-import AdvancedSearchPanel from '../components/AdvancedSearchPanel';
 import RestaurantCard from '../components/RestaurantCard';
 import ProductCard from '../components/ProductCard';
 import SupermarketCard from '../components/SupermarketCard';
 import OnlineShopCard from '../components/OnlineShopCard';
+import AllergySearchResults from '../components/AllergySearchResults';
 import { useRestaurant } from '../context/RestaurantContext';
 import SafeIcon from '../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
@@ -144,9 +144,6 @@ const SearchResults = () => {
     count: searchFilteredItems.filter(item => item.source?.type === sourceType.id).length
   }));
 
-  const handleSearchFilters = (newFilters) => {
-    setSearchFilters(newFilters);
-  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -277,11 +274,6 @@ const SearchResults = () => {
               animate={{ opacity: 1, x: 0 }}
               className="lg:w-96 space-y-6"
             >
-              <AdvancedSearchPanel 
-                onSearch={handleSearchFilters}
-                initialFilters={searchFilters}
-              />
-
               <div className="bg-white rounded-xl shadow-md p-6">
                 <h3 className="text-lg font-semibold mb-4">アレルギーフィルター</h3>
                 <AllergyFilter />
@@ -309,65 +301,7 @@ const SearchResults = () => {
 
           {/* Results */}
           <div className="flex-1">
-            {sortedItems.length > 0 ? (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className={viewMode === 'grid'
-                  ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6'
-                  : 'space-y-4'
-                }
-              >
-                {sortedItems.map((item, index) => (
-                  <motion.div
-                    key={`${item.category}-${item.id}`}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, delay: index * 0.05 }}
-                  >
-                    {renderCard(item)}
-                  </motion.div>
-                ))}
-              </motion.div>
-            ) : (
-              <div className="text-center py-16">
-                <div className="w-24 h-24 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
-                  <SafeIcon icon={FiMapPin} className="w-12 h-12 text-gray-400" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  条件に合うアイテムが見つかりませんでした
-                </h3>
-                <p className="text-gray-600 mb-4">
-                  検索条件やアレルギーフィルター、情報源フィルターを調整して再度お試しください
-                </p>
-                <div className="flex justify-center space-x-4">
-                  <button
-                    onClick={() => setShowFilters(true)}
-                    className="text-orange-500 hover:text-orange-600 font-semibold"
-                  >
-                    フィルターを調整する
-                  </button>
-                  <button
-                    onClick={() => {
-                      setSelectedSourceTypes([]);
-                      setShowSourceFilter(false);
-                      setSearchFilters({
-                        keyword: '',
-                        brand: '',
-                        category: 'all',
-                        containsAllergens: [],
-                        excludeAllergens: [],
-                        priceRange: 'all',
-                        safetyLevel: 'all'
-                      });
-                    }}
-                    className="text-blue-500 hover:text-blue-600 font-semibold"
-                  >
-                    すべてのフィルターをリセット
-                  </button>
-                </div>
-              </div>
-            )}
+            <AllergySearchResults />
           </div>
         </div>
       </div>

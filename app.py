@@ -2483,21 +2483,21 @@ def extract_text_from_pdf_content(pdf_content):
             # PDFを画像に変換（高速化）
             print("PDFを画像に変換中...")
             start_time = time.time()
-            pages = convert_from_path(temp_pdf_path, dpi=150)  # DPIをさらに下げて高速化
+            pages = convert_from_path(temp_pdf_path, dpi=100)  # DPIを大幅に下げて高速化
             conversion_time = time.time() - start_time
             print(f"PDFページ数: {len(pages)}")
             print(f"画像変換時間: {conversion_time:.2f}秒")
             
-            # ページ数制限（Render無料枠対応）
-            if len(pages) > 25:  # 25ページ制限（30秒以内で完了させるため）
-                print("警告: ページ数が多すぎます（25ページ制限）")
-                pages = pages[:25]  # 最初の25ページのみ処理
-                print(f"最初の25ページのみ処理します")
+            # ページ数制限（Render無料枠対応 - 20ページ対応）
+            if len(pages) > 20:  # 20ページ制限（30秒以内で完了させるため）
+                print("警告: ページ数が多すぎます（20ページ制限）")
+                pages = pages[:20]  # 最初の20ページのみ処理
+                print(f"最初の20ページのみ処理します")
             
             extracted_text = ""
             processed_pages = 0
             total_processing_time = 0
-            max_processing_time = 28  # 28秒制限（30秒以内で完了させるため、25ページ対応）
+            max_processing_time = 28  # 28秒制限（30秒以内で完了させるため、20ページ対応）
             
             # 各ページを処理（時間制限付き）
             for page_num, page_image in enumerate(pages):
@@ -2513,26 +2513,11 @@ def extract_text_from_pdf_content(pdf_content):
                 img_array = np.array(page_image)
                 img_cv = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
                 
-                # 表構造を検出（簡略化）
-                print(f"  表構造検出中...")
-                cells = detect_table_structure(img_cv)
-                print(f"  検出されたセル数: {len(cells)}")
-                
-                page_text = ""
-                if cells and len(cells) < 50:  # セル数が多すぎる場合は全体OCR
-                    # セルごとにOCR実行（制限付き）
-                    print(f"  セルごとOCR実行中...")
-                    for i, cell_region in enumerate(cells[:20]):  # 最大20セルまで
-                        cell_text = extract_text_from_cell(img_cv, cell_region)
-                        if cell_text:
-                            page_text += cell_text + "\t"
-                        if (i + 1) % 5 == 0:  # 5セルごとに改行
-                            page_text += "\n"
-                else:
-                    # 表が検出されない場合は全体をOCR（高速設定）
-                    print(f"  全体OCR実行中...")
-                    gray = cv2.cvtColor(img_cv, cv2.COLOR_BGR2GRAY)
-                    page_text = pytesseract.image_to_string(gray, lang='jpn+eng', config='--psm 6 -c tessedit_char_whitelist=0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzあいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん')
+                # 20ページ対応のため、さらに高速化
+                print(f"  全体OCR実行中（20ページ対応高速モード）...")
+                gray = cv2.cvtColor(img_cv, cv2.COLOR_BGR2GRAY)
+                # 20ページ対応高速OCR設定
+                page_text = pytesseract.image_to_string(gray, lang='jpn+eng', config='--psm 6 -c tessedit_char_whitelist=0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzあいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん')
                 
                 if page_text.strip():
                     extracted_text += f"\n--- ページ {page_num + 1} ---\n"
@@ -2549,9 +2534,9 @@ def extract_text_from_pdf_content(pdf_content):
                 print(f"  進捗: {((page_num + 1) / len(pages)) * 100:.1f}%")
                 
                 # メモリクリーンアップ
-                del img_array, img_cv, cells
+                del img_array, img_cv
                 
-                # 10ページごとに強制ガベージコレクション（25ページ対応）
+                # 10ページごとに強制ガベージコレクション（20ページ対応）
                 if (page_num + 1) % 10 == 0:
                     print(f"  10ページ処理完了、メモリクリーンアップ実行")
                     import gc

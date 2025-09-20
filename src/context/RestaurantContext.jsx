@@ -602,6 +602,9 @@ export const RestaurantProvider = ({ children }) => {
         console.log('商品データ変換完了:', transformedData.filter(item => item.category === 'products'));
       }
 
+      console.log('最終的なtransformedData:', transformedData);
+      console.log('商品データ数:', transformedData.filter(item => item.category === 'products').length);
+      console.log('店舗データ数:', transformedData.filter(item => item.category === 'restaurants').length);
       setAllItems(transformedData);
       
     } catch (err) {

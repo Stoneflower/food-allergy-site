@@ -97,6 +97,25 @@ const AllergySearchResults = () => {
           product_allergies_matrix: item.product_allergies_matrix || []
         });
         console.log('groupedStores - added menu item:', item.name, 'matrix:', item.product_allergies_matrix);
+      } else if (item.category === 'restaurants') {
+        // レストランの場合も処理する（商品データがない場合のフォールバック）
+        const storeName = item.name || '店舗名不明';
+        console.log('groupedStores - processing restaurant:', storeName);
+        
+        if (!stores[storeName]) {
+          stores[storeName] = {
+            name: storeName,
+            source: item.source,
+            menu_items: []
+          };
+        }
+        
+        // レストランの場合は空のメニューアイテムを追加
+        stores[storeName].menu_items.push({
+          name: item.name,
+          product_allergies_matrix: []
+        });
+        console.log('groupedStores - added restaurant:', item.name);
       }
     });
 

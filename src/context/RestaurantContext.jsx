@@ -450,13 +450,7 @@ export const RestaurantProvider = ({ children }) => {
         console.log('productsテーブルにアクセス中...');
         const { data, error } = await supabase
           .from('products')
-          .select(`
-            *,
-            product_allergies_matrix (
-              allergy_item_id,
-              presence_type
-            )
-          `);
+          .select('*');
         
         if (!error) {
           productData = data;
@@ -481,6 +475,24 @@ export const RestaurantProvider = ({ children }) => {
       }
       
       console.log('allergy_itemsデータ取得成功:', allergyData?.length || 0, '件');
+
+      // product_allergies_matrixを取得
+      let matrixData = [];
+      try {
+        console.log('product_allergies_matrixテーブルにアクセス中...');
+        const { data: matrix, error: matrixError } = await supabase
+          .from('product_allergies_matrix')
+          .select('*');
+        
+        if (!matrixError && matrix) {
+          matrixData = matrix;
+          console.log('product_allergies_matrixデータ取得成功:', matrix.length, '件');
+        } else {
+          console.error('product_allergies_matrixテーブルエラー:', matrixError);
+        }
+      } catch (err) {
+        console.error('product_allergies_matrixテーブルアクセスエラー:', err);
+      }
 
       // アレルギー項目を分類
       if (allergyData && allergyData.length > 0) {
@@ -551,6 +563,9 @@ export const RestaurantProvider = ({ children }) => {
           const defaultAllergyInfo = createDefaultAllergyInfo();
           const allergyFree = Object.keys(defaultAllergyInfo).filter(key => !defaultAllergyInfo[key]);
           
+          // この商品のproduct_allergies_matrixを取得
+          const productMatrix = matrixData.filter(matrix => matrix.product_id === product.id);
+          
           transformedData.push({
             id: product.id + 10000, // 店舗IDと重複しないように
             name: product.name || '商品名不明',
@@ -564,7 +579,7 @@ export const RestaurantProvider = ({ children }) => {
             brand: product.brand || '',
             allergyInfo: defaultAllergyInfo,
             allergyFree: allergyFree, // アレルギー対応項目のリスト
-            product_allergies_matrix: product.product_allergies_matrix || [], // Supabaseのproduct_allergies_matrixを追加
+            product_allergies_matrix: productMatrix, // 実際のproduct_allergies_matrixデータ
             description: product.description || '',
             source: {
               type: 'official',

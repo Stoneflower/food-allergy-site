@@ -32,7 +32,7 @@ const AllergySearchResults = () => {
       // 選択されたアレルギーが含まれていない商品を返す
       return selectedAllergies.every(selectedAllergy => {
         const allergyInfo = menuItem.product_allergies_matrix.find(
-          matrix => matrix.allergy_item_id === selectedAllergy
+          matrix => matrix.allergy_item_id === selectedAllergy || matrix.item_id === selectedAllergy
         );
         
         // アレルギー情報がない場合は安全とみなす
@@ -53,7 +53,9 @@ const AllergySearchResults = () => {
     const contaminations = [];
     menuItem.product_allergies_matrix.forEach(matrix => {
       if (matrix.presence_type === 'trace') {
-        const allergy = allergyOptions.find(a => a.id === matrix.allergy_item_id);
+        const allergy = allergyOptions.find(a => 
+          a.id === matrix.allergy_item_id || a.id === matrix.item_id
+        );
         if (allergy) {
           contaminations.push(`${allergy.name}コンタミネーション`);
         }

@@ -341,6 +341,12 @@ export const RestaurantProvider = ({ children }) => {
     );
   };
 
+  // お気に入り状態の確認
+  const isFavorite = (itemId, category) => {
+    const favoriteId = `${category}-${itemId}`;
+    return favorites.includes(favoriteId);
+  };
+
   // 履歴機能
   const addToHistory = (item) => {
     setHistory(prev => {
@@ -443,6 +449,7 @@ export const RestaurantProvider = ({ children }) => {
     
     // 関数
     toggleFavorite,
+    isFavorite,
     addToHistory,
     getFilteredItems,
     getFilteredRestaurants,

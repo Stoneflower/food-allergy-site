@@ -154,7 +154,7 @@ const Header = () => {
           {/* 検索バー */}
           <div className="flex justify-center items-center h-16">
             <form onSubmit={handleSearch} className="w-full max-w-6xl">
-              <div className="bg-white border-2 border-orange-400 rounded-lg overflow-hidden flex shadow-md">
+              <div className="bg-white border-2 border-orange-400 rounded-lg flex shadow-md">
                 {/* Category Dropdown */}
                 <div className="relative">
                   <select
@@ -184,7 +184,7 @@ const Header = () => {
                 </div>
 
                 {/* Allergy Selection - 拡張されたエリア */}
-                <div className="relative flex-1">
+                <div className="relative flex-1" style={{ zIndex: 10000 }}>
                   <button
                     type="button"
                     onClick={() => {
@@ -218,8 +218,12 @@ const Header = () => {
                       />
                       
                       {/* ドロップダウンメニュー */}
-                      <div className="absolute top-full left-0 bg-red-500 border-4 border-yellow-400 rounded-b-lg shadow-2xl z-[9999]"
-                           style={{ width: '700px', maxWidth: '95vw', minHeight: '200px' }}>
+                      <div className="absolute top-full left-0 bg-white border border-gray-200 rounded-b-lg shadow-2xl"
+                           style={{ 
+                             width: '700px', 
+                             maxWidth: '95vw',
+                             zIndex: 99999
+                           }}>
                         <div className="p-4">
                           <div className="flex items-center justify-between mb-3">
                             <h4 className="font-semibold text-gray-900">含まれるアレルギー成分</h4>

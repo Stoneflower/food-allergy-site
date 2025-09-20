@@ -21,17 +21,24 @@ const AllergySearchResults = () => {
   
   // デバッグ用ログ
   console.log('AllergySearchResults - filteredItems:', filteredItems);
+  console.log('AllergySearchResults - filteredItems products count:', filteredItems.filter(item => item.category === 'products').length);
+  console.log('AllergySearchResults - filteredItems restaurants count:', filteredItems.filter(item => item.category === 'restaurants').length);
   console.log('AllergySearchResults - selectedAllergies:', selectedAllergies);
   console.log('AllergySearchResults - allergyOptions:', allergyOptions);
 
   // 店舗の展開/折りたたみ機能
   const toggleStoreExpansion = (storeName) => {
+    console.log('toggleStoreExpansion called for:', storeName);
+    console.log('current expandedStores:', expandedStores);
     const newExpandedStores = new Set(expandedStores);
     if (newExpandedStores.has(storeName)) {
       newExpandedStores.delete(storeName);
+      console.log('closing store:', storeName);
     } else {
       newExpandedStores.add(storeName);
+      console.log('opening store:', storeName);
     }
+    console.log('new expandedStores:', newExpandedStores);
     setExpandedStores(newExpandedStores);
   };
 
@@ -137,14 +144,21 @@ const AllergySearchResults = () => {
     return result;
   }, [filteredItems, selectedAllergies]);
 
+  // デフォルトで最初の店舗を展開状態にする
+  React.useEffect(() => {
+    if (groupedStores.length > 0 && expandedStores.size === 0) {
+      const firstStoreName = groupedStores[0].name;
+      setExpandedStores(new Set([firstStoreName]));
+    }
+  }, [groupedStores, expandedStores.size]);
+
   // アレルギー成分を選択していない場合は全ての商品を表示
   if (selectedAllergies.length === 0) {
     return (
       <div className="space-y-6">
         {/* 検索条件表示 */}
-        <div className="bg-green-50 rounded-lg p-4">
-          <h3 className="font-semibold text-green-900 mb-2">検索条件</h3>
-          <p className="text-green-700">アレルギー成分を選択していないため、全ての商品を表示しています</p>
+        <div className="bg-gray-50 p-3 text-sm text-gray-600">
+          アレルギー成分を選択していないため、全ての商品を表示しています
         </div>
 
         {/* 店舗リスト */}
@@ -158,21 +172,20 @@ const AllergySearchResults = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: index * 0.1 }}
-              className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden"
+              className="bg-white border border-gray-200 overflow-hidden"
             >
               {/* 店舗ヘッダー */}
               <div 
-                className="bg-gradient-to-r from-green-500 to-blue-500 text-white p-4 cursor-pointer hover:from-green-600 hover:to-blue-600 transition-all"
+                className="bg-gray-50 border-b border-gray-200 p-3 cursor-pointer hover:bg-gray-100 transition-colors"
                 onClick={() => toggleStoreExpansion(store.name)}
               >
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <SafeIcon icon={FiShield} className="w-6 h-6" />
-                    <h2 className="text-xl font-bold">{store.name}</h2>
-                    <span className="text-sm bg-white/20 px-2 py-1 rounded">
-                      {allProducts.length}件
+                  <div className="flex items-center space-x-2">
+                    <h3 className="text-base font-medium text-gray-800">{store.name}</h3>
+                    <span className="text-xs text-gray-500">
+                      ({allProducts.length}件)
                     </span>
-                    <span className="text-sm">
+                    <span className="text-xs text-gray-400">
                       {expandedStores.has(store.name) ? '▼' : '▶'}
                     </span>
                   </div>
@@ -181,11 +194,10 @@ const AllergySearchResults = () => {
                       href={store.source.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="bg-white/20 hover:bg-white/30 text-white px-3 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+                      className="text-xs text-blue-600 hover:text-blue-800"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <span>アレルギー情報元</span>
-                      <SafeIcon icon={FiExternalLink} className="w-4 h-4" />
+                      情報元
                     </a>
                   )}
                 </div>
@@ -193,38 +205,26 @@ const AllergySearchResults = () => {
 
               {/* 商品リスト */}
               {expandedStores.has(store.name) && (
-                <div className="p-4">
+                <div className="p-2">
                   {allProducts.length > 0 ? (
-                    <div className="space-y-3">
-                      <h3 className="font-semibold text-gray-800 mb-3">
-                        安全な商品 ({allProducts.length}件)
-                      </h3>
+                    <div className="space-y-1">
                     {allProducts.map((product, productIndex) => {
                       const contaminations = getContaminationInfo(product);
                       
                       return (
                         <div
                           key={productIndex}
-                          className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg"
+                          className="flex items-center justify-between p-2 bg-gray-50 border-l-2 border-green-400"
                         >
                           <div className="flex-1">
-                            <h4 className="font-medium text-gray-900">{product.name}</h4>
+                            <div className="text-sm text-gray-800">
+                              {product.name}
+                            </div>
                             {contaminations.length > 0 && (
-                              <div className="flex flex-wrap gap-1 mt-1">
-                                {contaminations.map((contamination, contIndex) => (
-                                  <span
-                                    key={contIndex}
-                                    className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs flex items-center space-x-1"
-                                  >
-                                    <SafeIcon icon={FiAlertTriangle} className="w-3 h-3" />
-                                    <span>{contamination}</span>
-                                  </span>
-                                ))}
+                              <div className="text-xs text-yellow-600 mt-1">
+                                {contaminations.join(', ')}
                               </div>
                             )}
-                          </div>
-                          <div className="text-gray-600">
-                            <SafeIcon icon={FiShield} className="w-5 h-5" />
                           </div>
                         </div>
                       );
@@ -285,62 +285,59 @@ const AllergySearchResults = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: index * 0.1 }}
-            className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden"
+            className="bg-white border border-gray-200 overflow-hidden"
           >
             {/* 店舗ヘッダー */}
-            <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white p-4">
+            <div 
+              className="bg-gray-50 border-b border-gray-200 p-3 cursor-pointer hover:bg-gray-100 transition-colors"
+              onClick={() => toggleStoreExpansion(store.name)}
+            >
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <SafeIcon icon={FiShield} className="w-6 h-6" />
-                  <h2 className="text-xl font-bold">{store.name}</h2>
+                <div className="flex items-center space-x-2">
+                  <h3 className="text-base font-medium text-gray-800">{store.name}</h3>
+                  <span className="text-xs text-gray-500">
+                    ({safeProducts.length}件)
+                  </span>
+                  <span className="text-xs text-gray-400">
+                    {expandedStores.has(store.name) ? '▼' : '▶'}
+                  </span>
                 </div>
                 {store.source?.url && (
                   <a
                     href={store.source.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="bg-white/20 hover:bg-white/30 text-white px-3 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+                    className="text-xs text-blue-600 hover:text-blue-800"
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    <span>アレルギー情報元</span>
-                    <SafeIcon icon={FiExternalLink} className="w-4 h-4" />
+                    情報元
                   </a>
                 )}
               </div>
             </div>
 
             {/* 商品リスト */}
-            <div className="p-4">
-              {safeProducts.length > 0 ? (
-                <div className="space-y-3">
-                  <h3 className="font-semibold text-gray-800 mb-3">
-                    安全な商品 ({safeProducts.length}件)
-                  </h3>
+            {expandedStores.has(store.name) && (
+              <div className="p-2">
+                {safeProducts.length > 0 ? (
+                  <div className="space-y-1">
                   {safeProducts.map((product, productIndex) => {
                     const contaminations = getContaminationInfo(product);
                     
                     return (
                       <div
                         key={productIndex}
-                        className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg"
+                        className="flex items-center justify-between p-2 bg-gray-50 border-l-2 border-green-400"
                       >
                         <div className="flex-1">
-                          <h4 className="font-medium text-gray-900">{product.name}</h4>
+                          <div className="text-sm text-gray-800">
+                            {product.name}
+                          </div>
                           {contaminations.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {contaminations.map((contamination, contIndex) => (
-                                <span
-                                  key={contIndex}
-                                  className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs flex items-center space-x-1"
-                                >
-                                  <SafeIcon icon={FiAlertTriangle} className="w-3 h-3" />
-                                  <span>{contamination}</span>
-                                </span>
-                              ))}
+                            <div className="text-xs text-yellow-600 mt-1">
+                              {contaminations.join(', ')}
                             </div>
                           )}
-                        </div>
-                        <div className="text-green-600">
-                          <SafeIcon icon={FiShield} className="w-5 h-5" />
                         </div>
                       </div>
                     );
@@ -351,9 +348,10 @@ const AllergySearchResults = () => {
                   <div className="text-4xl mb-2">⚠️</div>
                   <p>選択されたアレルギー成分を含まない商品が見つかりませんでした</p>
                 </div>
+                )}
+                </div>
               )}
-            </div>
-          </motion.div>
+            </motion.div>
         );
       })}
 

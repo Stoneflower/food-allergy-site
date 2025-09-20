@@ -805,6 +805,8 @@ export const RestaurantProvider = ({ children }) => {
     let items = allItemsData;
     
     console.log('getFilteredItems - allItemsData:', allItemsData);
+    console.log('getFilteredItems - allItemsData products count:', allItemsData.filter(item => item.category === 'products').length);
+    console.log('getFilteredItems - allItemsData restaurants count:', allItemsData.filter(item => item.category === 'restaurants').length);
     console.log('getFilteredItems - selectedCategory:', selectedCategory);
     console.log('getFilteredItems - selectedAllergies:', selectedAllergies);
     console.log('getFilteredItems - searchKeyword:', searchKeyword);

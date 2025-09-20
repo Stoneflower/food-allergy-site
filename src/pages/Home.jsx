@@ -357,7 +357,7 @@ const Home = () => {
                     <span>最近共有された商品</span>
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {products.slice(0, 3).map((product, index) => (
+                    {(products || []).slice(0, 3).map((product, index) => (
                       <motion.div
                         key={product.id}
                         initial={{ opacity: 0, y: 20 }}

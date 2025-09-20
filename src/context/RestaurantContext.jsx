@@ -301,7 +301,7 @@ export const RestaurantProvider = ({ children }) => {
       console.log('Supabase接続テスト開始...');
       const { data, error } = await supabase
         .from('allergy_items')
-        .select('count')
+        .select('id')
         .limit(1);
       
       if (error) {
@@ -454,7 +454,9 @@ export const RestaurantProvider = ({ children }) => {
     testSupabaseConnection,
     
     // データ
-    categories
+    categories,
+    products: getFilteredProducts(),
+    restaurants: getFilteredRestaurants()
   };
 
   return (

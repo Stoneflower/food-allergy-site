@@ -73,7 +73,7 @@ const Header = () => {
               </div>
               <div className="flex flex-col">
                 <div className="flex items-baseline space-x-1">
-                  <span className="text-lg font-bold text-white">CanIEat?</span>
+                  <span className="text-lg font-bold text-white">CanIEatOo?</span>
                   <span className="text-orange-200 text-sm font-bold">✓</span>
                 </div>
                 <span className="text-orange-200 text-xs font-medium">みんなで共有</span>
@@ -108,17 +108,6 @@ const Header = () => {
           
           {/* PC版の右側メニュー - 「商品を投稿」をより目立つように */}
           <div className="hidden md:flex items-center space-x-4">
-            {/* PDF処理ボタン */}
-            <Link
-              to="/pdf-processor"
-              className="relative group"
-            >
-              <div className="flex items-center space-x-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white px-4 py-2 rounded-lg font-medium hover:from-blue-400 hover:to-purple-400 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105">
-                <SafeIcon icon={FiCamera} className="w-4 h-4" />
-                <span>PDF処理</span>
-              </div>
-            </Link>
-            
             {/* より目立つ投稿ボタン */}
             <Link
               to="/upload"
@@ -138,7 +127,7 @@ const Header = () => {
               to="/about"
               className="hover:text-orange-200 transition-colors font-medium"
             >
-              CanIEat?について
+              CanIEatOo?について
             </Link>
             <Link
               to="/login"
@@ -498,7 +487,7 @@ const Header = () => {
                 className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
                 onClick={() => setIsMenuOpen(false)}
               >
-                CanIEat?について
+                CanIEatOo?について
               </Link>
               <Link
                 to="/login"

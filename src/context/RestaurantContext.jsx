@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 
 const RestaurantContext = createContext();
 
@@ -25,8 +26,18 @@ export const RestaurantProvider = ({ children }) => {
     severityLevel: 'medium'
   });
 
-  // 法定8品目（特定原材料）- 表示義務
-  const mandatoryAllergies = [
+  // Supabaseから取得したデータ
+  const [allItems, setAllItems] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // アレルギー項目の状態
+  const [allergyOptions, setAllergyOptions] = useState([]);
+  const [mandatoryAllergies, setMandatoryAllergies] = useState([]);
+  const [recommendedAllergies, setRecommendedAllergies] = useState([]);
+
+  // デフォルトのアレルギー項目（Supabaseから取得できない場合のフォールバック）
+  const defaultMandatoryAllergies = [
     { id: 'egg', name: '卵', icon: '🥚' },
     { id: 'milk', name: '乳', icon: '🥛' },
     { id: 'wheat', name: '小麦', icon: '🌾' },
@@ -37,8 +48,7 @@ export const RestaurantProvider = ({ children }) => {
     { id: 'walnut', name: 'くるみ', icon: '🌰' }
   ];
 
-  // 推奨20品目（特定原材料に準ずるもの）- 表示推奨
-  const recommendedAllergies = [
+  const defaultRecommendedAllergies = [
     { id: 'almond', name: 'アーモンド', icon: '🌰' },
     { id: 'abalone', name: 'あわび', icon: '🐚' },
     { id: 'squid', name: 'いか', icon: '🦑' },
@@ -61,7 +71,7 @@ export const RestaurantProvider = ({ children }) => {
     { id: 'apple', name: 'りんご', icon: '🍎' }
   ];
 
-  const allergyOptions = [...mandatoryAllergies, ...recommendedAllergies];
+  const defaultAllergyOptions = [...defaultMandatoryAllergies, ...defaultRecommendedAllergies];
 
   const categories = [
     { id: 'all', name: '全て', icon: '🔍' },
@@ -408,8 +418,180 @@ export const RestaurantProvider = ({ children }) => {
     }
   ];
 
-  // 統合データ
-  const allItems = [...restaurants, ...products, ...supermarkets, ...onlineShops];
+  // Supabaseからデータを取得する関数
+  const fetchDataFromSupabase = async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      // 店舗情報を取得
+      const { data: storeData, error: storeError } = await supabase
+        .from('store_locations')
+          .select(`
+            *,
+            menu_items (
+              *,
+            product_allergies_matrix (
+              *
+            )
+          )
+        `);
+
+      if (storeError) throw storeError;
+
+      // 商品情報を取得
+      const { data: productData, error: productError } = await supabase
+        .from('products')
+        .select(`
+          *,
+          product_allergies_matrix (
+            *
+          )
+        `);
+
+      if (productError) throw productError;
+
+      // アレルギー項目を取得
+      const { data: allergyData, error: allergyError } = await supabase
+        .from('allergy_items')
+        .select('*')
+        .order('id');
+
+      if (allergyError) throw allergyError;
+
+      // アレルギー項目を分類
+      if (allergyData && allergyData.length > 0) {
+        const mandatory = allergyData.filter(item => item.category === 'mandatory');
+        const recommended = allergyData.filter(item => item.category === 'recommended');
+        
+        setMandatoryAllergies(mandatory.map(item => ({
+          id: item.item_id,
+          name: item.name,
+          icon: item.icon || '⚠️'
+        })));
+        
+        setRecommendedAllergies(recommended.map(item => ({
+          id: item.item_id,
+          name: item.name,
+          icon: item.icon || '⚠️'
+        })));
+        
+        setAllergyOptions([...mandatory, ...recommended].map(item => ({
+          id: item.item_id,
+          name: item.name,
+          icon: item.icon || '⚠️'
+        })));
+      } else {
+        // フォールバック
+        setMandatoryAllergies(defaultMandatoryAllergies);
+        setRecommendedAllergies(defaultRecommendedAllergies);
+        setAllergyOptions(defaultAllergyOptions);
+      }
+
+      // データを統合してallItems形式に変換
+      const transformedData = [];
+      
+      // 店舗データを変換
+      if (storeData) {
+        storeData.forEach(store => {
+          transformedData.push({
+            id: store.id,
+            name: store.name,
+            image: store.image_url || 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400',
+            rating: 4.0, // デフォルト値
+            reviewCount: 0,
+            price: '¥1,000～¥2,000', // デフォルト値
+            area: store.address || '',
+            cuisine: 'レストラン',
+            category: 'restaurants',
+            allergyInfo: convertAllergyMatrix(store.menu_items?.[0]?.product_allergies_matrix || []),
+            description: store.description || '',
+            source: {
+              type: 'official',
+              contributor: '店舗公式',
+              lastUpdated: new Date().toISOString().split('T')[0],
+              confidence: 90,
+              verified: true,
+              url: store.store_url || ''
+            }
+          });
+        });
+      }
+
+      // 商品データを変換
+      if (productData) {
+        productData.forEach(product => {
+          transformedData.push({
+            id: product.id + 10000, // 店舗IDと重複しないように
+            name: product.name,
+            image: product.image_url || 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400',
+            rating: 4.0,
+            reviewCount: 0,
+            price: '¥500～¥1,500',
+            area: '',
+            cuisine: '商品',
+            category: 'products',
+            brand: product.brand || '',
+            allergyInfo: convertAllergyMatrix(product.product_allergies_matrix || []),
+            description: product.description || '',
+            source: {
+              type: 'official',
+              contributor: '商品公式',
+              lastUpdated: new Date().toISOString().split('T')[0],
+              confidence: 85,
+              verified: true,
+              url: product.source_url || ''
+            }
+          });
+        });
+      }
+
+      setAllItems(transformedData);
+      
+    } catch (err) {
+      console.error('データ取得エラー:', err);
+      setError(err.message);
+      // エラー時はモックデータを使用
+      setAllItems([...restaurants, ...products, ...supermarkets, ...onlineShops]);
+      // アレルギー項目もフォールバック
+      setMandatoryAllergies(defaultMandatoryAllergies);
+      setRecommendedAllergies(defaultRecommendedAllergies);
+      setAllergyOptions(defaultAllergyOptions);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // アレルギーマトリックスをallergyInfo形式に変換
+  const convertAllergyMatrix = (matrix) => {
+    const allergyInfo = {};
+    
+    // デフォルトで全てtrue（含有）に設定
+    const currentAllergyOptions = allergyOptions.length > 0 ? allergyOptions : defaultAllergyOptions;
+    currentAllergyOptions.forEach(allergy => {
+      allergyInfo[allergy.id] = true;
+    });
+
+    // マトリックスデータで上書き
+    if (matrix && Array.isArray(matrix)) {
+      matrix.forEach(item => {
+        if (item.allergy_item_id && item.presence_type) {
+          // presence_typeが'direct'または'trace'の場合は含有
+          allergyInfo[item.allergy_item_id] = ['direct', 'trace'].includes(item.presence_type);
+        }
+      });
+    }
+
+    return allergyInfo;
+  };
+
+  // コンポーネントマウント時にデータを取得
+  useEffect(() => {
+    fetchDataFromSupabase();
+  }, []);
+
+  // 統合データ（Supabaseデータが空の場合はモックデータを使用）
+  const allItemsData = allItems.length > 0 ? allItems : [...restaurants, ...products, ...supermarkets, ...onlineShops];
 
   // お気に入り機能
   const toggleFavorite = (itemId, category) => {
@@ -489,7 +671,7 @@ export const RestaurantProvider = ({ children }) => {
 
   // フィルタリング機能
   const getFilteredItems = () => {
-    let items = allItems;
+    let items = allItemsData;
 
     if (selectedCategory !== 'all') {
       items = items.filter(item => item.category === selectedCategory);
@@ -532,26 +714,26 @@ export const RestaurantProvider = ({ children }) => {
 
   // レコメンド機能
   const getRecommendations = () => {
-    if (history.length === 0) return allItems.slice(0, 3);
+    if (history.length === 0) return allItemsData.slice(0, 3);
 
     // 履歴から類似アイテムを推薦（簡単なロジック）
     const lastViewed = history[0];
-    return allItems.filter(item =>
+    return allItemsData.filter(item =>
       item.id !== lastViewed.id && item.category === lastViewed.category
     ).slice(0, 3);
   };
 
   const value = {
     // データ
-    allergyOptions,
-    mandatoryAllergies,
-    recommendedAllergies,
+    allergyOptions: allergyOptions.length > 0 ? allergyOptions : defaultAllergyOptions,
+    mandatoryAllergies: mandatoryAllergies.length > 0 ? mandatoryAllergies : defaultMandatoryAllergies,
+    recommendedAllergies: recommendedAllergies.length > 0 ? recommendedAllergies : defaultRecommendedAllergies,
     categories,
     restaurants,
     products,
     supermarkets,
     onlineShops,
-    allItems,
+    allItems: allItemsData,
 
     // 状態
     selectedAllergies,
@@ -568,6 +750,11 @@ export const RestaurantProvider = ({ children }) => {
     setIsLoggedIn,
     userSettings,
     setUserSettings,
+
+    // Supabase関連
+    isLoading,
+    error,
+    fetchDataFromSupabase,
 
     // 機能
     getFilteredRestaurants,

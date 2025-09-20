@@ -1,0 +1,5 @@
+Flask==3.0.0
+requests
+python-dotenv
+PyMuPDF==1.23.14
+Pillow>=10.0.0

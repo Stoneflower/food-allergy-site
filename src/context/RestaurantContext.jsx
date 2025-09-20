@@ -450,7 +450,13 @@ export const RestaurantProvider = ({ children }) => {
         console.log('productsテーブルにアクセス中...');
         const { data, error } = await supabase
           .from('products')
-          .select('*');
+          .select(`
+            *,
+            product_allergies_matrix (
+              allergy_item_id,
+              presence_type
+            )
+          `);
         
         if (!error) {
           productData = data;
@@ -558,6 +564,7 @@ export const RestaurantProvider = ({ children }) => {
             brand: product.brand || '',
             allergyInfo: defaultAllergyInfo,
             allergyFree: allergyFree, // アレルギー対応項目のリスト
+            product_allergies_matrix: product.product_allergies_matrix || [], // Supabaseのproduct_allergies_matrixを追加
             description: product.description || '',
             source: {
               type: 'official',

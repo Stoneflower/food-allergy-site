@@ -49,8 +49,9 @@ const AllergySearchResults = () => {
     }
 
     return store.menu_items.filter(menuItem => {
-      if (!menuItem.product_allergies_matrix || !Array.isArray(menuItem.product_allergies_matrix)) {
-        return false;
+      if (!menuItem.product_allergies_matrix || !Array.isArray(menuItem.product_allergies_matrix) || menuItem.product_allergies_matrix.length === 0) {
+        console.log(`商品 ${menuItem.name} はアレルギー情報がないため表示`);
+        return true;
       }
 
       // 選択されたアレルギーが含まれていない商品を返す
@@ -63,9 +64,10 @@ const AllergySearchResults = () => {
         console.log(`アレルギー判定 - 商品: ${menuItem.name}, アレルギーID: ${selectedAllergy}`);
         console.log('allergyInfo:', allergyInfo);
         
-        // アレルギー情報がない場合は安全とみなす
+        // アレルギー情報がない場合は表示する（安全とみなす）
         if (!allergyInfo) {
-          console.log('アレルギー情報なし - 安全とみなす');
+          console.log(`商品 ${menuItem.name} のアレルギーID ${selectedAllergy} の情報なし - 表示する`);
+          console.log('利用可能なallergy_item_id:', menuItem.product_allergies_matrix.map(m => m.allergy_item_id));
           return true;
         }
         
@@ -123,13 +125,28 @@ const AllergySearchResults = () => {
         // 店舗に関連する商品を追加
         if (item.product_allergies_matrix && item.product_allergies_matrix.length > 0) {
           // デバッグ: product_allergies_matrixの構造を確認
+          console.log('=== 店舗:', storeName, '===');
           console.log('product_allergies_matrix全体:', item.product_allergies_matrix);
           console.log('product_allergies_matrix件数:', item.product_allergies_matrix.length);
+          console.log('最初のmatrix要素:', item.product_allergies_matrix[0]);
           
           // product_allergies_matrixの全要素を処理
           item.product_allergies_matrix.forEach((matrix, index) => {
             const menuName = matrix.menu_name || `商品${index + 1}`;
             console.log(`商品${index + 1}:`, menuName, 'matrix:', matrix);
+            
+            // 不明な商品のチェック
+            if (!matrix.menu_name) {
+              console.warn(`⚠️ 不明な商品発見: matrix.menu_nameがnull/undefined - 商品${index + 1}として表示`);
+            }
+            
+            // 同じ商品名で異なるアレルギー情報があるかチェック
+            const existingProduct = stores[storeName].menu_items.find(item => item.name === menuName);
+            if (existingProduct) {
+              console.log(`🔄 同じ商品名発見: ${menuName} - 既存のアレルギー情報と新しい情報を比較`);
+              console.log('既存のmatrix:', existingProduct.product_allergies_matrix);
+              console.log('新しいmatrix:', matrix);
+            }
             
             stores[storeName].menu_items.push({
               name: menuName,
@@ -146,7 +163,11 @@ const AllergySearchResults = () => {
           });
           console.log('groupedStores - added related product:', item.related_product.name, 'to store:', storeName);
         } else {
-          // 関連商品がない場合
+          // 関連商品がない場合（通常は存在しないはず）
+          console.error(`❌ 予期しない状況: product_allergies_matrixもrelated_productもない`);
+          console.error('item詳細:', item);
+          console.error('storeName:', storeName);
+          console.warn(`⚠️ 不明な商品発見: product_allergies_matrixもrelated_productもない - 商品情報なしとして表示`);
           stores[storeName].menu_items.push({
             name: '商品情報なし',
             product_allergies_matrix: []

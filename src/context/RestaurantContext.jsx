@@ -91,22 +91,9 @@ export const RestaurantProvider = ({ children }) => {
       let storeData = null;
       let productData = null;
       
-      // 店舗情報を取得（addressのみ）
-      try {
-        console.log('store_locationsテーブルからaddress、source_url、store_list_urlを取得中...');
-        const { data, error } = await supabase
-          .from('store_locations')
-          .select('address, source_url, store_list_url');
-        
-        if (!error) {
-          storeData = data;
-          console.log('store_locations address取得成功:', data?.length || 0, '件');
-        } else {
-          console.error('store_locationsテーブルエラー:', error);
-        }
-      } catch (err) {
-        console.error('store_locationsテーブルアクセスエラー:', err);
-      }
+      // 店舗情報を取得（無効化 - addressを店舗名として使用するのは不適切）
+      console.log('store_locationsテーブルアクセスを無効化（addressを店舗名として使用するのは不適切）');
+      storeData = null;
 
       // 商品情報を取得（シンプルなクエリ）
       try {
@@ -189,8 +176,8 @@ export const RestaurantProvider = ({ children }) => {
       // データを統合してallItems形式に変換
       const transformedData = [];
       
-      // 店舗データを変換（addressのみ使用）
-      if (storeData && storeData.length > 0) {
+      // 店舗データを変換（無効化 - addressを店舗名として使用するのは不適切）
+      if (false && storeData && storeData.length > 0) {
         console.log('店舗データ変換開始:', storeData);
         console.log('最初の店舗データの構造:', storeData[0]);
         storeData.forEach(store => {

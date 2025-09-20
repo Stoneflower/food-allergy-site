@@ -2480,52 +2480,59 @@ def extract_text_from_pdf_content(pdf_content):
         print(f"一時ファイル: {temp_pdf_path}")
         
         try:
-            # PDFを画像に変換
+            # PDFを画像に変換（高速化）
             print("PDFを画像に変換中...")
             start_time = time.time()
-            pages = convert_from_path(temp_pdf_path, dpi=200)  # 軽量化のためDPIを下げる
+            pages = convert_from_path(temp_pdf_path, dpi=150)  # DPIをさらに下げて高速化
             conversion_time = time.time() - start_time
             print(f"PDFページ数: {len(pages)}")
             print(f"画像変換時間: {conversion_time:.2f}秒")
             
-            # ページ数制限（Render無料枠対応）
-            if len(pages) > 50:  # 50ページ制限
-                print("警告: ページ数が多すぎます（50ページ制限）")
-                pages = pages[:50]  # 最初の50ページのみ処理
-                print(f"最初の50ページのみ処理します")
+            # ページ数制限（Render無料枠対応 - より厳しく制限）
+            if len(pages) > 10:  # 10ページ制限（30秒以内で完了させるため）
+                print("警告: ページ数が多すぎます（10ページ制限）")
+                pages = pages[:10]  # 最初の10ページのみ処理
+                print(f"最初の10ページのみ処理します")
             
             extracted_text = ""
             processed_pages = 0
+            total_processing_time = 0
+            max_processing_time = 25  # 25秒制限（30秒以内で完了させるため）
             
-            # 各ページを処理
+            # 各ページを処理（時間制限付き）
             for page_num, page_image in enumerate(pages):
                 page_start = time.time()
                 print(f"ページ {page_num + 1}/{len(pages)} を処理中...")
+                
+                # 処理時間チェック
+                if total_processing_time > max_processing_time:
+                    print(f"処理時間制限に達しました（{max_processing_time}秒）。残り{len(pages) - page_num}ページをスキップします。")
+                    break
                 
                 # 画像をOpenCV形式に変換
                 img_array = np.array(page_image)
                 img_cv = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
                 
-                # 表構造を検出
+                # 表構造を検出（簡略化）
                 print(f"  表構造検出中...")
                 cells = detect_table_structure(img_cv)
                 print(f"  検出されたセル数: {len(cells)}")
                 
                 page_text = ""
-                if cells:
-                    # セルごとにOCR実行
+                if cells and len(cells) < 50:  # セル数が多すぎる場合は全体OCR
+                    # セルごとにOCR実行（制限付き）
                     print(f"  セルごとOCR実行中...")
-                    for i, cell_region in enumerate(cells):
+                    for i, cell_region in enumerate(cells[:20]):  # 最大20セルまで
                         cell_text = extract_text_from_cell(img_cv, cell_region)
                         if cell_text:
                             page_text += cell_text + "\t"
                         if (i + 1) % 5 == 0:  # 5セルごとに改行
                             page_text += "\n"
                 else:
-                    # 表が検出されない場合は全体をOCR
-                    print(f"  表検出なし、全体OCR実行中...")
+                    # 表が検出されない場合は全体をOCR（高速設定）
+                    print(f"  全体OCR実行中...")
                     gray = cv2.cvtColor(img_cv, cv2.COLOR_BGR2GRAY)
-                    page_text = pytesseract.image_to_string(gray, lang='jpn+eng', config='--psm 6')
+                    page_text = pytesseract.image_to_string(gray, lang='jpn+eng', config='--psm 6 -c tessedit_char_whitelist=0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzあいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん')
                 
                 if page_text.strip():
                     extracted_text += f"\n--- ページ {page_num + 1} ---\n"
@@ -2536,15 +2543,17 @@ def extract_text_from_pdf_content(pdf_content):
                     print(f"  ページ {page_num + 1}: OCR結果なし")
                 
                 page_time = time.time() - page_start
+                total_processing_time += page_time
                 print(f"  ページ処理時間: {page_time:.2f}秒")
+                print(f"  累積処理時間: {total_processing_time:.2f}秒")
                 print(f"  進捗: {((page_num + 1) / len(pages)) * 100:.1f}%")
                 
                 # メモリクリーンアップ
                 del img_array, img_cv, cells
                 
-                # 10ページごとに強制ガベージコレクション
-                if (page_num + 1) % 10 == 0:
-                    print(f"  10ページ処理完了、メモリクリーンアップ実行")
+                # 5ページごとに強制ガベージコレクション
+                if (page_num + 1) % 5 == 0:
+                    print(f"  5ページ処理完了、メモリクリーンアップ実行")
                     import gc
                     gc.collect()
             

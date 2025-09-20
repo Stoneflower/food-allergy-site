@@ -534,7 +534,7 @@ export const RestaurantProvider = ({ children }) => {
           const allergyFree = Object.keys(defaultAllergyInfo).filter(key => !defaultAllergyInfo[key]);
           
           console.log('店舗データ:', store);
-          const storeName = store.name || store.store_name || '店舗名不明';
+          const storeName = store.store_name || store.name || '店舗名不明';
           console.log('店舗名:', storeName);
           
           transformedData.push({
@@ -573,6 +573,8 @@ export const RestaurantProvider = ({ children }) => {
           // この商品のproduct_allergies_matrixを取得
           const productMatrix = matrixData.filter(matrix => matrix.product_id === product.id);
           console.log(`商品 ${product.name} のmatrix:`, productMatrix);
+          console.log(`商品 ${product.name} のmatrix length:`, productMatrix.length);
+          console.log(`matrixData全体:`, matrixData.slice(0, 5)); // 最初の5件を表示
           
           transformedData.push({
             id: product.id + 10000, // 店舗IDと重複しないように

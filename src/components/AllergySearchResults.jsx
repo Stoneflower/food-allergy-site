@@ -97,6 +97,7 @@ const AllergySearchResults = () => {
           product_allergies_matrix: item.product_allergies_matrix || []
         });
         console.log('groupedStores - added menu item:', item.name, 'matrix:', item.product_allergies_matrix);
+        console.log('groupedStores - matrix length:', item.product_allergies_matrix ? item.product_allergies_matrix.length : 'undefined');
       } else if (item.category === 'restaurants') {
         // レストランの場合も処理する（商品データがない場合のフォールバック）
         const storeName = item.name || '店舗名不明';

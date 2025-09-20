@@ -206,8 +206,9 @@ export const RestaurantProvider = ({ children }) => {
           const relatedProduct = productData.find(product => product.id === store.product_id);
           console.log('関連商品:', relatedProduct);
           
-          const storeName = relatedProduct ? relatedProduct.name : (store.store_name || store.name || '店舗名不明');
+          const storeName = store.store_name || store.name || '店舗名不明';
           console.log('店舗名:', storeName);
+          console.log('関連商品名:', relatedProduct ? relatedProduct.name : 'なし');
           
           transformedData.push({
             id: store.id,
@@ -222,7 +223,8 @@ export const RestaurantProvider = ({ children }) => {
             brand: '',
             allergyInfo: defaultAllergyInfo,
             allergyFree: allergyFree, // アレルギー対応項目のリスト
-            product_allergies_matrix: [], // 店舗には商品マトリックスはない
+            product_allergies_matrix: relatedProduct ? (matrixData.filter(matrix => matrix.product_id === relatedProduct.id)) : [], // 関連商品のマトリックス
+            related_product: relatedProduct, // 関連商品情報
             description: '',
             source: {
               type: 'official',
@@ -245,6 +247,12 @@ export const RestaurantProvider = ({ children }) => {
           const defaultAllergyInfo = createDefaultAllergyInfo();
           const allergyFree = Object.keys(defaultAllergyInfo).filter(key => !defaultAllergyInfo[key]);
           
+          // デバッグ: 商品データの構造を確認
+          console.log(`商品データ構造確認 - ${product.name}:`, product);
+          console.log(`商品のstore_name:`, product.store_name);
+          console.log(`商品の全プロパティ:`, Object.keys(product));
+          console.log(`productsテーブルのnameを店舗名として使用: ${product.name}`);
+          
           // この商品のproduct_allergies_matrixを取得
           const productMatrix = matrixData.filter(matrix => matrix.product_id === product.id);
           console.log(`商品 ${product.name} のmatrix:`, productMatrix);
@@ -253,18 +261,19 @@ export const RestaurantProvider = ({ children }) => {
           
           transformedData.push({
             id: product.id + 10000, // 店舗IDと重複しないように
-            name: product.name || '商品名不明',
+            name: product.name || '店舗名不明', // productsテーブルのnameを店舗名として使用
             image: product.image_url || 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400',
             rating: 4.0,
             reviewCount: 0,
             price: '¥500～¥1,500',
             area: '',
             cuisine: '商品',
-            category: 'products',
+            category: 'restaurants', // productsテーブルもrestaurantsカテゴリとして扱う
             brand: product.brand || '',
             allergyInfo: defaultAllergyInfo,
             allergyFree: allergyFree, // アレルギー対応項目のリスト
             product_allergies_matrix: productMatrix, // 実際のproduct_allergies_matrixデータ
+            related_product: product, // productsテーブルの場合、自分自身が商品
             description: product.description || '',
             source: {
               type: 'official',

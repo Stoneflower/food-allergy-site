@@ -8,32 +8,38 @@ from werkzeug.utils import secure_filename
 # import pandas as pd  # Netlify対応のため一時的にコメントアウト
 import requests
 
-# 必要なライブラリをオプショナルインポート
+# Tesseract OCR + OpenCVライブラリをオプショナルインポート
 try:
-    print("ライブラリインポート開始...")
-    from paddleocr import PaddleOCR, PPStructure, save_structure_res
-    print("PaddleOCR imported successfully")
+    print("Tesseract OCR + OpenCVライブラリインポート開始...")
     
+    # PDF処理
     from pdf2image import convert_from_path
     print("pdf2image imported successfully")
     
-    import pandas as pd
-    print("pandas imported successfully")
+    # OCR処理
+    import pytesseract
+    print("pytesseract imported successfully")
     
+    # 画像処理
     import cv2
     print("cv2 imported successfully")
     
     import numpy as np
     print("numpy imported successfully")
     
-    import psutil
-    print("psutil imported successfully")
+    # データ処理
+    import pandas as pd
+    print("pandas imported successfully")
     
-    PADDLEOCR_AVAILABLE = True
-    print("All libraries imported successfully")
+    # 画像ライブラリ
+    from PIL import Image
+    print("PIL imported successfully")
+    
+    TESSERACT_AVAILABLE = True
+    print("Tesseract OCR + OpenCVライブラリ imported successfully")
 except ImportError as e:
-    PADDLEOCR_AVAILABLE = False
-    print(f"Library import failed: {e}")
+    TESSERACT_AVAILABLE = False
+    print(f"Tesseract OCR + OpenCVライブラリ import failed: {e}")
     print(f"Error type: {type(e)}")
     import traceback
     traceback.print_exc()
@@ -69,39 +75,70 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 ocr = None
 print(f"PaddleOCR available: {PADDLEOCR_AVAILABLE}")
 
-def get_ocr():
-    """PaddleOCRインスタンスを取得（遅延初期化）"""
-    global ocr
-    if ocr is None and PADDLEOCR_AVAILABLE:
-        try:
-            print("Initializing PaddleOCR...")
-            # Render環境での動作を考慮した設定
-            try:
-                # まず日本語で試行
-                ocr = PaddleOCR(use_angle_cls=True, lang='japan', use_gpu=False)
-                print("PaddleOCR initialized successfully with Japanese")
-            except Exception as e:
-                print(f"Japanese initialization failed: {e}")
-                try:
-                    # 中国語で試行
-                    ocr = PaddleOCR(use_angle_cls=True, lang='ch', use_gpu=False)
-                    print("PaddleOCR initialized successfully with Chinese")
-                except Exception as e2:
-                    print(f"Chinese initialization failed: {e2}")
-                    try:
-                        # 英語で試行
-                        ocr = PaddleOCR(use_angle_cls=True, lang='en', use_gpu=False)
-                        print("PaddleOCR initialized successfully with English")
-                    except Exception as e3:
-                        print(f"English initialization failed: {e3}")
-                        print("All language options failed for PaddleOCR")
-                        return None
-        except Exception as e:
-            print(f"PaddleOCR initialization failed completely: {e}")
-            import traceback
-            traceback.print_exc()
-            return None
-    return ocr
+def detect_table_structure(image):
+    """OpenCVで表の構造を検出"""
+    try:
+        # グレースケール変換
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        
+        # 二値化
+        _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+        
+        # 縦線検出
+        vertical_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 15))
+        vertical_lines = cv2.morphologyEx(binary, cv2.MORPH_OPEN, vertical_kernel)
+        
+        # 横線検出
+        horizontal_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (15, 1))
+        horizontal_lines = cv2.morphologyEx(binary, cv2.MORPH_OPEN, horizontal_kernel)
+        
+        # 線を結合
+        table_structure = cv2.addWeighted(vertical_lines, 0.5, horizontal_lines, 0.5, 0.0)
+        
+        # 輪郭検出
+        contours, _ = cv2.findContours(table_structure, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        # セル領域を抽出
+        cells = []
+        for contour in contours:
+            x, y, w, h = cv2.boundingRect(contour)
+            if w > 20 and h > 20:  # 小さすぎる領域は除外
+                cells.append((x, y, w, h))
+        
+        # セルを座標でソート（上から下、左から右）
+        cells.sort(key=lambda cell: (cell[1], cell[0]))
+        
+        return cells
+        
+    except Exception as e:
+        print(f"表検出エラー: {str(e)}")
+        return []
+
+def extract_text_from_cell(image, cell_region):
+    """セル領域からテキストを抽出（Tesseract OCR使用）"""
+    try:
+        x, y, w, h = cell_region
+        
+        # セル領域を切り出し
+        cell_img = image[y:y+h, x:x+w]
+        
+        # 画像前処理
+        gray = cv2.cvtColor(cell_img, cv2.COLOR_BGR2GRAY)
+        
+        # ノイズ除去
+        denoised = cv2.medianBlur(gray, 3)
+        
+        # 二値化
+        _, binary = cv2.threshold(denoised, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        
+        # OCR実行（日本語+英語）
+        text = pytesseract.image_to_string(binary, lang='jpn+eng', config='--psm 6')
+        
+        return text.strip()
+        
+    except Exception as e:
+        print(f"セルOCRエラー: {str(e)}")
+        return ""
 
 # Supabase設定（環境変数から取得）
 SUPABASE_URL = os.getenv('SUPABASE_URL', 'your_supabase_url')
@@ -1981,7 +2018,7 @@ def debug():
         
         debug_info = {
             'python_version': sys.version,
-            'paddleocr_available': PADDLEOCR_AVAILABLE,
+            'tesseract_available': TESSERACT_AVAILABLE,
             'working_directory': os.getcwd(),
             'environment_variables': {
                 'PORT': os.environ.get('PORT'),
@@ -1991,12 +2028,12 @@ def debug():
         }
         
         # ライブラリのインポートテスト
-        if PADDLEOCR_AVAILABLE:
+        if TESSERACT_AVAILABLE:
             try:
-                from paddleocr import PaddleOCR
-                debug_info['paddleocr_import'] = 'success'
+                import pytesseract
+                debug_info['pytesseract_import'] = 'success'
             except Exception as e:
-                debug_info['paddleocr_import'] = f'failed: {str(e)}'
+                debug_info['pytesseract_import'] = f'failed: {str(e)}'
                 
             try:
                 from pdf2image import convert_from_path
@@ -2021,6 +2058,12 @@ def debug():
                 debug_info['numpy_import'] = 'success'
             except Exception as e:
                 debug_info['numpy_import'] = f'failed: {str(e)}'
+                
+            try:
+                from PIL import Image
+                debug_info['PIL_import'] = 'success'
+            except Exception as e:
+                debug_info['PIL_import'] = f'failed: {str(e)}'
                 
             try:
                 import psutil
@@ -2317,10 +2360,11 @@ def pdf_csv_converter():
         return jsonify({'error': f'エラー: {str(e)}'})
 
 def extract_text_from_pdf_content(pdf_content):
-    """PDFコンテンツからテキストを抽出（pdf2image + PPStructure使用）"""
+    """PDFコンテンツからテキストを抽出（Tesseract OCR + OpenCV使用）"""
     try:
-        if not PADDLEOCR_AVAILABLE:
-            # PaddleOCRが利用できない場合はサンプルテキストを返す
+        if not TESSERACT_AVAILABLE:
+            # Tesseract OCRが利用できない場合はサンプルテキストを返す
+            print("Tesseract OCR利用不可、サンプルデータを使用")
             sample_text = """
             メニュー一覧
             
@@ -2352,25 +2396,21 @@ def extract_text_from_pdf_content(pdf_content):
             落花生: なし
             ごま: コンタミネーション
             """
+            # 関数属性を設定
+            extract_text_from_pdf_content._processed_pages = 1
+            extract_text_from_pdf_content._total_pages = 1
             return sample_text.strip()
         
-        # Render無料枠対応のPDF処理（メモリ最適化）
+        # Tesseract OCR + OpenCV版PDF処理
         import base64
         import io
+        import time
         import tempfile
         import os
-        import time
-        import gc
-        from PIL import Image
         
         print("=" * 50)
-        print("PDF処理開始（Render無料枠対応）...")
+        print("Tesseract OCR + OpenCV版PDF処理開始...")
         print(f"開始時刻: {time.strftime('%Y-%m-%d %H:%M:%S')}")
-        
-        # メモリ使用量チェック
-        import psutil
-        memory_before = psutil.virtual_memory()
-        print(f"処理前メモリ使用量: {memory_before.percent}% ({memory_before.used / 1024 / 1024:.1f}MB)")
         
         # Base64デコード
         print("Base64デコード中...")
@@ -2390,10 +2430,10 @@ def extract_text_from_pdf_content(pdf_content):
         print(f"一時ファイル: {temp_pdf_path}")
         
         try:
-            # PDFを画像に変換（高精度維持）
+            # PDFを画像に変換
             print("PDFを画像に変換中...")
             start_time = time.time()
-            pages = convert_from_path(temp_pdf_path, dpi=300)  # 高精度維持
+            pages = convert_from_path(temp_pdf_path, dpi=200)  # 軽量化のためDPIを下げる
             conversion_time = time.time() - start_time
             print(f"PDFページ数: {len(pages)}")
             print(f"画像変換時間: {conversion_time:.2f}秒")
@@ -2404,104 +2444,61 @@ def extract_text_from_pdf_content(pdf_content):
                 pages = pages[:50]  # 最初の50ページのみ処理
                 print(f"最初の50ページのみ処理します")
             
-            # PPStructureで表認識モデルを初期化
-            print("PPStructure初期化中...")
-            init_start = time.time()
-            table_engine = PPStructure(show_log=True)
-            init_time = time.time() - init_start
-            print(f"PPStructure初期化時間: {init_time:.2f}秒")
-            
             extracted_text = ""
+            processed_pages = 0
             
-            # 各ページを処理（メモリ最適化 + 処理時間制御）
-            total_processing_time = 0
-            max_processing_time = 28  # 28秒制限（30秒以内で完了させるため、50ページ対応）
-            
-            # 処理時間予測（最初の3ページの平均から計算）
-            estimated_time_per_page = 0
-            pages_for_estimation = min(3, len(pages))
-            
+            # 各ページを処理
             for page_num, page_image in enumerate(pages):
                 page_start = time.time()
                 print(f"ページ {page_num + 1}/{len(pages)} を処理中...")
                 
-                # 処理時間チェック
-                if total_processing_time > max_processing_time:
-                    print(f"処理時間制限に達しました（{max_processing_time}秒）。残り{len(pages) - page_num}ページをスキップします。")
-                    break
-                
-                # メモリ使用量チェック
-                memory_current = psutil.virtual_memory()
-                if memory_current.percent > 90:  # 90%以上で警告
-                    print(f"警告: メモリ使用量が高いです ({memory_current.percent}%)")
-                
                 # 画像をOpenCV形式に変換
-                print(f"  画像変換中...")
                 img_array = np.array(page_image)
                 img_cv = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
-                print(f"  画像サイズ: {img_cv.shape}")
                 
-                # 表構造を解析
-                print(f"  表構造解析中...")
-                ocr_start = time.time()
-                result = table_engine(img_cv)
-                ocr_time = time.time() - ocr_start
-                print(f"  OCR時間: {ocr_time:.2f}秒")
-                print(f"  解析結果数: {len(result)}")
+                # 表構造を検出
+                print(f"  表構造検出中...")
+                cells = detect_table_structure(img_cv)
+                print(f"  検出されたセル数: {len(cells)}")
                 
-                # 結果をテキストに変換
                 page_text = ""
-                for i, item in enumerate(result):
-                    if 'res' in item:
-                        # 表のセルごとのテキストを抽出
-                        for cell in item['res']:
-                            if 'text' in cell:
-                                page_text += cell['text'] + "\t"
-                        page_text += "\n"
-                    elif 'text' in item:
-                        # 通常のテキスト
-                        page_text += item['text'] + "\n"
+                if cells:
+                    # セルごとにOCR実行
+                    print(f"  セルごとOCR実行中...")
+                    for i, cell_region in enumerate(cells):
+                        cell_text = extract_text_from_cell(img_cv, cell_region)
+                        if cell_text:
+                            page_text += cell_text + "\t"
+                        if (i + 1) % 5 == 0:  # 5セルごとに改行
+                            page_text += "\n"
+                else:
+                    # 表が検出されない場合は全体をOCR
+                    print(f"  表検出なし、全体OCR実行中...")
+                    gray = cv2.cvtColor(img_cv, cv2.COLOR_BGR2GRAY)
+                    page_text = pytesseract.image_to_string(gray, lang='jpn+eng', config='--psm 6')
                 
                 if page_text.strip():
                     extracted_text += f"\n--- ページ {page_num + 1} ---\n"
                     extracted_text += page_text
-                    print(f"  ページ {page_num + 1}: 表認識成功 ({len(page_text)}文字)")
+                    print(f"  ページ {page_num + 1}: OCR成功 ({len(page_text)}文字)")
+                    processed_pages += 1
                 else:
-                    print(f"  ページ {page_num + 1}: 表認識結果なし")
+                    print(f"  ページ {page_num + 1}: OCR結果なし")
                 
                 page_time = time.time() - page_start
-                total_processing_time += page_time
                 print(f"  ページ処理時間: {page_time:.2f}秒")
-                print(f"  累積処理時間: {total_processing_time:.2f}秒")
                 print(f"  進捗: {((page_num + 1) / len(pages)) * 100:.1f}%")
                 
-                # 処理時間予測（最初の3ページの平均から計算）
-                if page_num < pages_for_estimation:
-                    estimated_time_per_page = total_processing_time / (page_num + 1)
-                    estimated_total_time = estimated_time_per_page * len(pages)
-                    print(f"  予測総処理時間: {estimated_total_time:.1f}秒")
-                    
-                    # 予測時間が制限を超える場合は警告
-                    if estimated_total_time > max_processing_time:
-                        print(f"  警告: 予測処理時間が制限を超える可能性があります")
-                
                 # メモリクリーンアップ
-                del img_array, img_cv, result
-                gc.collect()
+                del img_array, img_cv, cells
                 
-                # 処理時間が長い場合は警告
-                if total_processing_time > 20:
-                    print(f"警告: 処理時間が長くなっています（{total_processing_time:.1f}秒）")
-                
-                # 10ページごとに強制ガベージコレクション（50ページ対応）
+                # 10ページごとに強制ガベージコレクション
                 if (page_num + 1) % 10 == 0:
                     print(f"  10ページ処理完了、メモリクリーンアップ実行")
+                    import gc
                     gc.collect()
-                    memory_after_cleanup = psutil.virtual_memory()
-                    print(f"  クリーンアップ後メモリ: {memory_after_cleanup.percent}%")
             
             total_time = time.time() - start_time
-            processed_pages = page_num + 1 if 'page_num' in locals() else 0
             print(f"PDF処理完了: {len(extracted_text)}文字抽出")
             print(f"処理されたページ数: {processed_pages}/{len(pages)}")
             print(f"総処理時間: {total_time:.2f}秒")
@@ -2510,9 +2507,6 @@ def extract_text_from_pdf_content(pdf_content):
             extract_text_from_pdf_content._processed_pages = processed_pages
             extract_text_from_pdf_content._total_pages = len(pages)
             
-            # 最終メモリ使用量チェック
-            memory_after = psutil.virtual_memory()
-            print(f"処理後メモリ使用量: {memory_after.percent}% ({memory_after.used / 1024 / 1024:.1f}MB)")
             print("=" * 50)
             
         except Exception as pdf_error:
@@ -2526,9 +2520,6 @@ def extract_text_from_pdf_content(pdf_content):
             if os.path.exists(temp_pdf_path):
                 os.unlink(temp_pdf_path)
                 print(f"一時ファイル削除: {temp_pdf_path}")
-            
-            # メモリクリーンアップ
-            gc.collect()
         
         # 抽出されたテキストが少ない場合はサンプルデータを追加
         if len(extracted_text.strip()) < 100:
@@ -2640,17 +2631,24 @@ def extract_text_from_pdf_content(pdf_content):
         return ""
 
 def convert_to_csv(allergy_data, filename="allergy_data.csv"):
-    """アレルギーデータをCSV形式に変換"""
+    """アレルギーデータをCSV形式に変換（pandas使用）"""
     try:
-        if not PADDLEOCR_AVAILABLE:
-            # pandasが利用できない場合は手動でCSVを作成
+        if not TESSERACT_AVAILABLE:
+            # ライブラリが利用できない場合は手動でCSVを作成
             csv_content = "メニュー名," + ",".join(ALLERGY_28_ITEMS) + "\n"
             for item in allergy_data:
-                csv_content += f"{item['menu_name']},"
+                # メニュー名（カンマを含む場合はクォートで囲む）
+                menu_name = item['menu_name']
+                if ',' in menu_name:
+                    menu_name = f'"{menu_name}"'
+                csv_content += f"{menu_name},"
+                
+                # アレルギー情報
                 for allergy in ALLERGY_28_ITEMS:
                     value = item['allergies'].get(allergy, '-')
                     csv_content += f"{value},"
                 csv_content += "\n"
+            
             return csv_content
         
         # pandasを使用してCSVを作成
@@ -2675,7 +2673,10 @@ def convert_to_csv(allergy_data, filename="allergy_data.csv"):
         # フォールバック: 手動でCSVを作成
         csv_content = "メニュー名," + ",".join(ALLERGY_28_ITEMS) + "\n"
         for item in allergy_data:
-            csv_content += f"{item['menu_name']},"
+            menu_name = item['menu_name']
+            if ',' in menu_name:
+                menu_name = f'"{menu_name}"'
+            csv_content += f"{menu_name},"
             for allergy in ALLERGY_28_ITEMS:
                 value = item['allergies'].get(allergy, '-')
                 csv_content += f"{value},"

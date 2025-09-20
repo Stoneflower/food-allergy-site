@@ -424,40 +424,57 @@ export const RestaurantProvider = ({ children }) => {
     setError(null);
     
     try {
-      // 店舗情報を取得
-      const { data: storeData, error: storeError } = await supabase
-        .from('store_locations')
-          .select(`
-            *,
-            menu_items (
-              *,
-            product_allergies_matrix (
-              *
-            )
-          )
-        `);
+      // まず基本的なテーブルのみでテスト
+      let storeData = null;
+      let productData = null;
+      
+      // 店舗情報を取得（シンプルなクエリ）
+      try {
+        console.log('store_locationsテーブルにアクセス中...');
+        const { data, error } = await supabase
+          .from('store_locations')
+          .select('*');
+        
+        if (!error) {
+          storeData = data;
+          console.log('store_locationsデータ取得成功:', data?.length || 0, '件');
+        } else {
+          console.error('store_locationsテーブルエラー:', error);
+        }
+      } catch (err) {
+        console.error('store_locationsテーブルアクセスエラー:', err);
+      }
 
-      if (storeError) throw storeError;
-
-      // 商品情報を取得
-      const { data: productData, error: productError } = await supabase
-        .from('products')
-        .select(`
-          *,
-          product_allergies_matrix (
-            *
-          )
-        `);
-
-      if (productError) throw productError;
+      // 商品情報を取得（シンプルなクエリ）
+      try {
+        console.log('productsテーブルにアクセス中...');
+        const { data, error } = await supabase
+          .from('products')
+          .select('*');
+        
+        if (!error) {
+          productData = data;
+          console.log('productsデータ取得成功:', data?.length || 0, '件');
+        } else {
+          console.error('productsテーブルエラー:', error);
+        }
+      } catch (err) {
+        console.error('productsテーブルアクセスエラー:', err);
+      }
 
       // アレルギー項目を取得
+      console.log('allergy_itemsテーブルにアクセス中...');
       const { data: allergyData, error: allergyError } = await supabase
         .from('allergy_items')
         .select('*')
         .order('id');
 
-      if (allergyError) throw allergyError;
+      if (allergyError) {
+        console.error('allergy_itemsテーブルエラー:', allergyError);
+        throw allergyError;
+      }
+      
+      console.log('allergy_itemsデータ取得成功:', allergyData?.length || 0, '件');
 
       // アレルギー項目を分類
       if (allergyData && allergyData.length > 0) {
@@ -492,11 +509,11 @@ export const RestaurantProvider = ({ children }) => {
       const transformedData = [];
       
       // 店舗データを変換
-      if (storeData) {
+      if (storeData && storeData.length > 0) {
         storeData.forEach(store => {
           transformedData.push({
             id: store.id,
-            name: store.name,
+            name: store.name || '店舗名不明',
             image: store.image_url || 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400',
             rating: 4.0, // デフォルト値
             reviewCount: 0,
@@ -504,7 +521,7 @@ export const RestaurantProvider = ({ children }) => {
             area: store.address || '',
             cuisine: 'レストラン',
             category: 'restaurants',
-            allergyInfo: convertAllergyMatrix(store.menu_items?.[0]?.product_allergies_matrix || []),
+            allergyInfo: createDefaultAllergyInfo(), // デフォルトのアレルギー情報
             description: store.description || '',
             source: {
               type: 'official',
@@ -519,11 +536,11 @@ export const RestaurantProvider = ({ children }) => {
       }
 
       // 商品データを変換
-      if (productData) {
+      if (productData && productData.length > 0) {
         productData.forEach(product => {
           transformedData.push({
             id: product.id + 10000, // 店舗IDと重複しないように
-            name: product.name,
+            name: product.name || '商品名不明',
             image: product.image_url || 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400',
             rating: 4.0,
             reviewCount: 0,
@@ -532,7 +549,7 @@ export const RestaurantProvider = ({ children }) => {
             cuisine: '商品',
             category: 'products',
             brand: product.brand || '',
-            allergyInfo: convertAllergyMatrix(product.product_allergies_matrix || []),
+            allergyInfo: createDefaultAllergyInfo(), // デフォルトのアレルギー情報
             description: product.description || '',
             source: {
               type: 'official',
@@ -562,6 +579,19 @@ export const RestaurantProvider = ({ children }) => {
     }
   };
 
+  // デフォルトのアレルギー情報を作成
+  const createDefaultAllergyInfo = () => {
+    const allergyInfo = {};
+    const currentAllergyOptions = allergyOptions.length > 0 ? allergyOptions : defaultAllergyOptions;
+    
+    // デフォルトで全てfalse（含有しない）に設定
+    currentAllergyOptions.forEach(allergy => {
+      allergyInfo[allergy.id] = false;
+    });
+
+    return allergyInfo;
+  };
+
   // アレルギーマトリックスをallergyInfo形式に変換
   const convertAllergyMatrix = (matrix) => {
     const allergyInfo = {};
@@ -585,9 +615,57 @@ export const RestaurantProvider = ({ children }) => {
     return allergyInfo;
   };
 
+  // Supabase接続テスト関数
+  const testSupabaseConnection = async () => {
+    try {
+      console.log('Supabase接続テスト開始...');
+      
+      // 基本的な接続テスト
+        const { data, error } = await supabase
+          .from('allergy_items')
+        .select('count')
+        .limit(1);
+      
+      if (error) {
+        console.error('Supabase接続エラー:', error);
+        return false;
+      }
+      
+      console.log('Supabase接続成功');
+      
+      // 各テーブルの存在確認
+      const tables = ['allergy_items', 'store_locations', 'products', 'menu_items', 'product_allergies_matrix'];
+      
+      for (const table of tables) {
+        try {
+        const { data, error } = await supabase
+            .from(table)
+            .select('count')
+            .limit(1);
+          
+          if (error) {
+            console.log(`テーブル ${table} アクセスエラー:`, error.message);
+          } else {
+            console.log(`テーブル ${table} アクセス成功`);
+          }
+        } catch (err) {
+          console.log(`テーブル ${table} 例外エラー:`, err.message);
+        }
+      }
+      
+      return true;
+    } catch (err) {
+      console.error('接続テスト例外エラー:', err);
+      return false;
+    }
+  };
+
   // コンポーネントマウント時にデータを取得
   useEffect(() => {
-    fetchDataFromSupabase();
+    // まず接続テストを実行
+    testSupabaseConnection().then(() => {
+      fetchDataFromSupabase();
+    });
   }, []);
 
   // 統合データ（Supabaseデータが空の場合はモックデータを使用）
@@ -755,6 +833,7 @@ export const RestaurantProvider = ({ children }) => {
     isLoading,
     error,
     fetchDataFromSupabase,
+    testSupabaseConnection,
 
     // 機能
     getFilteredRestaurants,

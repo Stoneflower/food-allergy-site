@@ -2488,16 +2488,16 @@ def extract_text_from_pdf_content(pdf_content):
             print(f"PDFページ数: {len(pages)}")
             print(f"画像変換時間: {conversion_time:.2f}秒")
             
-            # ページ数制限（Render無料枠対応 - より厳しく制限）
-            if len(pages) > 10:  # 10ページ制限（30秒以内で完了させるため）
-                print("警告: ページ数が多すぎます（10ページ制限）")
-                pages = pages[:10]  # 最初の10ページのみ処理
-                print(f"最初の10ページのみ処理します")
+            # ページ数制限（Render無料枠対応）
+            if len(pages) > 25:  # 25ページ制限（30秒以内で完了させるため）
+                print("警告: ページ数が多すぎます（25ページ制限）")
+                pages = pages[:25]  # 最初の25ページのみ処理
+                print(f"最初の25ページのみ処理します")
             
             extracted_text = ""
             processed_pages = 0
             total_processing_time = 0
-            max_processing_time = 25  # 25秒制限（30秒以内で完了させるため）
+            max_processing_time = 28  # 28秒制限（30秒以内で完了させるため、25ページ対応）
             
             # 各ページを処理（時間制限付き）
             for page_num, page_image in enumerate(pages):
@@ -2551,9 +2551,9 @@ def extract_text_from_pdf_content(pdf_content):
                 # メモリクリーンアップ
                 del img_array, img_cv, cells
                 
-                # 5ページごとに強制ガベージコレクション
-                if (page_num + 1) % 5 == 0:
-                    print(f"  5ページ処理完了、メモリクリーンアップ実行")
+                # 10ページごとに強制ガベージコレクション（25ページ対応）
+                if (page_num + 1) % 10 == 0:
+                    print(f"  10ページ処理完了、メモリクリーンアップ実行")
                     import gc
                     gc.collect()
             

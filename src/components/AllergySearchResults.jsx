@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useRestaurant } from '../context/RestaurantContext';
 import SafeIcon from '../common/SafeIcon';
@@ -17,11 +17,23 @@ const AllergySearchResults = () => {
   } = useRestaurant();
 
   const filteredItems = getFilteredItems();
+  const [expandedStores, setExpandedStores] = useState(new Set());
   
   // デバッグ用ログ
   console.log('AllergySearchResults - filteredItems:', filteredItems);
   console.log('AllergySearchResults - selectedAllergies:', selectedAllergies);
   console.log('AllergySearchResults - allergyOptions:', allergyOptions);
+
+  // 店舗の展開/折りたたみ機能
+  const toggleStoreExpansion = (storeName) => {
+    const newExpandedStores = new Set(expandedStores);
+    if (newExpandedStores.has(storeName)) {
+      newExpandedStores.delete(storeName);
+    } else {
+      newExpandedStores.add(storeName);
+    }
+    setExpandedStores(newExpandedStores);
+  };
 
   // アレルギー選択に基づいて商品をフィルタリング
   const getSafeProducts = (store) => {
@@ -79,9 +91,9 @@ const AllergySearchResults = () => {
     filteredItems.forEach(item => {
       console.log('groupedStores - processing item:', item);
       if (item.category === 'products') {
-        // 商品の店舗名を取得（products.nameを参照）
-        const storeName = item.name || '店舗名不明';
-        console.log('groupedStores - storeName:', storeName);
+        // 商品の場合、商品名を店舗名として使用し、商品自体をメニューアイテムとして追加
+        const storeName = item.name || '商品名不明';
+        console.log('groupedStores - product storeName:', storeName);
         
         if (!stores[storeName]) {
           stores[storeName] = {
@@ -91,12 +103,12 @@ const AllergySearchResults = () => {
           };
         }
         
-        // 商品情報を追加（product_allergies_matrixを参照）
+        // 商品自体をメニューアイテムとして追加
         stores[storeName].menu_items.push({
           name: item.name,
           product_allergies_matrix: item.product_allergies_matrix || []
         });
-        console.log('groupedStores - added menu item:', item.name, 'matrix:', item.product_allergies_matrix);
+        console.log('groupedStores - added product as menu item:', item.name, 'matrix:', item.product_allergies_matrix);
         console.log('groupedStores - matrix length:', item.product_allergies_matrix ? item.product_allergies_matrix.length : 'undefined');
       } else if (item.category === 'restaurants') {
         // レストランの場合も処理する（商品データがない場合のフォールバック）
@@ -149,11 +161,20 @@ const AllergySearchResults = () => {
               className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden"
             >
               {/* 店舗ヘッダー */}
-              <div className="bg-gradient-to-r from-green-500 to-blue-500 text-white p-4">
+              <div 
+                className="bg-gradient-to-r from-green-500 to-blue-500 text-white p-4 cursor-pointer hover:from-green-600 hover:to-blue-600 transition-all"
+                onClick={() => toggleStoreExpansion(store.name)}
+              >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <SafeIcon icon={FiShield} className="w-6 h-6" />
                     <h2 className="text-xl font-bold">{store.name}</h2>
+                    <span className="text-sm bg-white/20 px-2 py-1 rounded">
+                      {allProducts.length}件
+                    </span>
+                    <span className="text-sm">
+                      {expandedStores.has(store.name) ? '▼' : '▶'}
+                    </span>
                   </div>
                   {store.source?.url && (
                     <a
@@ -161,6 +182,7 @@ const AllergySearchResults = () => {
                       target="_blank"
                       rel="noopener noreferrer"
                       className="bg-white/20 hover:bg-white/30 text-white px-3 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+                      onClick={(e) => e.stopPropagation()}
                     >
                       <span>アレルギー情報元</span>
                       <SafeIcon icon={FiExternalLink} className="w-4 h-4" />
@@ -170,12 +192,13 @@ const AllergySearchResults = () => {
               </div>
 
               {/* 商品リスト */}
-              <div className="p-4">
-                {allProducts.length > 0 ? (
-                  <div className="space-y-3">
-                    <h3 className="font-semibold text-gray-800 mb-3">
-                      全商品 ({allProducts.length}件)
-                    </h3>
+              {expandedStores.has(store.name) && (
+                <div className="p-4">
+                  {allProducts.length > 0 ? (
+                    <div className="space-y-3">
+                      <h3 className="font-semibold text-gray-800 mb-3">
+                        安全な商品 ({allProducts.length}件)
+                      </h3>
                     {allProducts.map((product, productIndex) => {
                       const contaminations = getContaminationInfo(product);
                       
@@ -213,7 +236,8 @@ const AllergySearchResults = () => {
                     <p>商品が見つかりませんでした</p>
                   </div>
                 )}
-              </div>
+                </div>
+              )}
             </motion.div>
           );
         })}

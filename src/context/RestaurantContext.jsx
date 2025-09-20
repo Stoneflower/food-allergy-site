@@ -178,7 +178,7 @@ export const RestaurantProvider = ({ children }) => {
       const transformedData = [];
       
       // 店舗データを変換（無効化 - addressを店舗名として使用するのは不適切）
-      // if (false && storeData && storeData.length > 0) {
+      if (storeData && storeData.length > 0) {
         console.log('店舗データ変換開始:', storeData);
         console.log('最初の店舗データの構造:', storeData[0]);
         storeData.forEach(store => {
@@ -221,7 +221,7 @@ export const RestaurantProvider = ({ children }) => {
           });
         });
         console.log('店舗データ変換完了:', transformedData.filter(item => item.category === 'restaurants'));
-      // }
+      }
 
       // 商品データを変換
       if (productData && productData.length > 0) {

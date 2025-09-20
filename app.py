@@ -7,7 +7,14 @@ from flask import Flask, request, jsonify, render_template_string
 from werkzeug.utils import secure_filename
 # import pandas as pd  # Netlify対応のため一時的にコメントアウト
 import requests
-from paddleocr import PaddleOCR
+
+# PaddleOCRをオプショナルインポート
+try:
+    from paddleocr import PaddleOCR
+    PADDLEOCR_AVAILABLE = True
+except ImportError:
+    PADDLEOCR_AVAILABLE = False
+    print("PaddleOCR not available, using sample data mode")
 
 # アレルギー28品目リスト（指定順番）
 ALLERGY_28_ITEMS = [
@@ -35,8 +42,17 @@ SYMBOL_MAPPING = {
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
-# PaddleOCR初期化（高精度日本語対応）
-ocr = PaddleOCR(use_angle_cls=True, lang='jap')
+# PaddleOCR初期化（利用可能な場合のみ）
+if PADDLEOCR_AVAILABLE:
+    try:
+        ocr = PaddleOCR(use_angle_cls=True, lang='jap')
+        print("PaddleOCR initialized successfully")
+    except Exception as e:
+        print(f"PaddleOCR initialization failed: {e}")
+        PADDLEOCR_AVAILABLE = False
+        ocr = None
+else:
+    ocr = None
 
 # Supabase設定（環境変数から取得）
 SUPABASE_URL = os.getenv('SUPABASE_URL', 'your_supabase_url')
@@ -133,6 +149,11 @@ CSV_CONVERTER_TEMPLATE = '''
 <body>
     <h1>🔧 高精度CSV変換ツール（PaddleOCR対応）</h1>
     <p>PaddleOCRの高精度なOCR機能と詳細なCSV変換機能を統合したツールです。</p>
+    {% if not paddleocr_available %}
+    <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; border-radius: 5px; margin-bottom: 20px;">
+        <strong>⚠️ 注意:</strong> PaddleOCRが利用できない環境です。サンプルデータで動作しています。
+    </div>
+    {% endif %}
     
     <!-- お店情報入力セクション -->
     <div class="section">
@@ -1430,7 +1451,7 @@ def env_check():
 def csv_converter():
     """詳細なCSV変換機能（PDF対応）"""
     if request.method == 'GET':
-        return render_template_string(CSV_CONVERTER_TEMPLATE)
+        return render_template_string(CSV_CONVERTER_TEMPLATE, paddleocr_available=PADDLEOCR_AVAILABLE)
     
     try:
         data = request.json
@@ -1564,6 +1585,41 @@ def csv_converter():
 def extract_text_from_pdf_content(pdf_content):
     """PDFコンテンツからテキストを抽出（PaddleOCR使用）"""
     try:
+        if not PADDLEOCR_AVAILABLE:
+            # PaddleOCRが利用できない場合はサンプルテキストを返す
+            sample_text = """
+            メニュー一覧
+            
+            アイスカフェラテ
+            卵: なし
+            乳: 含有
+            小麦: なし
+            えび: なし
+            かに: なし
+            そば: なし
+            落花生: なし
+            
+            いきいき乳酸菌ヨーデル
+            卵: なし
+            乳: 含有
+            小麦: なし
+            えび: なし
+            かに: なし
+            そば: なし
+            落花生: なし
+            
+            パン（工場で製造）
+            卵: なし
+            乳: なし
+            小麦: 含有
+            えび: なし
+            かに: なし
+            そば: なし
+            落花生: なし
+            ごま: コンタミネーション
+            """
+            return sample_text.strip()
+        
         # 実際のPDF処理（PaddleOCR使用）
         # ここではサンプルテキストを返すが、実際にはPyPDF2 + PaddleOCRで実装
         sample_text = """
@@ -1597,6 +1653,30 @@ def extract_text_from_pdf_content(pdf_content):
 def extract_text_from_image_data(image_data):
     """画像データからテキストを抽出（PaddleOCR使用）"""
     try:
+        if not PADDLEOCR_AVAILABLE or ocr is None:
+            # PaddleOCRが利用できない場合はサンプルテキストを返す
+            return """
+            メニュー一覧
+            
+            アイスカフェラテ
+            卵: なし
+            乳: 含有
+            小麦: なし
+            えび: なし
+            かに: なし
+            そば: なし
+            落花生: なし
+            
+            いきいき乳酸菌ヨーデル
+            卵: なし
+            乳: 含有
+            小麦: なし
+            えび: なし
+            かに: なし
+            そば: なし
+            落花生: なし
+            """
+        
         # Base64データを画像ファイルに変換
         import base64
         import tempfile

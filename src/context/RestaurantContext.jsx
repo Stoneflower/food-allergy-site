@@ -91,16 +91,16 @@ export const RestaurantProvider = ({ children }) => {
       let storeData = null;
       let productData = null;
       
-      // 店舗情報を取得（シンプルなクエリ）
+      // 店舗情報を取得（addressのみ）
       try {
-        console.log('store_locationsテーブルにアクセス中...');
+        console.log('store_locationsテーブルからaddress、source_url、store_list_urlを取得中...');
         const { data, error } = await supabase
           .from('store_locations')
-          .select('*');
+          .select('address, source_url, store_list_url');
         
         if (!error) {
           storeData = data;
-          console.log('store_locationsデータ取得成功:', data?.length || 0, '件');
+          console.log('store_locations address取得成功:', data?.length || 0, '件');
         } else {
           console.error('store_locationsテーブルエラー:', error);
         }
@@ -189,7 +189,7 @@ export const RestaurantProvider = ({ children }) => {
       // データを統合してallItems形式に変換
       const transformedData = [];
       
-      // 店舗データを変換
+      // 店舗データを変換（addressのみ使用）
       if (storeData && storeData.length > 0) {
         console.log('店舗データ変換開始:', storeData);
         console.log('最初の店舗データの構造:', storeData[0]);
@@ -197,23 +197,19 @@ export const RestaurantProvider = ({ children }) => {
           const defaultAllergyInfo = createDefaultAllergyInfo();
           const allergyFree = Object.keys(defaultAllergyInfo).filter(key => !defaultAllergyInfo[key]);
           
-          console.log('店舗データ:', store);
-          console.log('store.store_name:', store.store_name);
-          console.log('store.name:', store.name);
-          console.log('store.product_id:', store.product_id);
+          console.log('store_locations addressデータ:', store);
+          console.log('store.address:', store.address);
+          console.log('store.source_url:', store.source_url);
+          console.log('store.store_list_url:', store.store_list_url);
           
-          // product_idを使ってproductsテーブルから商品名を取得
-          const relatedProduct = productData.find(product => product.id === store.product_id);
-          console.log('関連商品:', relatedProduct);
-          
-          const storeName = store.store_name || store.name || '店舗名不明';
-          console.log('店舗名:', storeName);
-          console.log('関連商品名:', relatedProduct ? relatedProduct.name : 'なし');
+          // addressを使用して店舗データを作成
+          const storeName = store.address || '住所不明';
+          console.log('店舗名（住所）:', storeName);
           
           transformedData.push({
             id: store.id,
             name: storeName,
-            image: store.image_url || 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400',
+            image: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400', // デフォルト画像
             rating: 4.0, // デフォルト値
             reviewCount: 0,
             price: '¥1,000～¥2,000', // デフォルト値
@@ -223,8 +219,8 @@ export const RestaurantProvider = ({ children }) => {
             brand: '',
             allergyInfo: defaultAllergyInfo,
             allergyFree: allergyFree, // アレルギー対応項目のリスト
-            product_allergies_matrix: relatedProduct ? (matrixData.filter(matrix => matrix.product_id === relatedProduct.id)) : [], // 関連商品のマトリックス
-            related_product: relatedProduct, // 関連商品情報
+            product_allergies_matrix: [], // store_locationsには商品マトリックスはない
+            related_product: null, // store_locationsには関連商品はない
             description: '',
             source: {
               type: 'official',
@@ -232,7 +228,7 @@ export const RestaurantProvider = ({ children }) => {
               lastUpdated: new Date().toISOString().split('T')[0],
               confidence: 90,
               verified: true,
-              url: ''
+              url: store.source_url || store.store_list_url || ''
             }
           });
         });
@@ -287,7 +283,7 @@ export const RestaurantProvider = ({ children }) => {
         });
         console.log('商品データ変換完了:', transformedData.filter(item => item.category === 'products'));
         console.log('商品データ変換完了数:', transformedData.filter(item => item.category === 'products').length);
-      } else {
+        } else {
         console.log('商品データがありません:', productData);
       }
 
@@ -308,8 +304,8 @@ export const RestaurantProvider = ({ children }) => {
   const testSupabaseConnection = async () => {
     try {
       console.log('Supabase接続テスト開始...');
-      const { data, error } = await supabase
-        .from('allergy_items')
+        const { data, error } = await supabase
+          .from('allergy_items')
         .select('id')
         .limit(1);
       

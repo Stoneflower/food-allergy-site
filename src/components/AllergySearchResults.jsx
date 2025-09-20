@@ -123,16 +123,21 @@ const AllergySearchResults = () => {
         // 店舗に関連する商品を追加
         if (item.product_allergies_matrix && item.product_allergies_matrix.length > 0) {
           // デバッグ: product_allergies_matrixの構造を確認
-          console.log('product_allergies_matrix構造:', item.product_allergies_matrix[0]);
-          console.log('menu_name:', item.product_allergies_matrix[0].menu_name);
+          console.log('product_allergies_matrix全体:', item.product_allergies_matrix);
+          console.log('product_allergies_matrix件数:', item.product_allergies_matrix.length);
           
-          // product_allergies_matrixからmenu_nameを取得
-          const menuName = item.product_allergies_matrix[0].menu_name || item.related_product?.name || '商品名不明';
-          stores[storeName].menu_items.push({
-            name: menuName, // menu_nameを使用
-            product_allergies_matrix: item.product_allergies_matrix || []
+          // product_allergies_matrixの全要素を処理
+          item.product_allergies_matrix.forEach((matrix, index) => {
+            const menuName = matrix.menu_name || `商品${index + 1}`;
+            console.log(`商品${index + 1}:`, menuName, 'matrix:', matrix);
+            
+            stores[storeName].menu_items.push({
+              name: menuName,
+              product_allergies_matrix: [matrix] // 個別のmatrixを配列で渡す
+            });
           });
-          console.log('groupedStores - added product with menu_name:', menuName, 'to store:', storeName);
+          
+          console.log('groupedStores - added', item.product_allergies_matrix.length, 'products to store:', storeName);
         } else if (item.related_product) {
           // product_allergies_matrixがない場合はrelated_productのnameを使用
           stores[storeName].menu_items.push({

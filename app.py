@@ -334,21 +334,19 @@ def send_to_supabase(allergy_data, batch_id):
             print(f"KEY: {SUPABASE_KEY[:20] if SUPABASE_KEY else 'None'}...")
             return False
         
-        # staging_importsテーブルに送信するデータを準備
-        staging_data = []
+        # productsテーブルに送信するデータを準備
+        product_data = []
         for i, item in enumerate(allergy_data):
-            staging_data.append({
-                'import_batch_id': batch_id,
-                'row_no': i + 1,
-                'raw_menu_name': item['menu_name'],
-                'milk': item['milk'],
-                'egg': item['egg'],
-                'wheat': item['wheat'],
-                'source_file': item['source_file'],
+            # まず商品をproductsテーブルに挿入
+            product_data.append({
+                'name': item['menu_name'],
+                'brand': 'OCR Import',
+                'category': 'Food',
+                'description': f'OCRで抽出されたメニュー: {item["source_file"]}',
                 'created_at': item['extracted_at']
             })
         
-        print(f"送信データ: {staging_data}")
+        print(f"送信データ: {product_data}")
         
         # SupabaseにPOSTリクエスト
         headers = {
@@ -358,10 +356,10 @@ def send_to_supabase(allergy_data, batch_id):
             'Prefer': 'return=minimal'
         }
         
-        url = f"{SUPABASE_URL}/rest/v1/staging_imports"
+        url = f"{SUPABASE_URL}/rest/v1/products"
         print(f"送信URL: {url}")
         
-        for data in staging_data:
+        for data in product_data:
             print(f"送信中: {data}")
             response = requests.post(url, json=data, headers=headers)
             print(f"レスポンス: {response.status_code} - {response.text}")
@@ -370,7 +368,7 @@ def send_to_supabase(allergy_data, batch_id):
                 print(f"Supabase送信エラー: {response.status_code} - {response.text}")
                 return False
         
-        print(f"Supabaseに{len(staging_data)}件のデータを送信しました")
+        print(f"Supabaseに{len(product_data)}件のデータを送信しました")
         return True
         
     except Exception as e:

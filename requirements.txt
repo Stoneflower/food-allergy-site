@@ -1,10 +1,3 @@
 Flask==3.0.0
-Pillow
-PyPDF2
-pandas
 requests
 python-dotenv
-gunicorn
-opencv-python-headless
-paddlepaddle
-paddleocr

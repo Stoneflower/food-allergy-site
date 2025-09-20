@@ -54,29 +54,37 @@ const AllergySearchResults = () => {
         return true;
       }
 
-      // 選択されたアレルギーが含まれていない商品を返す
-      return selectedAllergies.every(selectedAllergy => {
-        const allergyInfo = menuItem.product_allergies_matrix.find(
-          matrix => matrix.allergy_item_id === selectedAllergy || matrix.item_id === selectedAllergy
-        );
-        
-        // デバッグログ
-        console.log(`アレルギー判定 - 商品: ${menuItem.name}, アレルギーID: ${selectedAllergy}`);
-        console.log('allergyInfo:', allergyInfo);
-        
-        // アレルギー情報がない場合は表示する（安全とみなす）
-        if (!allergyInfo) {
-          console.log(`商品 ${menuItem.name} のアレルギーID ${selectedAllergy} の情報なし - 表示する`);
-          console.log('利用可能なallergy_item_id:', menuItem.product_allergies_matrix.map(m => m.allergy_item_id));
-          return true;
+      // menuItemは個別のメニューアイテム（例：ハンバーグ、ソフトクリーム）
+      // menuItem.product_allergies_matrixは配列だが、各要素は同じメニューアイテムの情報
+      // 最初の要素を使用してアレルギー情報をチェック
+      
+      // 選択されたアレルギーのいずれかが含まれている場合は除外
+      const hasSelectedAllergy = selectedAllergies.some(selectedAllergy => {
+        // このメニューアイテムのアレルギー情報をチェック
+        const matrix = menuItem.product_allergies_matrix[0];
+        if (!matrix) {
+          console.log(`メニューアイテム ${menuItem.name} のmatrix情報なし - 安全`);
+          return false;
         }
         
-        // presence_typeが'direct'の場合は含有（除外）
-        // presence_typeが'trace'の場合はコンタミネーション（表示する）
-        const isDirectContained = allergyInfo.presence_type === 'direct';
-        console.log(`presence_type: ${allergyInfo.presence_type}, 直接含有: ${isDirectContained}`);
-        return !isDirectContained;
+        const allergyValue = matrix[selectedAllergy];
+        console.log(`アレルギー判定 - メニューアイテム: ${menuItem.name}, アレルギーID: ${selectedAllergy}, 値: ${allergyValue}`);
+        
+        // アレルギー情報がない場合は安全とみなす
+        if (!allergyValue) {
+          console.log(`メニューアイテム ${menuItem.name} のアレルギーID ${selectedAllergy} の情報なし - 安全`);
+          return false; // 含有していない
+        }
+        
+        // 'direct'の場合は含有（除外）
+        // 'trace'の場合はコンタミネーション（表示する）
+        const isDirectContained = allergyValue === 'direct';
+        console.log(`アレルギー値: ${allergyValue}, 直接含有: ${isDirectContained}`);
+        return isDirectContained;
       });
+      
+      console.log(`商品 ${menuItem.name} の選択アレルギー含有: ${hasSelectedAllergy}`);
+      return !hasSelectedAllergy; // 選択されたアレルギーが含まれていない場合は表示
     });
   };
 

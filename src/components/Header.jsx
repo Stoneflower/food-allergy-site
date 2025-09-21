@@ -22,6 +22,7 @@ const Header = () => {
     selectedArea,
     areaInputValue,
     setAreaInputValue,
+    executeSearch,
     selectedAllergies,
     setSelectedAllergies,
     allergyOptions,
@@ -40,9 +41,19 @@ const Header = () => {
 
   const handleSearch = (e) => {
     e.preventDefault();
+    executeSearch(); // 検索実行
     navigate('/search');
     setIsMenuOpen(false);
     setShowMobileSearch(false);
+  };
+
+  // Enterキーでの検索実行
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      executeSearch(); // 検索実行
+      navigate('/search');
+    }
   };
 
   const toggleAllergy = (allergyId) => {
@@ -179,6 +190,7 @@ const Header = () => {
                     placeholder="エリア・駅"
                     value={areaInputValue}
                     onChange={(e) => setAreaInputValue(e.target.value)}
+                    onKeyPress={handleKeyPress}
                     className="h-12 px-4 bg-blue-50 border-l border-blue-200 text-sm font-medium text-gray-700 focus:outline-none hover:bg-blue-100 transition-colors"
                     style={{ minWidth: '120px' }}
                   />
@@ -373,6 +385,7 @@ const Header = () => {
                   placeholder="渋谷、新宿、池袋など"
                   value={areaInputValue}
                   onChange={(e) => setAreaInputValue(e.target.value)}
+                  onKeyPress={handleKeyPress}
                   className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 />
               </div>

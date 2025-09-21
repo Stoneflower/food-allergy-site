@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { PREFECTURES, isPrefectureName, isAreaMatch } from '../constants/prefectures';
-import { useDebouncedInput } from '../hooks/useDebounce';
 
 const RestaurantContext = createContext();
 
@@ -28,14 +27,31 @@ export const RestaurantProvider = ({ children }) => {
 
   const [selectedAllergies, setSelectedAllergies] = useState([]);
   const [searchKeyword, setSearchKeyword] = useState('');
-  // エリア入力にdebounceを適用
-  const { inputValue: areaInputValue, setInputValue: setAreaInputValue, debouncedValue: selectedArea } = useDebouncedInput('', 300);
+  // エリア入力（検索ボタン方式）
+  const [areaInputValue, setAreaInputValue] = useState('');
+  const [selectedArea, setSelectedArea] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [favorites, setFavorites] = useState([]);
   const [history, setHistory] = useState([]);
   const [allItems, setAllItems] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  // 検索実行関数（検索ボタン方式）
+  const executeSearch = () => {
+    console.log('検索実行:', { areaInputValue, searchKeyword, selectedCategory });
+    
+    // エリア入力が空の場合は検索しない
+    if (!areaInputValue || areaInputValue.trim() === '') {
+      console.log('エリア入力が空のため、検索を実行しません');
+      setSelectedArea('');
+      return;
+    }
+    
+    // エリア入力をselectedAreaに設定して検索実行
+    setSelectedArea(areaInputValue.trim());
+    console.log('検索実行完了:', areaInputValue.trim());
+  };
   const defaultRecommendedAllergies = [
     { id: 'almond', name: 'アーモンド', icon: '🌰' },
     { id: 'abalone', name: 'あわび', icon: '🐚' },
@@ -601,8 +617,10 @@ export const RestaurantProvider = ({ children }) => {
     searchKeyword,
     setSearchKeyword,
     selectedArea,
+    setSelectedArea,
     areaInputValue,
     setAreaInputValue,
+    executeSearch,
     selectedCategory,
     setSelectedCategory,
     favorites,

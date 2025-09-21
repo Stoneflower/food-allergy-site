@@ -3,15 +3,14 @@ import { motion } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import SafeIcon from '../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
-import { useDebouncedInput } from '../hooks/useDebounce';
 
 const { FiSearch, FiMapPin, FiFilter, FiX, FiChevronDown } = FiIcons;
 
 const EnhancedSearchPanel = ({ onSearchResults, onLoading }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  // エリア入力にdebounceを適用
-  const { inputValue: areaInputValue, setInputValue: setAreaInputValue, debouncedValue: debouncedArea } = useDebouncedInput('', 300);
+  // エリア入力（検索ボタン方式）
+  const [areaInputValue, setAreaInputValue] = useState('');
   const [selectedAllergies, setSelectedAllergies] = useState([]);
   const [selectedMenuCategory, setSelectedMenuCategory] = useState('all');
   const [isLoading, setIsLoading] = useState(false);
@@ -147,9 +146,9 @@ const EnhancedSearchPanel = ({ onSearchResults, onLoading }) => {
         query = query.eq('category', selectedCategory);
       }
 
-      // エリアフィルター（debouncedAreaを使用）
-      if (debouncedArea) {
-        query = query.eq('store_locations.address', debouncedArea);
+      // エリアフィルター（検索ボタン方式）
+      if (areaInputValue) {
+        query = query.eq('store_locations.address', areaInputValue);
       }
 
       // キーワード検索
@@ -276,9 +275,9 @@ const EnhancedSearchPanel = ({ onSearchResults, onLoading }) => {
             placeholder="都道府県名を入力（例：兵庫県、大阪、東京）"
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
           />
-          {debouncedArea && (
+          {areaInputValue && (
             <p className="text-xs text-gray-500 mt-1">
-              検索中: {debouncedArea}
+              入力中: {areaInputValue}
             </p>
           )}
         </div>

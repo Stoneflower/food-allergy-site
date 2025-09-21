@@ -269,14 +269,9 @@ const AllergySearchResults = () => {
                       className={`px-2 py-1 text-xs rounded transition-colors ${
                         store.source?.url 
                           ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' 
-                          : 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                          : 'bg-gray-100 text-gray-500'
                       }`}
-                      onClick={(e) => {
-                        if (!store.source?.url) {
-                          e.preventDefault();
-                        }
-                        e.stopPropagation();
-                      }}
+                      onClick={(e) => e.stopPropagation()}
                     >
                       アレルギー情報元
                     </a>
@@ -287,16 +282,11 @@ const AllergySearchResults = () => {
                       className={`px-2 py-1 text-xs rounded transition-colors ${
                         store.store_list_url 
                           ? 'bg-green-100 text-green-700 hover:bg-green-200' 
-                          : 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                          : 'bg-gray-100 text-gray-500'
                       }`}
-                      onClick={(e) => {
-                        if (!store.store_list_url) {
-                          e.preventDefault();
-                        }
-                        e.stopPropagation();
-                      }}
+                      onClick={(e) => e.stopPropagation()}
                     >
-                      エリア検索
+                      エリア情報
                     </a>
                   </div>
                 </div>
@@ -415,14 +405,9 @@ const AllergySearchResults = () => {
                     className={`px-2 py-1 text-xs rounded transition-colors ${
                       store.source?.url 
                         ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' 
-                        : 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                        : 'bg-gray-100 text-gray-500'
                     }`}
-                    onClick={(e) => {
-                      if (!store.source?.url) {
-                        e.preventDefault();
-                      }
-                      e.stopPropagation();
-                    }}
+                    onClick={(e) => e.stopPropagation()}
                   >
                     アレルギー情報元
                   </a>
@@ -433,16 +418,11 @@ const AllergySearchResults = () => {
                     className={`px-2 py-1 text-xs rounded transition-colors ${
                       store.store_list_url 
                         ? 'bg-green-100 text-green-700 hover:bg-green-200' 
-                        : 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                        : 'bg-gray-100 text-gray-500'
                     }`}
-                    onClick={(e) => {
-                      if (!store.store_list_url) {
-                        e.preventDefault();
-                      }
-                      e.stopPropagation();
-                    }}
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    エリア検索
+                    エリア情報
                   </a>
                 </div>
               </div>

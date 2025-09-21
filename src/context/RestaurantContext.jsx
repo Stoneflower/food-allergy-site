@@ -276,6 +276,8 @@ export const RestaurantProvider = ({ children }) => {
           // デバッグ: 商品データの構造を確認
           console.log(`商品データ構造確認 - ${product.name}:`, product);
           console.log(`商品の全プロパティ:`, Object.keys(product));
+          console.log(`商品のstore_list_url:`, product.store_list_url);
+          console.log(`商品のstore_list_urlの型:`, typeof product.store_list_url);
           
           // この商品に関連するstore_locationsを取得
           const relatedStores = storeData ? storeData.filter(store => store.product_id === product.id) : [];
@@ -294,7 +296,7 @@ export const RestaurantProvider = ({ children }) => {
                 return; // この店舗の処理をスキップ
               }
               
-              transformedData.push({
+              const transformedItem = {
                 id: `product-${product.id}-store-${store.id}`, // 商品と店舗の組み合わせID
                 name: store.branch_name || product.name || '店舗名不明',
                 image: product.image_url || 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400',
@@ -319,7 +321,12 @@ export const RestaurantProvider = ({ children }) => {
                   verified: true,
                   url: store.source_url || product.source_url || '' // アレルギー情報元のリンク先
                 }
-              });
+              };
+              
+              console.log(`商品-店舗組み合わせ ${product.name}-${store.branch_name || store.address} のstore_list_url:`, transformedItem.store_list_url);
+              console.log(`元のstore.store_list_url:`, store.store_list_url);
+              
+              transformedData.push(transformedItem);
             });
           } else {
             // 関連店舗がない場合は商品データとして作成
@@ -329,7 +336,7 @@ export const RestaurantProvider = ({ children }) => {
               return; // この商品の処理をスキップ
             }
             
-            transformedData.push({
+            const transformedItem = {
               id: product.id + 10000,
               name: product.name || '商品名不明',
               image: product.image_url || 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400',
@@ -354,7 +361,12 @@ export const RestaurantProvider = ({ children }) => {
                 verified: true,
                 url: product.source_url || ''
               }
-            });
+            };
+            
+            console.log(`商品単体 ${product.name} のstore_list_url:`, transformedItem.store_list_url);
+            console.log(`元のproduct.store_list_url:`, product.store_list_url);
+            
+            transformedData.push(transformedItem);
           }
         });
         console.log('商品データ変換完了:', transformedData.filter(item => item.category === 'restaurants'));

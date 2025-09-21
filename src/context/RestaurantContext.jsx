@@ -210,13 +210,14 @@ export const RestaurantProvider = ({ children }) => {
             product_allergies_matrix: [], // store_locationsには商品マトリックスはない
             related_product: null, // store_locationsには関連商品はない
             description: '',
+            store_list_url: store.store_list_url || '', // 店舗エリアリンク用
             source: {
               type: 'official',
               contributor: '店舗公式',
               lastUpdated: new Date().toISOString().split('T')[0],
               confidence: 90,
               verified: true,
-              url: store.source_url || store.store_list_url || ''
+              url: store.source_url || ''
             }
           });
         });
@@ -259,6 +260,7 @@ export const RestaurantProvider = ({ children }) => {
             product_allergies_matrix: productMatrix, // 実際のproduct_allergies_matrixデータ
             related_product: product, // productsテーブルの場合、自分自身が商品
             description: product.description || '',
+            store_list_url: product.store_list_url || '', // 店舗エリアリンク用
             source: {
               type: 'official',
               contributor: '商品公式',
@@ -382,7 +384,7 @@ export const RestaurantProvider = ({ children }) => {
 
     if (selectedArea) {
       items = items.filter(item => 
-        !item.area || item.area.toLowerCase().includes(selectedArea.toLowerCase())
+        item.area && item.area.toLowerCase().includes(selectedArea.toLowerCase())
       );
     }
 

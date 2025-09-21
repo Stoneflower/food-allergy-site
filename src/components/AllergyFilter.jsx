@@ -25,15 +25,15 @@ const AllergyFilter=()=> {
       transition={{duration: 0.3,delay: index * 0.05}}
       onClick={()=> toggleAllergy(allergy.id)}
       className={`
-        flex items-center space-x-0.5 px-1.5 py-0.5 rounded text-xs transition-all duration-200
+        flex items-center justify-center space-x-1 px-2 py-1 rounded text-sm transition-all duration-200 w-full
         ${selectedAllergies.includes(allergy.id)
           ? 'bg-red-200 text-red-800'
           : 'bg-gray-100 text-gray-700 hover:bg-red-100 hover:text-red-700'
         }
       `}
     >
-      <span className="text-xs">{allergy.icon}</span>
-      <span className="text-xs">{allergy.name}</span>
+      <span className="text-sm">{allergy.icon}</span>
+      <span className="text-sm">{allergy.name}</span>
     </motion.button>
   );
 
@@ -44,7 +44,7 @@ const AllergyFilter=()=> {
         <h3 className="text-xs font-semibold text-gray-900 mb-1">
           特定原材料（8品目）
         </h3>
-        <div className="flex flex-wrap gap-0.5">
+        <div className="grid grid-cols-4 gap-1">
           {mandatoryAllergies.map((allergy,index)=> (
             <AllergyButton key={allergy.id} allergy={allergy} index={index} />
           ))}
@@ -56,7 +56,7 @@ const AllergyFilter=()=> {
         <h3 className="text-xs font-semibold text-gray-900 mb-1">
           特定原材料に準ずるもの（20品目）
         </h3>
-        <div className="flex flex-wrap gap-0.5">
+        <div className="grid grid-cols-4 gap-1">
           {recommendedAllergies.map((allergy,index)=> (
             <AllergyButton key={allergy.id} allergy={allergy} index={index + mandatoryAllergies.length} />
           ))}

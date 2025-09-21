@@ -485,6 +485,14 @@ const CsvExporter = ({ data, onBack }) => {
     console.log('選択都道府県:', selectedPrefectures);
     console.log('詳細住所:', detailedAddresses);
     
+    // アップロード開始前のstore_locations状態確認
+    console.log('🔍 アップロード開始前のstore_locations確認');
+    const { data: beforeUploadStores, error: beforeUploadErr } = await supabase
+      .from('store_locations')
+      .select('id, product_id, address');
+    console.log('🔍 アップロード開始前のstore_locations:', beforeUploadStores?.length || 0, '件');
+    console.log('🔍 アップロード開始前のstore_locations詳細:', beforeUploadStores);
+    
     if (!data || data.length === 0) {
       console.error('❌ データがありません');
       setUploadStatus('error');
@@ -492,6 +500,13 @@ const CsvExporter = ({ data, onBack }) => {
     }
     
     console.log('✅ データ検証完了、アップロード開始');
+    
+    // データ検証完了後のstore_locations状態確認
+    console.log('🔍 データ検証完了後のstore_locations確認');
+    const { data: afterValidationStores, error: afterValidationErr } = await supabase
+      .from('store_locations')
+      .select('id, product_id, address');
+    console.log('🔍 データ検証完了後のstore_locations:', afterValidationStores?.length || 0, '件');
     setUploadStatus('uploading');
     
     let watchdogId;
@@ -508,6 +523,13 @@ const CsvExporter = ({ data, onBack }) => {
       }, 60000);
       // 1. import_jobsテーブルにジョブを作成
       const jobId = crypto.randomUUID();
+      // ジョブ作成前のstore_locations状態確認
+      console.log('🔍 ジョブ作成前のstore_locations確認');
+      const { data: beforeJobStores, error: beforeJobErr } = await supabase
+        .from('store_locations')
+        .select('id, product_id, address');
+      console.log('🔍 ジョブ作成前のstore_locations:', beforeJobStores?.length || 0, '件');
+      
       console.log('🔄 ジョブ作成開始:', jobId);
       
       const { data: jobData, error: jobError } = await supabase
@@ -527,6 +549,13 @@ const CsvExporter = ({ data, onBack }) => {
       }
       
       console.log('✅ ジョブ作成完了:', jobData);
+      
+      // ジョブ作成後のstore_locations状態確認
+      console.log('🔍 ジョブ作成後のstore_locations確認');
+      const { data: afterJobStores, error: afterJobErr } = await supabase
+        .from('store_locations')
+        .select('id, product_id, address');
+      console.log('🔍 ジョブ作成後のstore_locations:', afterJobStores?.length || 0, '件');
       
       // 2. staging_importsテーブルにデータを挿入
       console.log('🔄 CSVデータ生成開始');
@@ -597,6 +626,13 @@ const CsvExporter = ({ data, onBack }) => {
       }
       console.log('✅ staging_imports 一括挿入完了:', stagingData.length, '行');
       
+      // staging_imports挿入後のstore_locations確認
+      console.log('🔍 staging_imports挿入後のstore_locations確認');
+      const { data: afterStaging, error: afterStagingErr } = await supabase
+        .from('store_locations')
+        .select('id, product_id, address');
+      console.log('🔍 staging_imports挿入後のstore_locations:', afterStaging?.length || 0, '件');
+      
       // 3. バッチ処理を実行
       console.log('🔄 バッチ処理開始:', jobId);
       let processOk = true;
@@ -610,6 +646,13 @@ const CsvExporter = ({ data, onBack }) => {
       } else {
         console.log('✅ バッチ処理完了:', processData);
         console.log('📊 処理結果:', JSON.stringify(processData, null, 2));
+        
+        // バッチ処理後のstore_locations確認
+        console.log('🔍 バッチ処理後のstore_locations確認');
+        const { data: afterBatch, error: afterBatchErr } = await supabase
+          .from('store_locations')
+          .select('id, product_id, address');
+        console.log('🔍 バッチ処理後のstore_locations:', afterBatch?.length || 0, '件');
         
         // バッチ処理が成功した場合、product_allergies_matrixを更新
         if (processData && processData.product_id) {
@@ -637,6 +680,9 @@ const CsvExporter = ({ data, onBack }) => {
             return acc;
           }, {}) || {}
         );
+        if (!allStoreLocations || allStoreLocations.length === 0) {
+          console.log('⚠️ 警告: store_locationsテーブルが空です。以前のアップロードでデータが削除された可能性があります。');
+        }
       }
       try {
         // 商品IDを動的に取得
@@ -680,11 +726,31 @@ const CsvExporter = ({ data, onBack }) => {
           if (createError || !newProductData) {
             console.error('❌ 商品作成エラー:', createError);
             console.error('商品名:', productName);
-            return;
+            
+            // 重複エラーの場合、既存商品を検索
+            if (createError?.code === '23505') { // ユニーク制約違反
+              console.log('🔄 重複エラー検出、既存商品を再検索します');
+              const { data: existingProduct, error: searchError } = await supabase
+                .from('products')
+                .select('id, name')
+                .eq('name', productName)
+                .eq('brand', productBrand)
+                .single();
+              
+              if (searchError || !existingProduct) {
+                console.error('❌ 既存商品検索エラー:', searchError);
+                return;
+              }
+              
+              productId = existingProduct.id;
+              console.log('✅ 既存商品を使用:', productId, existingProduct.name);
+            } else {
+              return;
+            }
+          } else {
+            productId = newProductData.id;
+            console.log('✅ 新商品作成完了:', productName, 'ID:', productId);
           }
-          
-          productId = newProductData.id;
-          console.log('✅ 新商品作成完了:', productName, 'ID:', productId);
           
           console.log('🔍 商品作成後のstore_locations確認');
           const { data: afterCreate, error: afterCreateErr } = await supabase

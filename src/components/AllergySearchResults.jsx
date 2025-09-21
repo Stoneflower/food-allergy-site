@@ -253,10 +253,10 @@ const AllergySearchResults = () => {
       <div className="text-center py-12">
         <div className="text-6xl mb-4">📍</div>
         <h3 className="text-xl font-semibold text-gray-700 mb-2">
-          エリア・駅を入力してください
+          都道府県を入力してください
         </h3>
         <p className="text-gray-500">
-          都道府県名や駅名を入力して、アレルギー対応店舗を検索できます
+          都道府県名を入力して、アレルギー対応店舗を検索できます
         </p>
       </div>
     );

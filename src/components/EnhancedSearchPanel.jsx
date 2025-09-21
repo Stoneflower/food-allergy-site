@@ -267,7 +267,7 @@ const EnhancedSearchPanel = ({ onSearchResults, onLoading }) => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">エリア</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">県名</label>
           <input
             type="text"
             value={areaInputValue}

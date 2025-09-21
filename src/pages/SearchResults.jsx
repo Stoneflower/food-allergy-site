@@ -159,7 +159,7 @@ const SearchResults = () => {
           <div className="flex items-center justify-between flex-wrap gap-4">
             <p className="text-sm text-gray-500">
               {!selectedArea || selectedArea.trim() === '' 
-                ? 'エリア・駅を入力して検索してください' 
+                ? '都道府県を入力して検索してください' 
                 : `${sortedItems.length}件のアイテムが見つかりました`
               }
             </p>

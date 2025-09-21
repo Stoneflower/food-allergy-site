@@ -187,7 +187,7 @@ const Header = () => {
                 <div className="relative">
                   <input
                     type="text"
-                    placeholder="エリア・駅"
+                    placeholder="県名"
                     value={areaInputValue}
                     onChange={(e) => setAreaInputValue(e.target.value)}
                     onKeyPress={handleKeyPress}
@@ -378,11 +378,11 @@ const Header = () => {
               {/* Mobile Area Input */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  📍 エリア・駅
+                  📍 県名
                 </label>
                 <input
                   type="text"
-                  placeholder="渋谷、新宿、池袋など"
+                  placeholder="兵庫県、大阪府、東京都など"
                   value={areaInputValue}
                   onChange={(e) => setAreaInputValue(e.target.value)}
                   onKeyPress={handleKeyPress}

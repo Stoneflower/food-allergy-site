@@ -175,7 +175,7 @@ CREATE TRIGGER update_product_allergies_updated_at
 -- 複数住所対応のためUNIQUE制約を削除
 CREATE TABLE IF NOT EXISTS store_locations (
   id SERIAL PRIMARY KEY,
-  product_id INTEGER REFERENCES products(id) ON DELETE CASCADE,
+  product_id INTEGER REFERENCES products(id) ON DELETE RESTRICT,
   branch_name VARCHAR(200),
   address TEXT,
   phone VARCHAR(50),
@@ -196,6 +196,13 @@ CREATE UNIQUE INDEX IF NOT EXISTS ux_store_locations_product_address ON store_lo
 CREATE TRIGGER update_store_locations_updated_at
 BEFORE UPDATE ON store_locations
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- CASCADE削除をRESTRICTに変更（既存テーブル用）
+-- 注意: このSQLは既存のテーブルに対して実行する必要があります
+-- ALTER TABLE store_locations 
+-- DROP CONSTRAINT IF EXISTS store_locations_product_id_fkey,
+-- ADD CONSTRAINT store_locations_product_id_fkey 
+-- FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT;
 
 -- メニューの重複防止（CSV UPSERT 対応）
 CREATE UNIQUE INDEX IF NOT EXISTS ux_menu_items_product_name ON menu_items(product_id, name);

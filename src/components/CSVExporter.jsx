@@ -835,10 +835,12 @@ const CsvExporter = ({ data, onBack }) => {
           } else {
             const allIds = (allMenus || []).map(r => r.id);
             if (allIds.length > 0) {
+              console.log('🧹 既存menu_items削除開始 - product_id:', pid, '件数:', allIds.length);
               // 子を先に削除
               await supabase.from('menu_item_allergies').delete().in('menu_item_id', allIds);
               await supabase.from('menu_items').delete().eq('product_id', pid).in('id', allIds);
-              console.log('🧹 既存menu_items 全削除:', allIds.length, '件');
+              console.log('🧹 既存menu_items 全削除完了:', allIds.length, '件');
+              console.log('⚠️ 注意: store_locationsはRESTRICT制約により保護されています');
             }
           }
 

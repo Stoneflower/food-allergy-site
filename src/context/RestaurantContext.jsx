@@ -534,9 +534,24 @@ export const RestaurantProvider = ({ children }) => {
         });
         
         // 2. その都道府県内の具体的な店舗のみをフィルタリング
-        items = items.filter(item => 
-          item.area && item.area.toLowerCase().includes(selectedArea.toLowerCase())
-        );
+        // ただし、都道府県名の店舗は除外
+        items = items.filter(item => {
+          // エリアフィルタリング
+          const areaMatch = item.area && item.area.toLowerCase().includes(selectedArea.toLowerCase());
+          
+          // 都道府県名の店舗かどうかをチェック
+          const isPrefectureName = prefectureNames.some(pref => 
+            item.name.includes(pref) && (
+              item.name === pref || // 完全一致
+              item.name.includes(`${pref}(`) || // "島根県(401件)" 形式
+              item.name.includes(`${pref} `) || // "島根県 " 形式
+              item.name.startsWith(pref) // "島根県" で始まる
+            )
+          );
+          
+          // エリアにマッチし、かつ都道府県名の店舗でない場合のみ表示
+          return areaMatch && !isPrefectureName;
+        });
         
         console.log('getFilteredItems - 都道府県名の店舗を除外し、具体的な店舗のみ表示:', items);
       } else {

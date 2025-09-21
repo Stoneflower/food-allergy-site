@@ -207,6 +207,8 @@ export const RestaurantProvider = ({ children }) => {
           console.log('store.store_list_url:', store.store_list_url);
           console.log('store.store_list_urlの型:', typeof store.store_list_url);
           console.log('store.store_list_urlが空かどうか:', !store.store_list_url);
+          console.log('store.store_list_urlがnullかどうか:', store.store_list_url === null);
+          console.log('store.store_list_urlがundefinedかどうか:', store.store_list_url === undefined);
           
           // branch_nameまたはaddressを使用して店舗名を作成
           const storeName = store.branch_name || store.address || '店舗名不明';
@@ -221,12 +223,12 @@ export const RestaurantProvider = ({ children }) => {
           console.log('関連商品のmatrix:', productMatrix);
           
           // 商品情報がない店舗は除外する（ただし、store_list_urlがある場合は除外しない）
-          if (!relatedProduct && productMatrix.length === 0 && !store.store_list_url) {
+          if (!relatedProduct && productMatrix.length === 0 && (!store.store_list_url || store.store_list_url.trim() === '')) {
             console.log('商品情報がない店舗のため除外:', storeName);
             return; // この店舗の処理をスキップ
           }
           
-          transformedData.push({
+          const transformedItem = {
             id: store.id,
             name: storeName,
             image: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400', // デフォルト画像
@@ -251,7 +253,14 @@ export const RestaurantProvider = ({ children }) => {
               verified: true,
               url: store.source_url || '' // アレルギー情報元のリンク先
             }
-          });
+          };
+          
+          console.log('変換後のstore_list_url:', transformedItem.store_list_url);
+          console.log('変換後のstore_list_urlの型:', typeof transformedItem.store_list_url);
+          console.log('変換後のstore_list_urlがnullかどうか:', transformedItem.store_list_url === null);
+          console.log('変換後のstore_list_urlがundefinedかどうか:', transformedItem.store_list_url === undefined);
+          
+          transformedData.push(transformedItem);
         });
         console.log('店舗データ変換完了:', transformedData.filter(item => item.category === 'restaurants'));
       }
@@ -301,7 +310,7 @@ export const RestaurantProvider = ({ children }) => {
                 product_allergies_matrix: productMatrix,
                 related_product: product,
                 description: product.description || product.name || '',
-                store_list_url: store.store_list_url || '', // エリア情報のリンク先
+                store_list_url: store.store_list_url || null, // エリア情報のリンク先
                 source: {
                   type: 'official',
                   contributor: '商品公式',
@@ -336,7 +345,7 @@ export const RestaurantProvider = ({ children }) => {
               product_allergies_matrix: productMatrix,
               related_product: product,
               description: product.description || product.name || '',
-              store_list_url: product.store_list_url || '',
+              store_list_url: product.store_list_url || null,
               source: {
                 type: 'official',
                 contributor: '商品公式',
@@ -473,17 +482,39 @@ export const RestaurantProvider = ({ children }) => {
       
       if (isPrefectureName) {
         // 都道府県名が入力された場合、その都道府県内の具体的な店舗のみを表示
-        // 1. まず都道府県名の店舗（例：「鳥取県(401件)」）を除外
-        items = items.filter(item => 
-          !prefectureNames.some(pref => 
+        // 1. 入力された都道府県内の店舗のみを表示
+        // 入力された都道府県名と完全一致する店舗名は除外
+        // 他の都道府県名の店舗も除外
+        items = items.filter(item => {
+          const isPrefectureName = prefectureNames.some(pref => 
             item.name.includes(pref) && (
               item.name === pref || // 完全一致
               item.name.includes(`${pref}(`) || // "鳥取県(401件)" 形式
               item.name.includes(`${pref} `) || // "鳥取県 " 形式
               item.name.startsWith(pref) // "鳥取県" で始まる
             )
-          )
-        );
+          );
+          
+          if (isPrefectureName) {
+            // 都道府県名の店舗の場合
+            const isExactMatch = prefectureNames.some(pref => 
+              selectedArea.toLowerCase().includes(pref.toLowerCase()) && item.name === pref
+            );
+            
+            if (isExactMatch) {
+              // 入力された都道府県名と完全一致する場合は除外
+              console.log('❌ 入力された都道府県名と完全一致するため除外:', item.name);
+              return false;
+            } else {
+              // 他の都道府県名の店舗は除外
+              console.log('❌ 他の都道府県名の店舗のため除外:', item.name);
+              return false;
+            }
+          }
+          
+          // 都道府県名でない店舗は除外しない
+          return true;
+        });
         
         // 2. その都道府県内の具体的な店舗のみをフィルタリング
         items = items.filter(item => 

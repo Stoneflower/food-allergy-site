@@ -220,8 +220,8 @@ export const RestaurantProvider = ({ children }) => {
           const productMatrix = relatedProduct ? matrixData.filter(matrix => matrix.product_id === relatedProduct.id) : [];
           console.log('関連商品のmatrix:', productMatrix);
           
-          // 商品情報がない店舗は除外する
-          if (!relatedProduct && productMatrix.length === 0) {
+          // 商品情報がない店舗は除外する（ただし、store_list_urlがある場合は除外しない）
+          if (!relatedProduct && productMatrix.length === 0 && !store.store_list_url) {
             console.log('商品情報がない店舗のため除外:', storeName);
             return; // この店舗の処理をスキップ
           }
@@ -242,7 +242,7 @@ export const RestaurantProvider = ({ children }) => {
             product_allergies_matrix: productMatrix, // 関連商品のマトリックス
             related_product: relatedProduct, // 関連商品
             description: store.notes || relatedProduct?.description || '',
-            store_list_url: store.store_list_url || '', // エリア情報のリンク先
+            store_list_url: store.store_list_url || null, // エリア情報のリンク先
             source: {
               type: 'official',
               contributor: '店舗公式',
@@ -467,6 +467,29 @@ export const RestaurantProvider = ({ children }) => {
       items = items.filter(item => 
         item.area && item.area.toLowerCase().includes(selectedArea.toLowerCase())
       );
+      
+      // 都道府県名と完全一致する店舗名を除外
+      const prefectureNames = ['北海道', '青森県', '岩手県', '宮城県', '秋田県', '山形県', '福島県', '茨城県', '栃木県', '群馬県', '埼玉県', '千葉県', '東京都', '神奈川県', '新潟県', '富山県', '石川県', '福井県', '山梨県', '長野県', '岐阜県', '静岡県', '愛知県', '三重県', '滋賀県', '京都府', '大阪府', '兵庫県', '奈良県', '和歌山県', '鳥取県', '島根県', '岡山県', '広島県', '山口県', '徳島県', '香川県', '愛媛県', '高知県', '福岡県', '佐賀県', '長崎県', '熊本県', '大分県', '宮崎県', '鹿児島県', '沖縄県'];
+      
+      const isPrefectureName = prefectureNames.some(pref => 
+        selectedArea.toLowerCase().includes(pref.toLowerCase())
+      );
+      
+      if (isPrefectureName) {
+        // 都道府県名が入力された場合、その都道府県名を含む店舗名を除外
+        // 例: "兵庫県(2件)"、"兵庫県" などを除外
+        items = items.filter(item => 
+          !prefectureNames.some(pref => 
+            item.name.includes(pref) && (
+              item.name === pref || // 完全一致
+              item.name.includes(`${pref}(`) || // "兵庫県(2件)" 形式
+              item.name.includes(`${pref} `) || // "兵庫県 " 形式
+              item.name.startsWith(pref) // "兵庫県" で始まる
+            )
+          )
+        );
+        console.log('getFilteredItems - 都道府県名の店舗を除外:', items);
+      }
     }
 
     console.log('getFilteredItems - final result:', items);

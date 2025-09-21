@@ -22,28 +22,14 @@ const AllergySearchResults = () => {
   // エリア情報URLを取得する関数
   const getAreaInfoUrl = (store) => {
     console.log('getAreaInfoUrl - store:', store);
-    console.log('getAreaInfoUrl - store.related_product:', store.related_product);
+    console.log('getAreaInfoUrl - store.store_list_url:', store.store_list_url);
+    console.log('getAreaInfoUrl - store.store_list_urlの型:', typeof store.store_list_url);
+    console.log('getAreaInfoUrl - store.store_list_urlが空かどうか:', !store.store_list_url);
     
-    // 1. product_idを確認
-    if (store.related_product && store.related_product.id) {
-      console.log('getAreaInfoUrl - product_id:', store.related_product.id);
-      
-      // 2. 同じproduct_idを持つ店舗データを検索（store_locationsから）
-      // 店舗名が同じで、同じproduct_idを持つ店舗を検索
-      const relatedStore = filteredItems.find(item => 
-        item.name === store.name && // 同じ店舗名
-        item.related_product && 
-        item.related_product.id === store.related_product.id &&
-        item.store_list_url
-      );
-      
-      console.log('getAreaInfoUrl - relatedStore:', relatedStore);
-      
-      // 3. store_locations.store_list_urlから取得
-      if (relatedStore && relatedStore.store_list_url) {
-        console.log('getAreaInfoUrl - store_locations.store_list_urlを使用:', relatedStore.store_list_url);
-        return relatedStore.store_list_url;
-      }
+    // 直接のstore_list_urlを確認
+    if (store.store_list_url && store.store_list_url.trim() !== '') {
+      console.log('getAreaInfoUrl - 直接のstore_list_urlを使用:', store.store_list_url);
+      return store.store_list_url;
     }
     
     // フォールバック: Google Maps検索

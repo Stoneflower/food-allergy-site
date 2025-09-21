@@ -633,33 +633,16 @@ const CsvExporter = ({ data, onBack }) => {
         .select('id, product_id, address');
       console.log('🔍 staging_imports挿入後のstore_locations:', afterStaging?.length || 0, '件');
       
-      // 3. バッチ処理を実行
-      console.log('🔄 バッチ処理開始:', jobId);
-      let processOk = true;
-      const { data: processData, error: processError } = await supabase
-        .rpc('process_import_batch', { p_batch_id: jobId });
+      // 3. バッチ処理をスキップ（store_locations削除問題のため）
+      console.log('⚠️ バッチ処理をスキップします（store_locations削除問題のため）');
+      let processOk = false; // フォールバック処理を使用
       
-      if (processError) {
-        processOk = false;
-        console.warn('⚠️ バッチ処理スキップ（フォールバック継続）:', processError);
-        console.warn('エラー詳細:', JSON.stringify(processError, null, 2));
-      } else {
-        console.log('✅ バッチ処理完了:', processData);
-        console.log('📊 処理結果:', JSON.stringify(processData, null, 2));
-        
-        // バッチ処理後のstore_locations確認
-        console.log('🔍 バッチ処理後のstore_locations確認');
-        const { data: afterBatch, error: afterBatchErr } = await supabase
-          .from('store_locations')
-          .select('id, product_id, address');
-        console.log('🔍 バッチ処理後のstore_locations:', afterBatch?.length || 0, '件');
-        
-        // バッチ処理が成功した場合、product_allergies_matrixを更新
-        if (processData && processData.product_id) {
-          console.log('🔄 バッチ処理成功後のproduct_allergies_matrix更新開始');
-          await updateProductAllergiesMatrix(processData.product_id, jobId);
-        }
-      }
+      // バッチ処理スキップ後のstore_locations確認
+      console.log('🔍 バッチ処理スキップ後のstore_locations確認');
+      const { data: afterSkip, error: afterSkipErr } = await supabase
+        .from('store_locations')
+        .select('id, product_id, address');
+      console.log('🔍 バッチ処理スキップ後のstore_locations:', afterSkip?.length || 0, '件');
       
       // 4. store_locationsデータを手動で作成（バッチ処理が失敗した場合のフォールバック）
       console.log('🔄 store_locationsデータ作成開始');

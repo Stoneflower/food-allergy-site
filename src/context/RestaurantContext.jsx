@@ -202,12 +202,27 @@ export const RestaurantProvider = ({ children }) => {
           console.log('store_locationsデータ:', store);
           console.log('store.branch_name:', store.branch_name);
           console.log('store.address:', store.address);
+          console.log('store.product_id:', store.product_id);
           console.log('store.source_url:', store.source_url);
           console.log('store.store_list_url:', store.store_list_url);
           
           // branch_nameまたはaddressを使用して店舗名を作成
           const storeName = store.branch_name || store.address || '店舗名不明';
           console.log('店舗名:', storeName);
+          
+          // この店舗に関連する商品を取得
+          const relatedProduct = productData && store.product_id ? productData.find(product => product.id === store.product_id) : null;
+          console.log('関連商品:', relatedProduct);
+          
+          // 関連商品のproduct_allergies_matrixを取得
+          const productMatrix = relatedProduct ? matrixData.filter(matrix => matrix.product_id === relatedProduct.id) : [];
+          console.log('関連商品のmatrix:', productMatrix);
+          
+          // 商品情報がない店舗は除外する
+          if (!relatedProduct && productMatrix.length === 0) {
+            console.log('商品情報がない店舗のため除外:', storeName);
+            return; // この店舗の処理をスキップ
+          }
           
           transformedData.push({
             id: store.id,
@@ -219,12 +234,12 @@ export const RestaurantProvider = ({ children }) => {
             area: store.address || '',
             cuisine: 'レストラン',
             category: 'restaurants',
-            brand: '',
+            brand: relatedProduct?.brand || '',
             allergyInfo: defaultAllergyInfo,
             allergyFree: allergyFree, // アレルギー対応項目のリスト
-            product_allergies_matrix: [], // store_locationsには商品マトリックスはない
-            related_product: null, // store_locationsには関連商品はない
-            description: store.notes || '',
+            product_allergies_matrix: productMatrix, // 関連商品のマトリックス
+            related_product: relatedProduct, // 関連商品
+            description: store.notes || relatedProduct?.description || '',
             store_list_url: store.store_list_url || '', // エリア情報のリンク先
             source: {
               type: 'official',
@@ -262,6 +277,12 @@ export const RestaurantProvider = ({ children }) => {
           // 関連店舗がある場合は店舗ごとにデータを作成、ない場合は商品データとして作成
           if (relatedStores.length > 0) {
             relatedStores.forEach(store => {
+              // 商品情報がない店舗は除外する
+              if (!product && productMatrix.length === 0) {
+                console.log('商品情報がない店舗のため除外:', store.branch_name || store.address);
+                return; // この店舗の処理をスキップ
+              }
+              
               transformedData.push({
                 id: `product-${product.id}-store-${store.id}`, // 商品と店舗の組み合わせID
                 name: store.branch_name || product.name || '店舗名不明',
@@ -291,6 +312,12 @@ export const RestaurantProvider = ({ children }) => {
             });
           } else {
             // 関連店舗がない場合は商品データとして作成
+            // 商品情報がない場合は除外する
+            if (!product && productMatrix.length === 0) {
+              console.log('商品情報がない商品のため除外:', product.name);
+              return; // この商品の処理をスキップ
+            }
+            
             transformedData.push({
               id: product.id + 10000,
               name: product.name || '商品名不明',

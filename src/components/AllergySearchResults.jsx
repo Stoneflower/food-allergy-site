@@ -18,6 +18,31 @@ const AllergySearchResults = () => {
 
   const filteredItems = getFilteredItems();
   const [expandedStores, setExpandedStores] = useState(new Set());
+
+  // エリア情報URLを取得する関数
+  const getAreaInfoUrl = (store) => {
+    // まずstore_list_urlを確認
+    if (store.store_list_url) {
+      return store.store_list_url;
+    }
+    
+    // related_productがある場合は、そのproduct_idでstore_locationsを検索
+    if (store.related_product && store.related_product.id) {
+      // 同じproduct_idを持つ店舗データを検索
+      const relatedStore = filteredItems.find(item => 
+        item.related_product && 
+        item.related_product.id === store.related_product.id &&
+        item.store_list_url
+      );
+      
+      if (relatedStore && relatedStore.store_list_url) {
+        return relatedStore.store_list_url;
+      }
+    }
+    
+    // フォールバック: Google Maps検索
+    return `https://www.google.com/maps/search/${encodeURIComponent(store.name)}`;
+  };
   const [showScrollTop, setShowScrollTop] = useState(false);
   
   // スクロール位置の監視
@@ -196,15 +221,18 @@ const AllergySearchResults = () => {
           });
           console.log('groupedStores - added related product:', item.related_product.name, 'to store:', storeName);
         } else {
-          // 関連商品がない場合（通常は存在しないはず）
-          console.error(`❌ 予期しない状況: product_allergies_matrixもrelated_productもない`);
-          console.error('item詳細:', item);
-          console.error('storeName:', storeName);
-          console.warn(`⚠️ 不明な商品発見: product_allergies_matrixもrelated_productもない - 商品情報なしとして表示`);
-          stores[storeName].menu_items.push({
-            name: '商品情報なし',
-            product_allergies_matrix: []
-          });
+          // 関連商品がない場合（store_locationsテーブルのみのデータ）
+          console.warn(`⚠️ 店舗データに商品情報がありません: ${storeName}`);
+          console.log('item詳細:', item);
+          console.log('storeName:', storeName);
+          
+          // 商品情報がない店舗は表示しない（menu_itemsに追加しない）
+          console.log('商品情報がない店舗のため、表示をスキップ:', storeName);
+          
+          // 店舗自体も表示リストから除外する
+          delete stores[storeName];
+          console.log('商品情報がない店舗を表示リストから除外:', storeName);
+          return; // この店舗の処理を終了
         }
         
         console.log('groupedStores - added restaurant:', item.name);
@@ -412,11 +440,11 @@ const AllergySearchResults = () => {
                     アレルギー情報元
                   </a>
                   <a
-                    href={store.store_list_url || `https://www.google.com/maps/search/${encodeURIComponent(store.name)}`}
+                    href={getAreaInfoUrl(store)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className={`px-2 py-1 text-xs rounded transition-colors ${
-                      store.store_list_url 
+                      getAreaInfoUrl(store) !== '#' 
                         ? 'bg-green-100 text-green-700 hover:bg-green-200' 
                         : 'bg-gray-100 text-gray-500'
                     }`}

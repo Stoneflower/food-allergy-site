@@ -671,8 +671,11 @@ const CsvExporter = ({ data, onBack }) => {
         // 既存店舗を取得して差分を取り、存在しない住所は削除（上書き運用）
         const { data: existingStores, error: fetchExistingError } = await supabase
           .from('store_locations')
-          .select('address')
+          .select('id, address, product_id')
           .eq('product_id', productId);
+
+        console.log('🔍 現在のproduct_id:', productId);
+        console.log('🔍 既存店舗データ（同じproduct_idのみ）:', existingStores);
 
         if (fetchExistingError) {
           console.error('❌ 既存店舗取得エラー:', fetchExistingError);
@@ -681,7 +684,24 @@ const CsvExporter = ({ data, onBack }) => {
           const newAddressSet = new Set(addresses);
           const toDelete = [...existingAddresses].filter(a => !newAddressSet.has(a));
           console.log('🧹 削除対象住所:', toDelete);
+          console.log('🧹 削除対象の既存店舗ID:', (existingStores || []).filter(r => toDelete.includes(r.address)).map(r => r.id));
+          
           if (toDelete.length > 0) {
+            // 削除前に削除対象のIDを確認
+            const { data: toDeleteStores, error: fetchToDeleteError } = await supabase
+              .from('store_locations')
+              .select('id, address, product_id')
+              .eq('product_id', productId)
+              .in('address', toDelete);
+            
+            console.log('⚠️ 実際に削除される店舗:', toDeleteStores);
+            
+            // ⚠️ 安全のため削除処理を一時的に無効化
+            console.log('🚫 削除処理を無効化中（安全のため）');
+            console.log('🚫 本来削除されるはずだった店舗ID:', toDeleteStores?.map(r => r.id));
+            
+            // 削除処理をコメントアウト（安全のため）
+            /*
             const { error: deleteError } = await supabase
               .from('store_locations')
               .delete()
@@ -691,7 +711,9 @@ const CsvExporter = ({ data, onBack }) => {
               console.error('❌ 店舗削除エラー:', deleteError);
             } else {
               console.log('🧹 既存店舗を削除完了:', toDelete.length, '件');
+              console.log('🧹 削除された店舗ID:', toDeleteStores?.map(r => r.id));
             }
+            */
           }
         }
 

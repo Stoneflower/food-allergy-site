@@ -3,13 +3,15 @@ import { motion } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import SafeIcon from '../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
+import { useDebouncedInput } from '../hooks/useDebounce';
 
 const { FiSearch, FiMapPin, FiFilter, FiX, FiChevronDown } = FiIcons;
 
 const EnhancedSearchPanel = ({ onSearchResults, onLoading }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedArea, setSelectedArea] = useState('');
+  // エリア入力にdebounceを適用
+  const { inputValue: areaInputValue, setInputValue: setAreaInputValue, debouncedValue: debouncedArea } = useDebouncedInput('', 300);
   const [selectedAllergies, setSelectedAllergies] = useState([]);
   const [selectedMenuCategory, setSelectedMenuCategory] = useState('all');
   const [isLoading, setIsLoading] = useState(false);
@@ -145,9 +147,9 @@ const EnhancedSearchPanel = ({ onSearchResults, onLoading }) => {
         query = query.eq('category', selectedCategory);
       }
 
-      // エリアフィルター
-      if (selectedArea) {
-        query = query.eq('store_locations.address', selectedArea);
+      // エリアフィルター（debouncedAreaを使用）
+      if (debouncedArea) {
+        query = query.eq('store_locations.address', debouncedArea);
       }
 
       // キーワード検索
@@ -267,18 +269,18 @@ const EnhancedSearchPanel = ({ onSearchResults, onLoading }) => {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">エリア</label>
-          <select
-            value={selectedArea}
-            onChange={(e) => setSelectedArea(e.target.value)}
+          <input
+            type="text"
+            value={areaInputValue}
+            onChange={(e) => setAreaInputValue(e.target.value)}
+            placeholder="都道府県名を入力（例：兵庫県、大阪、東京）"
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-          >
-            <option value="">すべてのエリア</option>
-            {prefectures.map(prefecture => (
-              <option key={prefecture} value={prefecture}>
-                {prefecture}
-              </option>
-            ))}
-          </select>
+          />
+          {debouncedArea && (
+            <p className="text-xs text-gray-500 mt-1">
+              検索中: {debouncedArea}
+            </p>
+          )}
         </div>
       </div>
 

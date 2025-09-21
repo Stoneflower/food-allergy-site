@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { PREFECTURES, isPrefectureName, isAreaMatch } from '../constants/prefectures';
+import { useDebouncedInput } from '../hooks/useDebounce';
 
 const RestaurantContext = createContext();
 
@@ -26,7 +28,8 @@ export const RestaurantProvider = ({ children }) => {
 
   const [selectedAllergies, setSelectedAllergies] = useState([]);
   const [searchKeyword, setSearchKeyword] = useState('');
-  const [selectedArea, setSelectedArea] = useState('');
+  // エリア入力にdebounceを適用
+  const { inputValue: areaInputValue, setInputValue: setAreaInputValue, debouncedValue: selectedArea } = useDebouncedInput('', 300);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [favorites, setFavorites] = useState([]);
   const [history, setHistory] = useState([]);
@@ -490,47 +493,16 @@ export const RestaurantProvider = ({ children }) => {
     // if (selectedAllergies.length > 0) { ... }
 
     if (selectedArea) {
-      // 都道府県名リスト
-      const prefectureNames = ['北海道', '青森県', '岩手県', '宮城県', '秋田県', '山形県', '福島県', '茨城県', '栃木県', '群馬県', '埼玉県', '千葉県', '東京都', '神奈川県', '新潟県', '富山県', '石川県', '福井県', '山梨県', '長野県', '岐阜県', '静岡県', '愛知県', '三重県', '滋賀県', '京都府', '大阪府', '兵庫県', '奈良県', '和歌山県', '鳥取県', '島根県', '岡山県', '広島県', '山口県', '徳島県', '香川県', '愛媛県', '高知県', '福岡県', '佐賀県', '長崎県', '熊本県', '大分県', '宮崎県', '鹿児島県', '沖縄県'];
+      // 都道府県名の判定（静的データを使用）
+      const isPrefectureNameInput = isPrefectureName(selectedArea);
       
-      // 都道府県名の判定（「県」「都」「府」を省略した場合も含む）
-      const isPrefectureName = prefectureNames.some(pref => {
-        const prefLower = pref.toLowerCase();
-        const selectedLower = selectedArea.toLowerCase();
-        
-        // 完全一致
-        if (selectedLower.includes(prefLower)) {
-          return true;
-        }
-        
-        // 「県」「都」「府」を省略した場合の判定
-        if (prefLower.endsWith('県')) {
-          const prefWithoutSuffix = prefLower.replace('県', '');
-          if (selectedLower === prefWithoutSuffix) {
-            return true;
-          }
-        } else if (prefLower.endsWith('都')) {
-          const prefWithoutSuffix = prefLower.replace('都', '');
-          if (selectedLower === prefWithoutSuffix) {
-            return true;
-          }
-        } else if (prefLower.endsWith('府')) {
-          const prefWithoutSuffix = prefLower.replace('府', '');
-          if (selectedLower === prefWithoutSuffix) {
-            return true;
-          }
-        }
-        
-        return false;
-      });
-      
-      if (isPrefectureName) {
+      if (isPrefectureNameInput) {
         // 都道府県名が入力された場合、その都道府県内の具体的な店舗のみを表示
         // 1. 入力された都道府県内の店舗のみを表示
         // 入力された都道府県名と完全一致する店舗名は除外
         // 他の都道府県名の店舗も除外
         items = items.filter(item => {
-          const isPrefectureName = prefectureNames.some(pref => 
+          const isPrefectureNameItem = PREFECTURES.some(pref => 
             item.name.includes(pref) && (
               item.name === pref || // 完全一致
               item.name.includes(`${pref}(`) || // "鳥取県(401件)" 形式
@@ -539,9 +511,9 @@ export const RestaurantProvider = ({ children }) => {
             )
           );
           
-          if (isPrefectureName) {
+          if (isPrefectureNameItem) {
             // 都道府県名の店舗の場合
-            const isExactMatch = prefectureNames.some(pref => 
+            const isExactMatch = PREFECTURES.some(pref => 
               selectedArea.toLowerCase().includes(pref.toLowerCase()) && item.name === pref
             );
             
@@ -563,43 +535,11 @@ export const RestaurantProvider = ({ children }) => {
         // 2. その都道府県内の具体的な店舗のみをフィルタリング
         // ただし、都道府県名の店舗は除外
         items = items.filter(item => {
-          // エリアフィルタリング（「県」「都」「府」を省略した場合も含む）
-          let areaMatch = false;
-          if (item.area) {
-            const itemAreaLower = item.area.toLowerCase();
-            const selectedLower = selectedArea.toLowerCase();
-            
-            // 完全一致
-            if (itemAreaLower.includes(selectedLower)) {
-              areaMatch = true;
-            } else {
-              // 「県」「都」「府」を省略した場合の判定
-              prefectureNames.forEach(pref => {
-                const prefLower = pref.toLowerCase();
-                if (prefLower.includes(selectedLower)) {
-                  if (prefLower.endsWith('県')) {
-                    const prefWithoutSuffix = prefLower.replace('県', '');
-                    if (selectedLower === prefWithoutSuffix && itemAreaLower.includes(prefLower)) {
-                      areaMatch = true;
-                    }
-                  } else if (prefLower.endsWith('都')) {
-                    const prefWithoutSuffix = prefLower.replace('都', '');
-                    if (selectedLower === prefWithoutSuffix && itemAreaLower.includes(prefLower)) {
-                      areaMatch = true;
-                    }
-                  } else if (prefLower.endsWith('府')) {
-                    const prefWithoutSuffix = prefLower.replace('府', '');
-                    if (selectedLower === prefWithoutSuffix && itemAreaLower.includes(prefLower)) {
-                      areaMatch = true;
-                    }
-                  }
-                }
-              });
-            }
-          }
+          // エリアフィルタリング（静的データを使用）
+          const areaMatch = isAreaMatch(item.area, selectedArea);
           
           // 都道府県名の店舗かどうかをチェック
-          const isPrefectureName = prefectureNames.some(pref => 
+          const isPrefectureNameItem = PREFECTURES.some(pref => 
             item.name.includes(pref) && (
               item.name === pref || // 完全一致
               item.name.includes(`${pref}(`) || // "島根県(401件)" 形式
@@ -609,7 +549,7 @@ export const RestaurantProvider = ({ children }) => {
           );
           
           // エリアにマッチし、かつ都道府県名の店舗でない場合のみ表示
-          return areaMatch && !isPrefectureName;
+          return areaMatch && !isPrefectureNameItem;
         });
         
         console.log('getFilteredItems - 都道府県名の店舗を除外し、具体的な店舗のみ表示:', items);
@@ -657,7 +597,8 @@ export const RestaurantProvider = ({ children }) => {
     searchKeyword,
     setSearchKeyword,
     selectedArea,
-    setSelectedArea,
+    areaInputValue,
+    setAreaInputValue,
     selectedCategory,
     setSelectedCategory,
     favorites,

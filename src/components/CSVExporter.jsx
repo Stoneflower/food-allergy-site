@@ -854,14 +854,14 @@ const CsvExporter = ({ data, onBack }) => {
         const stagingNames = (Array.isArray(stagingData) ? stagingData : [])
           .map(r => ({ row_no: r.row_no, raw_menu_name: r.raw_menu_name }))
           .sort((a, b) => (a.row_no || 0) - (b.row_no || 0));
-        {
-          // 既存menu_itemsを丸ごと削除（対象商品）
-          console.log('🔍 menu_items削除前のstore_locations確認開始');
-          const { data: beforeStoreLocations, error: beforeErr } = await supabase
-            .from('store_locations')
-            .select('id, product_id, address');
-          console.log('🔍 削除前のstore_locations:', beforeStoreLocations?.length || 0, '件');
-          console.log('🔍 削除前のstore_locations詳細:', beforeStoreLocations);
+        
+        // 既存menu_itemsを丸ごと削除（対象商品）
+        console.log('🔍 menu_items削除前のstore_locations確認開始');
+        const { data: beforeStoreLocations, error: beforeErr } = await supabase
+          .from('store_locations')
+          .select('id, product_id, address');
+        console.log('🔍 削除前のstore_locations:', beforeStoreLocations?.length || 0, '件');
+        console.log('🔍 削除前のstore_locations詳細:', beforeStoreLocations);
           
           const { data: allMenus, error: fetchAllErr } = await supabase
             .from('menu_items')
@@ -922,9 +922,8 @@ const CsvExporter = ({ data, onBack }) => {
           } else {
             console.log('✅ store_locationsは影響を受けていません');
           }
-        }
 
-          // 202件を必ずINSERT（重複名は(2),(3)…を付与して衝突回避）
+        // 202件を必ずINSERT（重複名は(2),(3)…を付与して衝突回避）
           const finalNames = [];
           const nameCount = new Map();
           (stagingNames || []).forEach(r => {
@@ -950,7 +949,6 @@ const CsvExporter = ({ data, onBack }) => {
             console.log('🔄 product_allergies_matrix自動更新開始');
             await updateProductAllergiesMatrix(pid, jobId);
           }
-        }
       } catch (menuFallbackError) {
         console.error('❌ menu_itemsフォールバック処理エラー:', menuFallbackError);
       }

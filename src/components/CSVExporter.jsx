@@ -644,6 +644,12 @@ const CsvExporter = ({ data, onBack }) => {
         
         // 1. products.nameを参照してidを確認
         console.log('🔍 商品名で検索開始:', productName);
+        console.log('🔍 productsテーブル検索前のstore_locations確認');
+        const { data: beforeProductSearch, error: beforeProductErr } = await supabase
+          .from('store_locations')
+          .select('id, product_id, address');
+        console.log('🔍 商品検索前のstore_locations:', beforeProductSearch?.length || 0, '件');
+        
         const { data: productData, error: productError } = await supabase
           .from('products')
           .select('id, name')
@@ -654,6 +660,12 @@ const CsvExporter = ({ data, onBack }) => {
           console.log('🔄 商品が存在しないため、新規作成します:', productName);
           
           // 新しい商品を作成
+          console.log('🔍 商品作成前のstore_locations確認');
+          const { data: beforeCreate, error: beforeCreateErr } = await supabase
+            .from('store_locations')
+            .select('id, product_id, address');
+          console.log('🔍 商品作成前のstore_locations:', beforeCreate?.length || 0, '件');
+          
           const { data: newProductData, error: createError } = await supabase
             .from('products')
             .insert({
@@ -673,9 +685,22 @@ const CsvExporter = ({ data, onBack }) => {
           
           productId = newProductData.id;
           console.log('✅ 新商品作成完了:', productName, 'ID:', productId);
+          
+          console.log('🔍 商品作成後のstore_locations確認');
+          const { data: afterCreate, error: afterCreateErr } = await supabase
+            .from('store_locations')
+            .select('id, product_id, address');
+          console.log('🔍 商品作成後のstore_locations:', afterCreate?.length || 0, '件');
+          
         } else {
           productId = productData.id;
           console.log('📦 既存商品ID:', productId, '商品名:', productData.name);
+          
+          console.log('🔍 既存商品取得後のstore_locations確認');
+          const { data: afterExisting, error: afterExistingErr } = await supabase
+            .from('store_locations')
+            .select('id, product_id, address');
+          console.log('🔍 既存商品取得後のstore_locations:', afterExisting?.length || 0, '件');
         }
         
         console.log('📦 確定した商品ID:', productId);
@@ -749,6 +774,8 @@ const CsvExporter = ({ data, onBack }) => {
           // まず同じproduct_idの既存データを削除
           if ((existingStores || []).length > 0) {
             console.log('🧹 同じproduct_idの既存データを削除開始:', productId);
+            console.log('🔒 RESTRICT制約により、他のproduct_idは保護されます');
+            
             const { error: deleteError } = await supabase
               .from('store_locations')
               .delete()
@@ -756,8 +783,10 @@ const CsvExporter = ({ data, onBack }) => {
 
             if (deleteError) {
               console.error('❌ 既存データ削除エラー:', deleteError);
+              console.error('🔒 RESTRICT制約により削除がブロックされました');
             } else {
               console.log('🧹 既存データ削除完了:', (existingStores || []).length, '件');
+              console.log('✅ 同じproduct_idのみが削除されました');
             }
           }
 
@@ -782,6 +811,7 @@ const CsvExporter = ({ data, onBack }) => {
           } else {
             console.log('✅ store_locations新規挿入完了:', insertData?.length || 0, '件');
             console.log('✅ 挿入されたproduct_id:', productId);
+            console.log('🔒 RESTRICT制約により、他のproduct_idは保護されています');
           }
         } else {
           console.log('ℹ️ 挿入する住所がありません');
@@ -826,6 +856,13 @@ const CsvExporter = ({ data, onBack }) => {
           .sort((a, b) => (a.row_no || 0) - (b.row_no || 0));
         {
           // 既存menu_itemsを丸ごと削除（対象商品）
+          console.log('🔍 menu_items削除前のstore_locations確認開始');
+          const { data: beforeStoreLocations, error: beforeErr } = await supabase
+            .from('store_locations')
+            .select('id, product_id, address');
+          console.log('🔍 削除前のstore_locations:', beforeStoreLocations?.length || 0, '件');
+          console.log('🔍 削除前のstore_locations詳細:', beforeStoreLocations);
+          
           const { data: allMenus, error: fetchAllErr } = await supabase
             .from('menu_items')
             .select('id')
@@ -836,13 +873,56 @@ const CsvExporter = ({ data, onBack }) => {
             const allIds = (allMenus || []).map(r => r.id);
             if (allIds.length > 0) {
               console.log('🧹 既存menu_items削除開始 - product_id:', pid, '件数:', allIds.length);
+              console.log('🧹 削除対象menu_items ID:', allIds);
+              
               // 子を先に削除
-              await supabase.from('menu_item_allergies').delete().in('menu_item_id', allIds);
-              await supabase.from('menu_items').delete().eq('product_id', pid).in('id', allIds);
+              console.log('🧹 menu_item_allergies削除開始');
+              const { error: allergyDeleteErr } = await supabase
+                .from('menu_item_allergies')
+                .delete()
+                .in('menu_item_id', allIds);
+              if (allergyDeleteErr) {
+                console.error('❌ menu_item_allergies削除エラー:', allergyDeleteErr);
+              } else {
+                console.log('✅ menu_item_allergies削除完了');
+              }
+              
+              console.log('🧹 menu_items削除開始');
+              const { error: menuDeleteErr } = await supabase
+                .from('menu_items')
+                .delete()
+                .eq('product_id', pid)
+                .in('id', allIds);
+              if (menuDeleteErr) {
+                console.error('❌ menu_items削除エラー:', menuDeleteErr);
+              } else {
+                console.log('✅ menu_items削除完了');
+              }
+              
               console.log('🧹 既存menu_items 全削除完了:', allIds.length, '件');
               console.log('⚠️ 注意: store_locationsはRESTRICT制約により保護されています');
             }
           }
+          
+          // 削除後のstore_locations確認
+          console.log('🔍 menu_items削除後のstore_locations確認開始');
+          const { data: afterStoreLocations, error: afterErr } = await supabase
+            .from('store_locations')
+            .select('id, product_id, address');
+          console.log('🔍 削除後のstore_locations:', afterStoreLocations?.length || 0, '件');
+          console.log('🔍 削除後のstore_locations詳細:', afterStoreLocations);
+          
+          // 変化の確認
+          const beforeCount = beforeStoreLocations?.length || 0;
+          const afterCount = afterStoreLocations?.length || 0;
+          if (beforeCount !== afterCount) {
+            console.error('🚨 警告: store_locationsの件数が変化しました!');
+            console.error('🚨 削除前:', beforeCount, '件 → 削除後:', afterCount, '件');
+            console.error('🚨 これは予期しない動作です。RESTRICT制約が機能していない可能性があります。');
+          } else {
+            console.log('✅ store_locationsは影響を受けていません');
+          }
+        }
 
           // 202件を必ずINSERT（重複名は(2),(3)…を付与して衝突回避）
           const finalNames = [];

@@ -464,11 +464,7 @@ export const RestaurantProvider = ({ children }) => {
     // if (selectedAllergies.length > 0) { ... }
 
     if (selectedArea) {
-      items = items.filter(item => 
-        item.area && item.area.toLowerCase().includes(selectedArea.toLowerCase())
-      );
-      
-      // 都道府県名と完全一致する店舗名を除外
+      // 都道府県名リスト
       const prefectureNames = ['北海道', '青森県', '岩手県', '宮城県', '秋田県', '山形県', '福島県', '茨城県', '栃木県', '群馬県', '埼玉県', '千葉県', '東京都', '神奈川県', '新潟県', '富山県', '石川県', '福井県', '山梨県', '長野県', '岐阜県', '静岡県', '愛知県', '三重県', '滋賀県', '京都府', '大阪府', '兵庫県', '奈良県', '和歌山県', '鳥取県', '島根県', '岡山県', '広島県', '山口県', '徳島県', '香川県', '愛媛県', '高知県', '福岡県', '佐賀県', '長崎県', '熊本県', '大分県', '宮崎県', '鹿児島県', '沖縄県'];
       
       const isPrefectureName = prefectureNames.some(pref => 
@@ -476,19 +472,30 @@ export const RestaurantProvider = ({ children }) => {
       );
       
       if (isPrefectureName) {
-        // 都道府県名が入力された場合、その都道府県名を含む店舗名を除外
-        // 例: "兵庫県(2件)"、"兵庫県" などを除外
+        // 都道府県名が入力された場合、その都道府県内の具体的な店舗のみを表示
+        // 1. まず都道府県名の店舗（例：「鳥取県(401件)」）を除外
         items = items.filter(item => 
           !prefectureNames.some(pref => 
             item.name.includes(pref) && (
               item.name === pref || // 完全一致
-              item.name.includes(`${pref}(`) || // "兵庫県(2件)" 形式
-              item.name.includes(`${pref} `) || // "兵庫県 " 形式
-              item.name.startsWith(pref) // "兵庫県" で始まる
+              item.name.includes(`${pref}(`) || // "鳥取県(401件)" 形式
+              item.name.includes(`${pref} `) || // "鳥取県 " 形式
+              item.name.startsWith(pref) // "鳥取県" で始まる
             )
           )
         );
-        console.log('getFilteredItems - 都道府県名の店舗を除外:', items);
+        
+        // 2. その都道府県内の具体的な店舗のみをフィルタリング
+        items = items.filter(item => 
+          item.area && item.area.toLowerCase().includes(selectedArea.toLowerCase())
+        );
+        
+        console.log('getFilteredItems - 都道府県名の店舗を除外し、具体的な店舗のみ表示:', items);
+      } else {
+        // 都道府県名以外の場合は通常のフィルタリング
+        items = items.filter(item => 
+          item.area && item.area.toLowerCase().includes(selectedArea.toLowerCase())
+        );
       }
     }
 

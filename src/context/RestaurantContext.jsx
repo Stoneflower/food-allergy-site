@@ -205,6 +205,8 @@ export const RestaurantProvider = ({ children }) => {
           console.log('store.product_id:', store.product_id);
           console.log('store.source_url:', store.source_url);
           console.log('store.store_list_url:', store.store_list_url);
+          console.log('store.store_list_urlの型:', typeof store.store_list_url);
+          console.log('store.store_list_urlが空かどうか:', !store.store_list_url);
           
           // branch_nameまたはaddressを使用して店舗名を作成
           const storeName = store.branch_name || store.address || '店舗名不明';

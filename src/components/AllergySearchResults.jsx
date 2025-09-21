@@ -21,26 +21,33 @@ const AllergySearchResults = () => {
 
   // エリア情報URLを取得する関数
   const getAreaInfoUrl = (store) => {
-    // まずstore_list_urlを確認
-    if (store.store_list_url) {
-      return store.store_list_url;
-    }
+    console.log('getAreaInfoUrl - store:', store);
+    console.log('getAreaInfoUrl - store.related_product:', store.related_product);
     
-    // related_productがある場合は、そのproduct_idでstore_locationsを検索
+    // 1. product_idを確認
     if (store.related_product && store.related_product.id) {
-      // 同じproduct_idを持つ店舗データを検索
+      console.log('getAreaInfoUrl - product_id:', store.related_product.id);
+      
+      // 2. 同じproduct_idを持つ店舗データを検索（store_locationsから）
+      // 店舗名が同じで、同じproduct_idを持つ店舗を検索
       const relatedStore = filteredItems.find(item => 
+        item.name === store.name && // 同じ店舗名
         item.related_product && 
         item.related_product.id === store.related_product.id &&
         item.store_list_url
       );
       
+      console.log('getAreaInfoUrl - relatedStore:', relatedStore);
+      
+      // 3. store_locations.store_list_urlから取得
       if (relatedStore && relatedStore.store_list_url) {
+        console.log('getAreaInfoUrl - store_locations.store_list_urlを使用:', relatedStore.store_list_url);
         return relatedStore.store_list_url;
       }
     }
     
     // フォールバック: Google Maps検索
+    console.log('getAreaInfoUrl - Google Maps検索にフォールバック');
     return `https://www.google.com/maps/search/${encodeURIComponent(store.name)}`;
   };
   const [showScrollTop, setShowScrollTop] = useState(false);

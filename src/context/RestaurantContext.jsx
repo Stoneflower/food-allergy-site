@@ -312,7 +312,7 @@ export const RestaurantProvider = ({ children }) => {
                 product_allergies_matrix: productMatrix,
                 related_product: product,
                 description: product.description || product.name || '',
-                store_list_url: store.store_list_url || null, // エリア情報のリンク先
+                store_list_url: store.store_list_url || product.store_list_url || null, // エリア情報のリンク先（アレルギー情報元と同じロジック）
                 source: {
                   type: 'official',
                   contributor: '商品公式',
@@ -336,6 +336,10 @@ export const RestaurantProvider = ({ children }) => {
               return; // この商品の処理をスキップ
             }
             
+            // 関連するstore_locationsからstore_list_urlを取得（アレルギー情報元と同じロジック）
+            const relatedStoreForUrl = storeData ? storeData.find(store => store.product_id === product.id) : null;
+            const storeListUrl = relatedStoreForUrl ? relatedStoreForUrl.store_list_url : (product.store_list_url || null);
+            
             const transformedItem = {
               id: product.id + 10000,
               name: product.name || '商品名不明',
@@ -352,7 +356,7 @@ export const RestaurantProvider = ({ children }) => {
               product_allergies_matrix: productMatrix,
               related_product: product,
               description: product.description || product.name || '',
-              store_list_url: product.store_list_url || null,
+              store_list_url: storeListUrl, // store_locationsから取得
               source: {
                 type: 'official',
                 contributor: '商品公式',
@@ -364,7 +368,8 @@ export const RestaurantProvider = ({ children }) => {
             };
             
             console.log(`商品単体 ${product.name} のstore_list_url:`, transformedItem.store_list_url);
-            console.log(`元のproduct.store_list_url:`, product.store_list_url);
+            console.log(`関連するstore_locations:`, relatedStoreForUrl);
+            console.log(`store_locationsから取得したstore_list_url:`, storeListUrl);
             
             transformedData.push(transformedItem);
           }

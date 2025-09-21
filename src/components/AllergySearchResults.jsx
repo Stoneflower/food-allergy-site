@@ -169,6 +169,8 @@ const AllergySearchResults = () => {
           stores[storeName] = {
             name: storeName,
             source: item.source,
+            area: item.area,
+            store_list_url: item.store_list_url,
             menu_items: []
           };
         }

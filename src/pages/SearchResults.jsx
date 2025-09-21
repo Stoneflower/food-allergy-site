@@ -42,7 +42,11 @@ const SearchResults = () => {
       result = result.filter(item =>
         item.name.toLowerCase().includes(searchFilters.keyword.toLowerCase()) ||
         (item.brand && item.brand.toLowerCase().includes(searchFilters.keyword.toLowerCase())) ||
-        (item.cuisine && item.cuisine.toLowerCase().includes(searchFilters.keyword.toLowerCase()))
+        (item.cuisine && item.cuisine.toLowerCase().includes(searchFilters.keyword.toLowerCase())) ||
+        (item.area && item.area.toLowerCase().includes(searchFilters.keyword.toLowerCase())) ||
+        (item.description && item.description.toLowerCase().includes(searchFilters.keyword.toLowerCase())) ||
+        (item.related_product && item.related_product.name && item.related_product.name.toLowerCase().includes(searchFilters.keyword.toLowerCase())) ||
+        (item.related_product && item.related_product.description && item.related_product.description.toLowerCase().includes(searchFilters.keyword.toLowerCase()))
       );
     }
 

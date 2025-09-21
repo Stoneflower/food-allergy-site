@@ -91,9 +91,23 @@ export const RestaurantProvider = ({ children }) => {
       let storeData = null;
       let productData = null;
       
-      // 店舗情報を取得（無効化 - addressを店舗名として使用するのは不適切）
-      console.log('store_locationsテーブルアクセスを無効化（addressを店舗名として使用するのは不適切）');
-      storeData = null;
+      // 店舗情報を取得
+      try {
+        console.log('store_locationsテーブルにアクセス中...');
+        const { data, error } = await supabase
+          .from('store_locations')
+          .select('*');
+        
+        if (!error) {
+          storeData = data;
+          console.log('store_locationsデータ取得成功:', data?.length || 0, '件');
+          console.log('store_locationsデータ詳細:', data);
+        } else {
+          console.error('store_locationsテーブルエラー:', error);
+        }
+      } catch (err) {
+        console.error('store_locationsテーブルアクセスエラー:', err);
+      }
 
       // 商品情報を取得（シンプルなクエリ）
       try {
@@ -177,7 +191,7 @@ export const RestaurantProvider = ({ children }) => {
       // データを統合してallItems形式に変換
       const transformedData = [];
       
-      // 店舗データを変換（無効化 - addressを店舗名として使用するのは不適切）
+      // 店舗データを変換
       if (storeData && storeData.length > 0) {
         console.log('店舗データ変換開始:', storeData);
         console.log('最初の店舗データの構造:', storeData[0]);
@@ -185,14 +199,15 @@ export const RestaurantProvider = ({ children }) => {
           const defaultAllergyInfo = createDefaultAllergyInfo();
           const allergyFree = Object.keys(defaultAllergyInfo).filter(key => !defaultAllergyInfo[key]);
           
-          console.log('store_locations addressデータ:', store);
+          console.log('store_locationsデータ:', store);
+          console.log('store.branch_name:', store.branch_name);
           console.log('store.address:', store.address);
           console.log('store.source_url:', store.source_url);
           console.log('store.store_list_url:', store.store_list_url);
           
-          // addressを使用して店舗データを作成
-          const storeName = store.address || '住所不明';
-          console.log('店舗名（住所）:', storeName);
+          // branch_nameまたはaddressを使用して店舗名を作成
+          const storeName = store.branch_name || store.address || '店舗名不明';
+          console.log('店舗名:', storeName);
           
           transformedData.push({
             id: store.id,
@@ -209,15 +224,15 @@ export const RestaurantProvider = ({ children }) => {
             allergyFree: allergyFree, // アレルギー対応項目のリスト
             product_allergies_matrix: [], // store_locationsには商品マトリックスはない
             related_product: null, // store_locationsには関連商品はない
-            description: '',
-            store_list_url: store.store_list_url || '', // 店舗エリアリンク用
+            description: store.notes || '',
+            store_list_url: store.store_list_url || '', // エリア情報のリンク先
             source: {
               type: 'official',
               contributor: '店舗公式',
               lastUpdated: new Date().toISOString().split('T')[0],
               confidence: 90,
               verified: true,
-              url: store.source_url || ''
+              url: store.source_url || '' // アレルギー情報元のリンク先
             }
           });
         });
@@ -234,45 +249,78 @@ export const RestaurantProvider = ({ children }) => {
           
           // デバッグ: 商品データの構造を確認
           console.log(`商品データ構造確認 - ${product.name}:`, product);
-          console.log(`商品のstore_name:`, product.store_name);
           console.log(`商品の全プロパティ:`, Object.keys(product));
-          console.log(`productsテーブルのnameを店舗名として使用: ${product.name}`);
+          
+          // この商品に関連するstore_locationsを取得
+          const relatedStores = storeData ? storeData.filter(store => store.product_id === product.id) : [];
+          console.log(`商品 ${product.name} の関連店舗:`, relatedStores);
           
           // この商品のproduct_allergies_matrixを取得
           const productMatrix = matrixData.filter(matrix => matrix.product_id === product.id);
           console.log(`商品 ${product.name} のmatrix:`, productMatrix);
-          console.log(`商品 ${product.name} のmatrix length:`, productMatrix.length);
-          console.log(`matrixData全体:`, matrixData.slice(0, 5)); // 最初の5件を表示
           
-          transformedData.push({
-            id: product.id + 10000, // 店舗IDと重複しないように
-            name: product.name || '店舗名不明', // productsテーブルのnameを店舗名として使用
-            image: product.image_url || 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400',
-            rating: 4.0,
-            reviewCount: 0,
-            price: '¥500～¥1,500',
-            area: '',
-            cuisine: '商品',
-            category: 'restaurants', // productsテーブルもrestaurantsカテゴリとして扱う
-            brand: product.brand || '',
-            allergyInfo: defaultAllergyInfo,
-            allergyFree: allergyFree, // アレルギー対応項目のリスト
-            product_allergies_matrix: productMatrix, // 実際のproduct_allergies_matrixデータ
-            related_product: product, // productsテーブルの場合、自分自身が商品
-            description: product.description || '',
-            store_list_url: product.store_list_url || '', // 店舗エリアリンク用
-            source: {
-              type: 'official',
-              contributor: '商品公式',
-              lastUpdated: new Date().toISOString().split('T')[0],
-              confidence: 85,
-              verified: true,
-              url: product.source_url || ''
-            }
-          });
+          // 関連店舗がある場合は店舗ごとにデータを作成、ない場合は商品データとして作成
+          if (relatedStores.length > 0) {
+            relatedStores.forEach(store => {
+              transformedData.push({
+                id: `product-${product.id}-store-${store.id}`, // 商品と店舗の組み合わせID
+                name: store.branch_name || product.name || '店舗名不明',
+                image: product.image_url || 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400',
+                rating: 4.0,
+                reviewCount: 0,
+                price: '¥500～¥1,500',
+                area: store.address || '',
+                cuisine: '商品',
+                category: 'restaurants',
+                brand: product.brand || '',
+                allergyInfo: defaultAllergyInfo,
+                allergyFree: allergyFree,
+                product_allergies_matrix: productMatrix,
+                related_product: product,
+                description: product.description || product.name || '',
+                store_list_url: store.store_list_url || '', // エリア情報のリンク先
+                source: {
+                  type: 'official',
+                  contributor: '商品公式',
+                  lastUpdated: new Date().toISOString().split('T')[0],
+                  confidence: 85,
+                  verified: true,
+                  url: store.source_url || product.source_url || '' // アレルギー情報元のリンク先
+                }
+              });
+            });
+          } else {
+            // 関連店舗がない場合は商品データとして作成
+            transformedData.push({
+              id: product.id + 10000,
+              name: product.name || '商品名不明',
+              image: product.image_url || 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400',
+              rating: 4.0,
+              reviewCount: 0,
+              price: '¥500～¥1,500',
+              area: product.brand || '',
+              cuisine: '商品',
+              category: 'restaurants',
+              brand: product.brand || '',
+              allergyInfo: defaultAllergyInfo,
+              allergyFree: allergyFree,
+              product_allergies_matrix: productMatrix,
+              related_product: product,
+              description: product.description || product.name || '',
+              store_list_url: product.store_list_url || '',
+              source: {
+                type: 'official',
+                contributor: '商品公式',
+                lastUpdated: new Date().toISOString().split('T')[0],
+                confidence: 85,
+                verified: true,
+                url: product.source_url || ''
+              }
+            });
+          }
         });
-        console.log('商品データ変換完了:', transformedData.filter(item => item.category === 'products'));
-        console.log('商品データ変換完了数:', transformedData.filter(item => item.category === 'products').length);
+        console.log('商品データ変換完了:', transformedData.filter(item => item.category === 'restaurants'));
+        console.log('商品データ変換完了数:', transformedData.filter(item => item.category === 'restaurants').length);
         } else {
         console.log('商品データがありません:', productData);
       }
@@ -374,7 +422,11 @@ export const RestaurantProvider = ({ children }) => {
       items = items.filter(item =>
         item.name.toLowerCase().includes(searchKeyword.toLowerCase()) ||
         item.cuisine?.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-        item.brand?.toLowerCase().includes(searchKeyword.toLowerCase())
+        item.brand?.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+        item.area?.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+        item.description?.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+        (item.related_product && item.related_product.name?.toLowerCase().includes(searchKeyword.toLowerCase())) ||
+        (item.related_product && item.related_product.description?.toLowerCase().includes(searchKeyword.toLowerCase()))
       );
       console.log('getFilteredItems - after search filter:', items);
     }

@@ -221,10 +221,6 @@ const SearchResults = () => {
           </div>
         </div>
 
-        {/* Category Filter */}
-        <div className="mb-8">
-          <CategoryFilter />
-        </div>
 
         {/* Source Filter Panel */}
         {showSourceFilter && (
@@ -278,6 +274,29 @@ const SearchResults = () => {
               animate={{ opacity: 1, x: 0 }}
               className="lg:w-96 space-y-6"
             >
+              {/* Category Filter */}
+              <div className="bg-white rounded-xl shadow-md p-6">
+                <h3 className="text-lg font-semibold mb-4">カテゴリー</h3>
+                <div className="space-y-2">
+                  {categories.map((category) => (
+                    <button
+                      key={category.id}
+                      onClick={() => setSelectedCategory(category.id)}
+                      className={`
+                        w-full flex items-center space-x-3 px-3 py-2 rounded-lg border transition-all duration-200
+                        ${selectedCategory === category.id
+                          ? 'bg-orange-500 border-orange-500 text-white shadow-md'
+                          : 'bg-white border-gray-200 text-gray-700 hover:border-orange-300 hover:bg-orange-50'
+                        }
+                      `}
+                    >
+                      <span className="text-lg">{category.icon}</span>
+                      <span className="font-medium">{category.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div className="bg-white rounded-xl shadow-md p-6">
                 <h3 className="text-lg font-semibold mb-4">アレルギーフィルター</h3>
                 <AllergyFilter />

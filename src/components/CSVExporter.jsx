@@ -642,11 +642,12 @@ const CsvExporter = ({ data, onBack }) => {
         // 商品IDを動的に取得
         let productId;
         
-        // まず既存の商品を検索
+        // 1. products.nameを参照してidを確認
+        console.log('🔍 商品名で検索開始:', productName);
         const { data: productData, error: productError } = await supabase
           .from('products')
-          .select('id')
-          .eq('name', productName)
+          .select('id, name')
+          .ilike('name', productName.trim())
           .single();
         
         if (productError || !productData) {
@@ -661,7 +662,7 @@ const CsvExporter = ({ data, onBack }) => {
               category: productCategory,
               description: `${productName}のアレルギー情報`
             })
-            .select('id')
+            .select('id, name')
             .single();
           
           if (createError || !newProductData) {
@@ -674,9 +675,10 @@ const CsvExporter = ({ data, onBack }) => {
           console.log('✅ 新商品作成完了:', productName, 'ID:', productId);
         } else {
           productId = productData.id;
-          console.log('📦 既存商品ID:', productId);
+          console.log('📦 既存商品ID:', productId, '商品名:', productData.name);
         }
-        console.log('📦 商品ID:', productId);
+        
+        console.log('📦 確定した商品ID:', productId);
         
         // 選択された都道府県から住所を生成
         const addresses = selectedPrefectures.map(prefecture => {
@@ -686,14 +688,15 @@ const CsvExporter = ({ data, onBack }) => {
         
         console.log('📍 生成された住所:', addresses);
         
-        // 既存店舗を取得して差分を取り、存在しない住所は削除（上書き運用）
+        // 2. store_locationsのproduct_idを参照して既存データを確認
+        console.log('🔍 store_locations検索開始 - product_id:', productId);
         const { data: existingStores, error: fetchExistingError } = await supabase
           .from('store_locations')
           .select('id, address, product_id')
           .eq('product_id', productId);
 
-        console.log('🔍 現在のproduct_id:', productId);
-        console.log('🔍 既存店舗データ（同じproduct_idのみ）:', existingStores);
+        console.log('🔍 既存store_locationsデータ（product_id=' + productId + '）:', existingStores);
+        console.log('🔍 既存店舗数:', existingStores?.length || 0);
 
         if (fetchExistingError) {
           console.error('❌ 既存店舗取得エラー:', fetchExistingError);
@@ -735,28 +738,54 @@ const CsvExporter = ({ data, onBack }) => {
           }
         }
 
-        // 挿入・更新を一括upsert（同じproduct_idの場合は上書きOK）
-        const upsertPayload = addresses.map(address => ({
-          product_id: productId,
-          branch_name: null,
-          address,
-          source_url: defaultSourceUrl,
-          store_list_url: defaultStoreListUrl
-        }));
+        // 3. 同じproduct_idは上書きOK、異なるproduct_idは上書きしない
+        console.log('🔍 既存住所数:', (existingStores || []).length);
+        console.log('🔍 新規住所数:', addresses.length);
+        console.log('🔍 既存住所:', (existingStores || []).map(r => r.address));
+        console.log('🔍 新規住所:', addresses);
 
-        console.log('🔍 upsert対象住所数:', addresses.length);
-        console.log('🔍 upsert対象住所:', addresses);
+        // 同じproduct_idの既存データを削除してから新規挿入（上書き）
+        if (addresses.length > 0) {
+          // まず同じproduct_idの既存データを削除
+          if ((existingStores || []).length > 0) {
+            console.log('🧹 同じproduct_idの既存データを削除開始:', productId);
+            const { error: deleteError } = await supabase
+              .from('store_locations')
+              .delete()
+              .eq('product_id', productId);
 
-        const { data: upsertData, error: upsertError } = await supabase
-          .from('store_locations')
-          .upsert(upsertPayload, { onConflict: 'product_id,address' })
-          .select();
+            if (deleteError) {
+              console.error('❌ 既存データ削除エラー:', deleteError);
+            } else {
+              console.log('🧹 既存データ削除完了:', (existingStores || []).length, '件');
+            }
+          }
 
-        if (upsertError) {
-          console.error('❌ store_locations一括upsertエラー:', upsertError);
-          console.error('エラー詳細:', JSON.stringify(upsertError, null, 2));
+          // 新しいデータを挿入
+          console.log('📝 store_locations新規挿入開始 - product_id:', productId);
+          const insertPayload = addresses.map(address => ({
+            product_id: productId,
+            branch_name: null,
+            address,
+            source_url: defaultSourceUrl,
+            store_list_url: defaultStoreListUrl
+          }));
+
+          const { data: insertData, error: insertError } = await supabase
+            .from('store_locations')
+            .insert(insertPayload)
+            .select();
+
+          if (insertError) {
+            console.error('❌ store_locations新規挿入エラー:', insertError);
+            console.error('エラー詳細:', JSON.stringify(insertError, null, 2));
+          } else {
+            console.log('✅ store_locations新規挿入完了:', insertData?.length || 0, '件');
+            console.log('✅ 挿入されたproduct_id:', productId);
+          }
         } else {
-          console.log('✅ store_locations一括upsert完了:', upsertData?.length || 0, '件');
+          console.log('ℹ️ 挿入する住所がありません');
+          console.log('ℹ️ 対象product_id:', productId);
         }
 
         

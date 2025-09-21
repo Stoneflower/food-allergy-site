@@ -382,12 +382,11 @@ export const RestaurantProvider = ({ children }) => {
     // アレルギーフィルタリングはAllergySearchResults.jsxで行うため、ここでは削除
     // if (selectedAllergies.length > 0) { ... }
 
-    // 地域フィルタリングを一時的に無効化（Supabaseデータが不完全なため）
-    // if (selectedArea) {
-    //   items = items.filter(item => 
-    //     item.area && item.area.toLowerCase().includes(selectedArea.toLowerCase())
-    //   );
-    // }
+    if (selectedArea) {
+      items = items.filter(item => 
+        item.area && item.area.toLowerCase().includes(selectedArea.toLowerCase())
+      );
+    }
 
     console.log('getFilteredItems - final result:', items);
     console.log('getFilteredItems - products count:', items.filter(item => item.category === 'products').length);

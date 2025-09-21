@@ -20,7 +20,8 @@ const Header = () => {
     searchKeyword,
     setSearchKeyword,
     selectedArea,
-    setSelectedArea,
+    areaInputValue,
+    setAreaInputValue,
     selectedAllergies,
     setSelectedAllergies,
     allergyOptions,
@@ -176,8 +177,8 @@ const Header = () => {
                   <input
                     type="text"
                     placeholder="エリア・駅"
-                    value={selectedArea}
-                    onChange={(e) => setSelectedArea(e.target.value)}
+                    value={areaInputValue}
+                    onChange={(e) => setAreaInputValue(e.target.value)}
                     className="h-12 px-4 bg-blue-50 border-l border-blue-200 text-sm font-medium text-gray-700 focus:outline-none hover:bg-blue-100 transition-colors"
                     style={{ minWidth: '120px' }}
                   />
@@ -370,8 +371,8 @@ const Header = () => {
                 <input
                   type="text"
                   placeholder="渋谷、新宿、池袋など"
-                  value={selectedArea}
-                  onChange={(e) => setSelectedArea(e.target.value)}
+                  value={areaInputValue}
+                  onChange={(e) => setAreaInputValue(e.target.value)}
                   className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 />
               </div>

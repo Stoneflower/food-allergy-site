@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useRestaurant } from '../context/RestaurantContext';
 import SafeIcon from '../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
 
-const { FiExternalLink, FiShield, FiAlertTriangle } = FiIcons;
+const { FiExternalLink, FiShield, FiAlertTriangle, FiChevronUp } = FiIcons;
 
 const AllergySearchResults = () => {
   const { 
@@ -18,6 +18,26 @@ const AllergySearchResults = () => {
 
   const filteredItems = getFilteredItems();
   const [expandedStores, setExpandedStores] = useState(new Set());
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  
+  // スクロール位置の監視
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      setShowScrollTop(scrollTop > 300); // 300px以上スクロールしたら表示
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // トップに戻る関数
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  };
   
   // デバッグ用ログ
   console.log('AllergySearchResults - filteredItems:', filteredItems);
@@ -417,6 +437,20 @@ const AllergySearchResults = () => {
             検索条件を変更して再度お試しください
           </p>
         </div>
+      )}
+
+      {/* フローティングトップボタン */}
+      {showScrollTop && (
+        <motion.button
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.8 }}
+          onClick={scrollToTop}
+          className="fixed bottom-6 right-6 z-50 bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg transition-all duration-200 ease-in-out"
+          aria-label="トップに戻る"
+        >
+          <FiChevronUp className="w-6 h-6" />
+        </motion.button>
       )}
     </div>
   );

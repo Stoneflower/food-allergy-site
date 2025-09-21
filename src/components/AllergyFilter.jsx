@@ -25,31 +25,26 @@ const AllergyFilter=()=> {
       transition={{duration: 0.3,delay: index * 0.05}}
       onClick={()=> toggleAllergy(allergy.id)}
       className={`
-        flex items-center space-x-2 px-4 py-2 rounded-full border-2 transition-all duration-200
+        flex items-center space-x-0.5 px-1.5 py-0.5 rounded text-xs transition-all duration-200
         ${selectedAllergies.includes(allergy.id)
-          ? 'bg-red-500 border-red-500 text-white shadow-lg scale-105'
-          : 'bg-white border-gray-200 text-gray-700 hover:border-red-300 hover:bg-red-50'
+          ? 'bg-red-200 text-red-800'
+          : 'bg-gray-100 text-gray-700 hover:bg-red-100 hover:text-red-700'
         }
       `}
     >
-      <span className="text-lg">{allergy.icon}</span>
-      <span className="font-medium">{allergy.name}</span>
+      <span className="text-xs">{allergy.icon}</span>
+      <span className="text-xs">{allergy.name}</span>
     </motion.button>
   );
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="space-y-2">
       {/* 法定8品目 */}
-      <div className="mb-8">
-        <div className="text-center mb-4">
-          <h3 className="text-xl font-bold text-gray-900 mb-2">
-            表示義務のある8品目（特定原材料）
-          </h3>
-          <p className="text-sm text-gray-600">
-            食品表示法により表示が義務付けられているアレルギー物質
-          </p>
-        </div>
-        <div className="flex flex-wrap justify-center gap-3">
+      <div>
+        <h3 className="text-xs font-semibold text-gray-900 mb-1">
+          特定原材料（8品目）
+        </h3>
+        <div className="flex flex-wrap gap-0.5">
           {mandatoryAllergies.map((allergy,index)=> (
             <AllergyButton key={allergy.id} allergy={allergy} index={index} />
           ))}
@@ -57,16 +52,11 @@ const AllergyFilter=()=> {
       </div>
 
       {/* 推奨20品目 */}
-      <div className="mb-6">
-        <div className="text-center mb-4">
-          <h3 className="text-xl font-bold text-gray-900 mb-2">
-            表示が推奨される20品目（特定原材料に準ずるもの）
-          </h3>
-          <p className="text-sm text-gray-600">
-            可能な限り表示することが推奨されているアレルギー物質
-          </p>
-        </div>
-        <div className="flex flex-wrap justify-center gap-3">
+      <div>
+        <h3 className="text-xs font-semibold text-gray-900 mb-1">
+          特定原材料に準ずるもの（20品目）
+        </h3>
+        <div className="flex flex-wrap gap-0.5">
           {recommendedAllergies.map((allergy,index)=> (
             <AllergyButton key={allergy.id} allergy={allergy} index={index + mandatoryAllergies.length} />
           ))}
@@ -78,31 +68,32 @@ const AllergyFilter=()=> {
         <motion.div
           initial={{opacity: 0,y: 10}}
           animate={{opacity: 1,y: 0}}
-          className="text-center"
         >
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-            <p className="text-red-800 mb-2">
-              <strong>{selectedAllergies.length}個のアレルギー</strong>が選択されています
-            </p>
-            <div className="flex flex-wrap justify-center gap-2 mb-3">
+          <div className="bg-red-50 border border-red-200 rounded p-1.5">
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-red-800 text-xs">
+                <strong>{selectedAllergies.length}個選択中</strong>
+              </p>
+              <button
+                onClick={clearAll}
+                className="text-red-600 hover:text-red-800 text-xs underline"
+              >
+                クリア
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-0.5">
               {selectedAllergies.map(allergyId=> {
                 const allergy=[...mandatoryAllergies,...recommendedAllergies].find(a=> a.id===allergyId);
                 return (
                   <span
                     key={allergyId}
-                    className="bg-red-200 text-red-800 px-2 py-1 rounded text-sm"
+                    className="bg-red-200 text-red-800 px-1.5 py-0.5 rounded text-xs"
                   >
                     {allergy?.icon} {allergy?.name}
                   </span>
                 );
               })}
             </div>
-            <button
-              onClick={clearAll}
-              className="text-red-600 hover:text-red-800 text-sm font-medium underline"
-            >
-              すべてクリア
-            </button>
           </div>
         </motion.div>
       )}

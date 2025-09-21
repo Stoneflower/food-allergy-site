@@ -620,6 +620,24 @@ const CsvExporter = ({ data, onBack }) => {
       
       // 4. store_locationsデータを手動で作成（バッチ処理が失敗した場合のフォールバック）
       console.log('🔄 store_locationsデータ作成開始');
+      
+      // デバッグ: 現在のstore_locationsテーブルの全データを確認
+      const { data: allStoreLocations, error: allStoresError } = await supabase
+        .from('store_locations')
+        .select('id, product_id, address')
+        .order('product_id, id');
+      
+      if (allStoresError) {
+        console.error('❌ 全store_locations取得エラー:', allStoresError);
+      } else {
+        console.log('🔍 現在のstore_locations全データ:', allStoreLocations);
+        console.log('🔍 store_locationsのproduct_id別件数:', 
+          allStoreLocations?.reduce((acc, item) => {
+            acc[item.product_id] = (acc[item.product_id] || 0) + 1;
+            return acc;
+          }, {}) || {}
+        );
+      }
       try {
         // 商品IDを動的に取得
         let productId;
@@ -717,7 +735,7 @@ const CsvExporter = ({ data, onBack }) => {
           }
         }
 
-        // 挿入・更新を一括upsert（URL等の更新も反映）
+        // 挿入・更新を一括upsert（同じproduct_idの場合は上書きOK）
         const upsertPayload = addresses.map(address => ({
           product_id: productId,
           branch_name: null,
@@ -725,6 +743,9 @@ const CsvExporter = ({ data, onBack }) => {
           source_url: defaultSourceUrl,
           store_list_url: defaultStoreListUrl
         }));
+
+        console.log('🔍 upsert対象住所数:', addresses.length);
+        console.log('🔍 upsert対象住所:', addresses);
 
         const { data: upsertData, error: upsertError } = await supabase
           .from('store_locations')
@@ -737,6 +758,7 @@ const CsvExporter = ({ data, onBack }) => {
         } else {
           console.log('✅ store_locations一括upsert完了:', upsertData?.length || 0, '件');
         }
+
         
         // 挿入結果を確認
         const { data: verifyData, error: verifyError } = await supabase

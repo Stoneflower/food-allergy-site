@@ -29,7 +29,7 @@ const SearchResults = () => {
     safetyLevel: 'all'
   });
 
-  const { getFilteredItems, selectedAllergies, searchKeyword, selectedArea, selectedCategory, categories } = useRestaurant();
+  const { getFilteredItems, selectedAllergies, searchKeyword, selectedArea, selectedCategory, setSelectedCategory, categories } = useRestaurant();
 
   const filteredItems = getFilteredItems();
 

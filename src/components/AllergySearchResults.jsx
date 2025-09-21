@@ -247,6 +247,21 @@ const AllergySearchResults = () => {
   //   }
   // }, [groupedStores, expandedStores.size]);
 
+  // エリア入力が空の場合はメッセージを表示
+  if (!selectedArea || selectedArea.trim() === '') {
+    return (
+      <div className="text-center py-12">
+        <div className="text-6xl mb-4">📍</div>
+        <h3 className="text-xl font-semibold text-gray-700 mb-2">
+          エリア・駅を入力してください
+        </h3>
+        <p className="text-gray-500">
+          都道府県名や駅名を入力して、アレルギー対応店舗を検索できます
+        </p>
+      </div>
+    );
+  }
+
   // アレルギー成分を選択していない場合は全ての商品を表示
   if (selectedAllergies.length === 0) {
     return (

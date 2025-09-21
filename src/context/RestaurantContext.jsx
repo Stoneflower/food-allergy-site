@@ -492,7 +492,11 @@ export const RestaurantProvider = ({ children }) => {
     // アレルギーフィルタリングはAllergySearchResults.jsxで行うため、ここでは削除
     // if (selectedAllergies.length > 0) { ... }
 
-    if (selectedArea) {
+    // エリア入力が空の場合は結果をクリア（DBアクセスを避ける）
+    if (!selectedArea || selectedArea.trim() === '') {
+      console.log('エリア入力が空のため、結果をクリア');
+      items = [];
+    } else if (selectedArea) {
       // 都道府県名の判定（静的データを使用）
       const isPrefectureNameInput = isPrefectureName(selectedArea);
       

@@ -103,7 +103,7 @@ export const RestaurantProvider = ({ children }) => {
   const normalizeCategory = (categoryText) => {
     if (!categoryText || typeof categoryText !== 'string') return 'products';
     // 複数選択時はスラッシュ区切りで保存されている想定
-    const tokens = categoryText.split(/[\/、,\s]+/).filter(Boolean);
+    const tokens = categoryText.split(/[/、,\s]+/).filter(Boolean);
     const text = categoryText;
     // 優先順位: スーパー → ネットショップ → テイクアウト → レストラン
     if (tokens.some(t => t.includes('スーパー')) || text.includes('スーパー')) return 'supermarkets';

@@ -5,7 +5,7 @@ import * as FiIcons from 'react-icons/fi';
 import { useRestaurant } from '../context/RestaurantContext';
 import { supabase } from '../lib/supabase';
 import { PREFECTURES } from '../constants/prefectures';
-import { compressAndUpload, buildImageUrl } from '../utils/cloudflareImages';
+import imageCompression from 'browser-image-compression';
 import MultiImageUploader from '../components/MultiImageUploader';
 
 const { FiCamera, FiUpload, FiX, FiCheck, FiAlertCircle, FiEdit3, FiSave, FiImage, FiRefreshCw, FiTrendingUp } = FiIcons;
@@ -187,38 +187,39 @@ const Upload = () => {
 
       const categoryValue = channelLabels.length > 0 ? channelLabels.join('/') : null;
 
-      // 選択された最大3枚を Cloudflare に圧縮アップロード
-      const accountHash = (import.meta?.env?.VITE_CF_ACCOUNT_HASH) || (typeof process !== 'undefined' ? process.env?.REACT_APP_CF_ACCOUNT_HASH : undefined);
-      let uploadedList = [];
+      // 選択された最大3枚を圧縮→シンレンタルサーバーAPIにアップロード
+      const uploadApiUrl = import.meta?.env?.VITE_UPLOAD_API_URL;
+      const uploadApiKey = import.meta?.env?.VITE_UPLOAD_API_KEY;
+      let uploadedUrls = [];
       let uploadErrors = [];
-      if (capturedImages.length > 0) {
-        const files = capturedImages
-          .filter(img => !!img?.file)
-          .slice(0, 3)
-          .map(img => img.file);
+      if (capturedImages.length > 0 && uploadApiUrl && uploadApiKey) {
+        const files = capturedImages.filter(img => !!img?.file).slice(0, 3).map(img => img.file);
         if (files.length > 0) {
           try {
-            uploadedList = await Promise.all(files.map(async (file, idx) => {
+            uploadedUrls = await Promise.all(files.map(async (file, idx) => {
               try {
-                const { imageId } = await compressAndUpload(file, { maxSizeMB: 0.8, maxWidthOrHeight: 1600 });
-                const url = accountHash ? buildImageUrl({ accountHash, imageId, variant: 'public' }) : null;
-                console.log(`[Cloudflare] アップロード成功 index=${idx}, imageId=${imageId}`);
-                return { imageId, url };
+                const compressed = await imageCompression(file, { maxSizeMB: 0.8, maxWidthOrHeight: 1600, useWebWorker: true });
+                const fd = new FormData();
+                fd.append('file', compressed, file.name);
+                const res = await fetch(uploadApiUrl, { method: 'POST', headers: { 'X-API-KEY': uploadApiKey }, body: fd });
+                const json = await res.json();
+                if (!res.ok || !json?.url) throw new Error(json?.error || 'upload_failed');
+                console.log(`[UploadAPI] 成功 index=${idx}, url=${json.url}`);
+                return json.url;
               } catch (err) {
-                console.warn(`[Cloudflare] アップロード失敗 index=${idx}:`, err);
+                console.warn(`[UploadAPI] 失敗 index=${idx}:`, err);
                 uploadErrors.push({ index: idx, error: err?.message || String(err) });
                 return null;
               }
             }));
-            uploadedList = uploadedList.filter(Boolean);
+            uploadedUrls = uploadedUrls.filter(Boolean);
           } catch (e) {
-            console.warn('Cloudflareアップロードの一部/全部に失敗しました:', e);
+            console.warn('UploadAPIの一部/全部に失敗しました:', e);
           }
         }
       }
 
-      const uploadedImageId = uploadedList[0]?.imageId || null;
-      const uploadedImageUrl = uploadedList[0]?.url || null;
+      const uploadedImageUrl = uploadedUrls[0] || null;
 
       // products へ登録（name はブランド・メーカー入力、画像はCloudflareの結果を保存）
       const insertPayload = {
@@ -227,7 +228,7 @@ const Upload = () => {
         category: categoryValue,
         description: null,
         image_url: uploadedImageUrl,
-        image_id: uploadedImageId,
+        image_id: null,
         barcode: null
       };
 

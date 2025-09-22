@@ -227,7 +227,8 @@ const Upload = () => {
         }
       }
 
-      const uploadedImageUrl = uploadedUrls[0] || null;
+      const uploadedImageUrl = uploadedUrls[0] || null; // 先頭URL
+      const uploadedImageUrl2 = uploadedUrls[1] || null; // 2枚目URL（任意）
       // 失敗一覧を状態に反映
       setUploadErrorsState(uploadErrors);
 
@@ -289,6 +290,7 @@ const Upload = () => {
         };
         // 画像URLは products.source_url へ保存
         if (uploadedImageUrl) updatePayload.source_url = uploadedImageUrl;
+        if (uploadedImageUrl2) updatePayload.source_url2 = uploadedImageUrl2;
         const { error: upErr } = await supabase
           .from('products')
           .update(updatePayload)
@@ -304,6 +306,7 @@ const Upload = () => {
           category: categoryValue,
           description: null,
           source_url: uploadedImageUrl,
+          source_url2: uploadedImageUrl2,
           image_url: null,
           image_id: null,
           barcode: editedInfo.barcode ? String(editedInfo.barcode).trim() : null

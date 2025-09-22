@@ -204,12 +204,12 @@ const Upload = () => {
         if (locError) throw locError;
       }
 
-      // 香料に含まれるアレルギー成分を product_allergies へ presence_type='trace' で保存（複数可）
+      // 香料に含まれるアレルギー成分を product_allergies へ presence_type='Included' で保存（複数可）
       if (productId && Array.isArray(fragranceAllergens) && fragranceAllergens.length > 0) {
         const rows = fragranceAllergens.map(allergyId => ({
           product_id: productId,
           allergy_item_id: allergyId,
-          presence_type: 'trace',
+          presence_type: 'Included',
           amount_level: 'unknown',
           notes: null
         }));
@@ -482,6 +482,41 @@ const Upload = () => {
               )}
             </div>
 
+            {/* 商品情報編集（画像の直下） */}
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <h3 className="text-lg font-semibold mb-4 flex items-center space-x-2">
+                <SafeIcon icon={FiEdit3} className="w-5 h-5" />
+                <span>商品情報</span>
+              </h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    商品名
+                  </label>
+                  <input
+                    type="text"
+                    value={editedInfo.productName}
+                    onChange={(e) => handleInfoChange('productName', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    placeholder="商品名を入力"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    ブランド・メーカー
+                  </label>
+                  <input
+                    type="text"
+                    value={editedInfo.brand}
+                    onChange={(e) => handleInfoChange('brand', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    placeholder="ブランド名を入力"
+                  />
+                </div>
+                {/* 原材料名は仕様により非表示 */}
+              </div>
+            </div>
+
             {/* 利用シーン */}
             <div className="bg-white rounded-xl shadow-lg p-6">
               <h3 className="text-lg font-semibold mb-4">利用シーン</h3>
@@ -529,40 +564,7 @@ const Upload = () => {
               </div>
             </div>
 
-            {/* 商品情報編集 */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h3 className="text-lg font-semibold mb-4 flex items-center space-x-2">
-                <SafeIcon icon={FiEdit3} className="w-5 h-5" />
-                <span>商品情報</span>
-              </h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    商品名
-                  </label>
-                  <input
-                    type="text"
-                    value={editedInfo.productName}
-                    onChange={(e) => handleInfoChange('productName', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                    placeholder="商品名を入力"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    ブランド・メーカー
-                  </label>
-                  <input
-                    type="text"
-                    value={editedInfo.brand}
-                    onChange={(e) => handleInfoChange('brand', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                    placeholder="ブランド名を入力"
-                  />
-                </div>
-                {/* 原材料名は仕様により非表示 */}
-              </div>
-            </div>
+            {/* 商品情報編集（重複を削除。画像直下に移動済み） */}
 
             {/* アレルギー成分選択 */}
             <div className="bg-white rounded-xl shadow-lg p-6">

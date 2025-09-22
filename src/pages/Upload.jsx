@@ -5,6 +5,8 @@ import * as FiIcons from 'react-icons/fi';
 import { useRestaurant } from '../context/RestaurantContext';
 import { supabase } from '../lib/supabase';
 import { PREFECTURES } from '../constants/prefectures';
+import { compressAndUpload, buildImageUrl } from '../utils/cloudflareImages';
+import MultiImageUploader from '../components/MultiImageUploader';
 
 const { FiCamera, FiUpload, FiX, FiCheck, FiAlertCircle, FiEdit3, FiSave, FiImage, FiRefreshCw, FiTrendingUp } = FiIcons;
 
@@ -32,6 +34,8 @@ const Upload = () => {
     onlineShop: false
   });
   const [selectedPrefecture, setSelectedPrefecture] = useState('すべて');
+  const [createdProductId, setCreatedProductId] = useState(null);
+  const [showImageUploader, setShowImageUploader] = useState(false);
   
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
@@ -183,14 +187,47 @@ const Upload = () => {
 
       const categoryValue = channelLabels.length > 0 ? channelLabels.join('/') : null;
 
-      // products へ登録（name はブランド・メーカー入力、他はNULL）
+      // 選択された最大3枚を Cloudflare に圧縮アップロード
+      const accountHash = (import.meta?.env?.VITE_CF_ACCOUNT_HASH) || (typeof process !== 'undefined' ? process.env?.REACT_APP_CF_ACCOUNT_HASH : undefined);
+      let uploadedList = [];
+      let uploadErrors = [];
+      if (capturedImages.length > 0) {
+        const files = capturedImages
+          .filter(img => !!img?.file)
+          .slice(0, 3)
+          .map(img => img.file);
+        if (files.length > 0) {
+          try {
+            uploadedList = await Promise.all(files.map(async (file, idx) => {
+              try {
+                const { imageId } = await compressAndUpload(file, { maxSizeMB: 0.8, maxWidthOrHeight: 1600 });
+                const url = accountHash ? buildImageUrl({ accountHash, imageId, variant: 'public' }) : null;
+                console.log(`[Cloudflare] アップロード成功 index=${idx}, imageId=${imageId}`);
+                return { imageId, url };
+              } catch (err) {
+                console.warn(`[Cloudflare] アップロード失敗 index=${idx}:`, err);
+                uploadErrors.push({ index: idx, error: err?.message || String(err) });
+                return null;
+              }
+            }));
+            uploadedList = uploadedList.filter(Boolean);
+          } catch (e) {
+            console.warn('Cloudflareアップロードの一部/全部に失敗しました:', e);
+          }
+        }
+      }
+
+      const uploadedImageId = uploadedList[0]?.imageId || null;
+      const uploadedImageUrl = uploadedList[0]?.url || null;
+
+      // products へ登録（name はブランド・メーカー入力、画像はCloudflareの結果を保存）
       const insertPayload = {
         name: productNameForSave,
         brand: null,
         category: categoryValue,
         description: null,
-        image_url: null,
-        image_id: null,
+        image_url: uploadedImageUrl,
+        image_id: uploadedImageId,
         barcode: null
       };
 
@@ -202,6 +239,7 @@ const Upload = () => {
       if (productError) throw productError;
 
       const productId = productData?.id;
+      setCreatedProductId(productId || null);
 
       // 都道府県は「すべて」を含め常に store_locations.address として保存
       if (productId && selectedPrefecture) {
@@ -224,6 +262,11 @@ const Upload = () => {
           .from('product_allergies')
           .insert(rows);
         if (paError) throw paError;
+      }
+
+      // 画像アップロードに失敗・未実施の場合も保存は継続し、後から追加できるUIを出す
+      if ((uploadedList?.length || 0) === 0 && productId) {
+        console.warn('画像なしで保存完了。後から画像を追加できます。');
       }
 
       setStep(3);
@@ -710,6 +753,14 @@ const Upload = () => {
               >
                 もう一つ投稿する
               </button>
+              {createdProductId && (
+                <button
+                  onClick={() => setShowImageUploader(true)}
+                  className="flex-1 py-3 px-6 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-semibold"
+                >
+                  今すぐ画像を追加
+                </button>
+              )}
               <button
                 onClick={() => window.location.href = '/'}
                 className="flex-1 py-3 px-6 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
@@ -720,6 +771,24 @@ const Upload = () => {
           </motion.div>
         )}
       </div>
+      {/* 後から画像追加用のモーダル */}
+      {showImageUploader && createdProductId && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-2xl relative">
+            <button className="absolute top-3 right-3 text-gray-500 hover:text-gray-700" onClick={() => setShowImageUploader(false)}>
+              <SafeIcon icon={FiX} className="w-5 h-5" />
+            </button>
+            <h3 className="text-lg font-semibold mb-4">画像を追加</h3>
+            <MultiImageUploader
+              productId={createdProductId}
+              maxImages={3}
+              variant="public"
+              onUploadComplete={() => setShowImageUploader(false)}
+              onError={(e) => console.warn('追加アップロード失敗:', e)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

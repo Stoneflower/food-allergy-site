@@ -556,7 +556,9 @@ export const RestaurantProvider = ({ children }) => {
         // ただし、都道府県名の店舗は除外
         items = items.filter(item => {
           // エリアフィルタリング（静的データを使用）
-          const areaMatch = isAreaMatch(item.area, selectedArea);
+          let areaMatch = isAreaMatch(item.area, selectedArea);
+          // 追加: store_locations.address が『すべて』なら常に表示
+          if (item.area === 'すべて') areaMatch = true;
           
           // 都道府県名の店舗かどうかをチェック
           const isPrefectureNameItem = PREFECTURES.some(pref => 
@@ -575,8 +577,9 @@ export const RestaurantProvider = ({ children }) => {
         console.log('getFilteredItems - 都道府県名の店舗を除外し、具体的な店舗のみ表示:', items);
       } else {
         // 都道府県名以外の場合は通常のフィルタリング
-        items = items.filter(item => 
-          item.area && item.area.toLowerCase().includes(selectedArea.toLowerCase())
+        items = items.filter(item =>
+          (item.area === 'すべて') ||
+          (item.area && item.area.toLowerCase().includes(selectedArea.toLowerCase()))
         );
       }
     }

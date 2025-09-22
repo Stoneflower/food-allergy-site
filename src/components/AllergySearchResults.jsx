@@ -171,6 +171,7 @@ const AllergySearchResults = () => {
             source: item.source,
             area: item.area,
             store_list_url: item.store_list_url,
+            category: item.category,
             menu_items: []
           };
         }
@@ -203,7 +204,12 @@ const AllergySearchResults = () => {
             
             stores[storeName].menu_items.push({
               name: menuName,
-              product_allergies_matrix: [matrix] // 個別のmatrixを配列で渡す
+              display_name: (item?.related_product?.product_title) || (item?.related_product?.name) || menuName,
+              product_allergies_matrix: [matrix], // 個別のmatrixを配列で渡す
+              image_urls: [
+                item?.related_product?.source_url,
+                item?.related_product?.source_url2
+              ].filter(Boolean)
             });
           });
           
@@ -211,8 +217,13 @@ const AllergySearchResults = () => {
         } else if (item.related_product) {
           // product_allergies_matrixがない場合はrelated_productのnameを使用
           stores[storeName].menu_items.push({
-            name: item.related_product.name,
-            product_allergies_matrix: []
+            name: item.related_product.product_title || item.related_product.name,
+            display_name: item.related_product.product_title || item.related_product.name,
+            product_allergies_matrix: [],
+            image_urls: [
+              item?.related_product?.source_url,
+              item?.related_product?.source_url2
+            ].filter(Boolean)
           });
           console.log('groupedStores - added related product:', item.related_product.name, 'to store:', storeName);
         } else {
@@ -271,10 +282,11 @@ const AllergySearchResults = () => {
           アレルギー成分を選択していないため、全ての商品を表示しています
         </div>
 
-        {/* 店舗リスト */}
-        {groupedStores.map((store, index) => {
-          // アレルギー選択がない場合は全ての商品を表示
-          const allProducts = store.menu_items || [];
+      {/* 店舗リスト */}
+      {groupedStores.map((store, index) => {
+        // アレルギー選択がない場合は全ての商品を表示
+        const allProducts = store.menu_items || [];
+        const headerPreview = (allProducts[0]?.image_urls || []).slice(0, 2);
           
           return (
             <motion.div
@@ -412,6 +424,12 @@ const AllergySearchResults = () => {
         console.log(`店舗 ${store.name} のarea:`, store.area);
         console.log(`店舗 ${store.name} のstore_list_url:`, store.store_list_url);
         
+        // アレルギーが選択されていて、この店舗の安全商品が0件なら非表示
+        const safeProductsForHeader = getSafeProducts(store);
+        if (selectedAllergies.length > 0 && safeProductsForHeader.length === 0) {
+          return null;
+        }
+
         return (
           <motion.div
             key={index}
@@ -428,9 +446,7 @@ const AllergySearchResults = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   <h3 className="text-base font-medium text-gray-800">{store.name}</h3>
-                  <span className="text-xs text-gray-500">
-                    ({safeProducts.length}件)
-                  </span>
+                  <span className="text-xs text-gray-500">({safeProductsForHeader.length}件)</span>
                   <span className="text-xs text-gray-400">
                     {expandedStores.has(store.name) ? '▼' : '▶'}
                   </span>
@@ -449,19 +465,30 @@ const AllergySearchResults = () => {
                   >
                     アレルギー情報元
                   </a>
-                  <a
-                    href={getAreaInfoUrl(store)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`px-2 py-1 text-xs rounded transition-colors ${
-                      getAreaInfoUrl(store) !== '#' 
-                        ? 'bg-green-100 text-green-700 hover:bg-green-200' 
-                        : 'bg-gray-100 text-gray-500'
-                    }`}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    エリア情報
-                  </a>
+                  {!(selectedCategory === 'supermarkets' || selectedCategory === 'online') && (
+                    <a
+                      href={getAreaInfoUrl(store)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`px-2 py-1 text-xs rounded transition-colors ${
+                        getAreaInfoUrl(store) !== '#' 
+                          ? 'bg-green-100 text-green-700 hover:bg-green-200' 
+                          : 'bg-gray-100 text-gray-500'
+                      }`}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      エリア情報
+                    </a>
+                  )}
+                  {headerPreview.length > 0 && (
+                    <div className="flex items-center space-x-1 ml-2">
+                      {headerPreview.map((url, i) => (
+                        <a key={i} href={url} target="_blank" rel="noopener noreferrer" onClick={(e)=>e.stopPropagation()}>
+                          <img src={url} alt={`画像${i+1}`} className="w-10 h-10 object-cover rounded" />
+                        </a>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -481,11 +508,20 @@ const AllergySearchResults = () => {
                       >
                         <div className="flex-1">
                           <div className="text-sm text-gray-800">
-                            {product.name}
+                            {product.display_name || product.name}
                           </div>
                           {contaminations.length > 0 && (
                             <div className="text-xs text-yellow-600 mt-1">
                               {contaminations.join(', ')}
+                            </div>
+                          )}
+                          {product.image_urls && product.image_urls.length > 0 && (
+                            <div className="mt-2 grid grid-cols-2 gap-2">
+                              {product.image_urls.slice(0, 2).map((url, idx) => (
+                                <a key={idx} href={url} target="_blank" rel="noopener noreferrer" className="block">
+                                  <img src={url} alt={`画像${idx + 1}`} className="w-full h-24 object-cover rounded" />
+                                </a>
+                              ))}
                             </div>
                           )}
                         </div>

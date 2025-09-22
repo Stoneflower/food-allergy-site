@@ -378,19 +378,38 @@ const Upload = () => {
         }
       }
 
-      // 香料に含まれるアレルギー成分を product_allergies へ presence_type='Included' で保存（複数可）
-      if (productId && Array.isArray(fragranceAllergens) && fragranceAllergens.length > 0) {
-        const rows = fragranceAllergens.map(allergyId => ({
-          product_id: productId,
-          allergy_item_id: allergyId,
-          presence_type: 'Included',
-          amount_level: 'unknown',
-          notes: null
-        }));
-        const { error: paError } = await supabase
-          .from('product_allergies')
-          .insert(rows);
-        if (paError) throw paError;
+      // 香料に含まれるアレルギー成分を product_allergies へ presence_type='Included' で保存（複数可・全置き換え）
+      if (productId && Array.isArray(fragranceAllergens)) {
+        // 既存の香料（Included）レコードを削除してから挿入（全置き換え）
+        if (fragranceAllergens.length > 0) {
+          const { error: delFragErr } = await supabase
+            .from('product_allergies')
+            .delete()
+            .match({ product_id: productId, presence_type: 'Included' })
+            .in('allergy_item_id', fragranceAllergens);
+          if (delFragErr) console.warn('product_allergies 香料(Included) 既存削除で警告:', delFragErr);
+        }
+
+        if (fragranceAllergens.length > 0) {
+          const rows = fragranceAllergens.map(allergyId => ({
+            product_id: productId,
+            allergy_item_id: allergyId,
+            presence_type: 'Included',
+            amount_level: 'unknown',
+            notes: null
+          }));
+          const { error: paError } = await supabase
+            .from('product_allergies')
+            .insert(rows);
+          if (paError) throw paError;
+        } else {
+          // 香料を全て未選択にした場合は、その商品の Included を全削除
+          const { error: clearFragErr } = await supabase
+            .from('product_allergies')
+            .delete()
+            .match({ product_id: productId, presence_type: 'Included' });
+          if (clearFragErr) console.warn('product_allergies 香料(Included) 全削除で警告:', clearFragErr);
+        }
       }
 
       // 通常のアレルギー選択（含有）も product_allergies に保存（presence_type='direct'）

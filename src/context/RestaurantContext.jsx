@@ -345,7 +345,7 @@ export const RestaurantProvider = ({ children }) => {
               if (mapped === 'Included') mapped = 'trace';
               generated[r.allergy_item_id] = mapped;
             });
-            productMatrix.push({ ...generated, menu_name: product.name });
+            productMatrix.push({ ...generated, menu_name: product.product_title || product.name });
           }
           console.log(`商品 ${product.name} のmatrix:`, productMatrix);
           
@@ -373,7 +373,7 @@ export const RestaurantProvider = ({ children }) => {
                 allergyFree: allergyFree,
                 product_allergies_matrix: productMatrix,
                 related_product: product,
-                description: product.description || product.name || '',
+                description: product.description || product.product_title || product.name || '',
                 store_list_url: store.store_list_url || product.store_list_url || null, // エリア情報のリンク先（アレルギー情報元と同じロジック）
                 source: {
                   type: 'official',
@@ -417,7 +417,7 @@ export const RestaurantProvider = ({ children }) => {
               allergyFree: allergyFree,
               product_allergies_matrix: productMatrix,
               related_product: product,
-              description: product.description || product.name || '',
+              description: product.description || product.product_title || product.name || '',
               store_list_url: storeListUrl, // store_locationsから取得
               source: {
                 type: 'official',

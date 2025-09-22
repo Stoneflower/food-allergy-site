@@ -191,6 +191,17 @@ const Upload = () => {
       // 選択された最大2枚を圧縮→シンレンタルサーバーAPIにアップロード
       const uploadApiUrl = import.meta?.env?.VITE_UPLOAD_API_URL;
       const uploadApiKey = import.meta?.env?.VITE_UPLOAD_API_KEY;
+      // デバッグ: 環境値と対象ファイル
+      console.log('[UploadAPI] url=', uploadApiUrl, 'key set=', !!uploadApiKey);
+      try {
+        console.log(
+          '[UploadAPI] files=',
+          capturedImages
+            .filter(i => !!i?.file)
+            .slice(0, 2)
+            .map(f => ({ name: f.file.name, size: f.file.size, type: f.file.type }))
+        );
+      } catch (_) {}
       let uploadedUrls = [];
       let uploadErrors = [];
       if (capturedImages.length > 0 && uploadApiUrl && uploadApiKey) {
@@ -207,10 +218,16 @@ const Upload = () => {
                   fileType: 'image/jpeg',
                   useWebWorker: true,
                 });
+                console.log(`[UploadAPI] start index=${idx}`, { name: file.name, size: file.size, type: file.type });
+                console.log(`[UploadAPI] compressed index=${idx}`, { size: compressed.size, type: compressed.type });
                 const fd = new FormData();
                 fd.append('file', compressed, file.name);
                 const res = await fetch(uploadApiUrl, { method: 'POST', headers: { 'X-API-KEY': uploadApiKey }, body: fd });
-                const json = await res.json();
+                console.log(`[UploadAPI] response index=${idx}`, res.status);
+                let bodyTxt = '';
+                try { bodyTxt = await res.clone().text(); } catch (_) {}
+                console.log(`[UploadAPI] body index=${idx}`, bodyTxt?.slice(0, 300));
+                const json = bodyTxt ? JSON.parse(bodyTxt) : {};
                 if (!res.ok || !json?.url) throw new Error(json?.error || 'upload_failed');
                 console.log(`[UploadAPI] 成功 index=${idx}, url=${json.url}`);
                 return json.url;

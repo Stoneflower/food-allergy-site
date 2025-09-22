@@ -516,15 +516,7 @@ const AllergySearchResults = () => {
                               {contaminations.join(', ')}
                             </div>
                           )}
-                          {product.image_urls && product.image_urls.length > 0 && (
-                            <div className="mt-2 grid grid-cols-2 gap-2">
-                              {product.image_urls.slice(0, 2).map((url, idx) => (
-                                <a key={idx} href={url} target="_blank" rel="noopener noreferrer" className="block">
-                                  <img src={url} alt={`画像${idx + 1}`} className="w-full h-24 object-cover rounded" />
-                                </a>
-                              ))}
-                            </div>
-                          )}
+                          {/* 画像サムネ（行内）は非表示にし、商品名のみ表示 */}
                         </div>
                       </div>
                     );

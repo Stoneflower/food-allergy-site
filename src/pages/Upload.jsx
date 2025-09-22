@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import SafeIcon from '../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
 import { useRestaurant } from '../context/RestaurantContext';
+import Tesseract from 'tesseract.js';
 
 const { FiCamera, FiUpload, FiX, FiCheck, FiAlertCircle, FiEdit3, FiSave, FiImage, FiRefreshCw, FiTrendingUp } = FiIcons;
 
@@ -27,92 +28,215 @@ const Upload = () => {
   const cameraInputRef = useRef(null);
   const { allergyOptions } = useRestaurant();
 
-  // カメラで撮影
+  // カメラで撮影（複数枚対応）
   const handleCameraCapture = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      handleImageFile(file);
+    const files = Array.from(event.target.files);
+    if (files.length > 0) {
+      handleImageFiles(files);
     }
   };
 
-  // ファイルアップロード
+  // ファイルアップロード（複数枚対応）
   const handleFileUpload = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      handleImageFile(file);
+    const files = Array.from(event.target.files);
+    if (files.length > 0) {
+      handleImageFiles(files);
     }
   };
 
-  // 画像ファイル処理
-  const handleImageFile = (file) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setCapturedImage(e.target.result);
-      processImage(file);
-    };
-    reader.readAsDataURL(file);
+  // 複数画像ファイル処理（上限3枚）
+  const handleImageFiles = (files) => {
+    // 上限チェック
+    if (files.length > 3) {
+      alert('最大3枚まで選択できます。最初の3枚を使用します。');
+      files = files.slice(0, 3);
+    }
+
+    if (files.length === 1) {
+      // 1枚の場合は従来通り
+      const file = files[0];
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setCapturedImage(e.target.result);
+        processImage(file);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      // 複数枚の場合は最初の画像を表示して処理
+      const firstFile = files[0];
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setCapturedImage(e.target.result);
+        processImage(firstFile);
+      };
+      reader.readAsDataURL(firstFile);
+      
+      // 複数枚選択されたことをユーザーに通知
+      if (files.length > 1) {
+        alert(`${files.length}枚の写真が選択されました。最初の写真で解析を開始します。`);
+      }
+    }
   };
 
-  // 画像解析処理（モック）
+  // アレルギー成分の検出
+  const detectAllergens = (text) => {
+    const allergenKeywords = {
+      'wheat': ['小麦', 'グルテン', 'wheat', 'gluten'],
+      'soy': ['大豆', 'soy', 'soybean', 'レシチン'],
+      'milk': ['乳', '牛乳', 'milk', '乳製品', 'バター', 'チーズ'],
+      'egg': ['卵', 'egg', 'たまご'],
+      'peanut': ['落花生', 'ピーナッツ', 'peanut'],
+      'tree_nut': ['アーモンド', 'くるみ', 'カシューナッツ', 'almond', 'walnut'],
+      'fish': ['魚', 'fish', 'さかな'],
+      'shellfish': ['甲殻類', 'エビ', 'カニ', 'shrimp', 'crab'],
+      'sesame': ['ごま', 'sesame'],
+      'sulfite': ['亜硫酸', 'sulfite']
+    };
+
+    const detectedAllergens = [];
+    const lowerText = text.toLowerCase();
+
+    Object.entries(allergenKeywords).forEach(([allergenId, keywords]) => {
+      const found = keywords.some(keyword => 
+        lowerText.includes(keyword.toLowerCase()) || text.includes(keyword)
+      );
+      if (found) {
+        detectedAllergens.push(allergenId);
+      }
+    });
+
+    return detectedAllergens;
+  };
+
+  // 商品情報の抽出
+  const extractProductInfo = (text) => {
+    const lines = text.split('\n').filter(line => line.trim());
+    
+    // 商品名の推定（最初の行または長い行）
+    let productName = '';
+    let brand = '';
+    let ingredients = [];
+
+    // 商品名の検出（最初の数行から推定）
+    for (let i = 0; i < Math.min(3, lines.length); i++) {
+      const line = lines[i].trim();
+      if (line.length > 3 && line.length < 50 && !line.includes('原材料') && !line.includes('成分')) {
+        if (!productName) productName = line;
+        else if (!brand && line.length < 30) brand = line;
+      }
+    }
+
+    // 原材料の検出
+    let inIngredientsSection = false;
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+      
+      if (trimmedLine.includes('原材料') || trimmedLine.includes('成分') || trimmedLine.includes('材料')) {
+        inIngredientsSection = true;
+        continue;
+      }
+      
+      if (inIngredientsSection) {
+        if (trimmedLine.includes('アレルギー') || trimmedLine.includes('注意') || trimmedLine.includes('製造')) {
+          break;
+        }
+        
+        // 原材料らしき行を抽出
+        if (trimmedLine.length > 1 && trimmedLine.length < 100) {
+          // カンマやスペースで分割
+          const parts = trimmedLine.split(/[,、]/);
+          parts.forEach(part => {
+            const cleanPart = part.trim();
+            if (cleanPart && cleanPart.length > 1 && !ingredients.includes(cleanPart)) {
+              ingredients.push(cleanPart);
+            }
+          });
+        }
+      }
+    }
+
+    // デフォルト値の設定
+    if (!productName) productName = '商品名を入力してください';
+    if (!brand) brand = 'ブランド名を入力してください';
+    if (ingredients.length === 0) ingredients = ['原材料を入力してください'];
+
+    return { productName, brand, ingredients };
+  };
+
+  // 実際のOCR処理
   const processImage = async (file) => {
     setIsProcessing(true);
     
-    // モック処理：実際にはOCRやAI画像解析を行う
-    setTimeout(() => {
-      const mockExtractedInfo = {
-        productName: 'グルテンフリー米粉パン',
-        brand: 'アレルギー対応パン工房',
-        ingredients: [
-          '米粉（国産）',
-          '砂糖',
-          '植物油脂',
-          '食塩',
-          'イースト',
-          'キサンタンガム'
-        ],
-        allergens: ['soy'], // 大豆由来成分が含まれている例
-        confidence: 85,
-        lastUpdated: new Date()
+    try {
+      // Tesseract.jsでOCR実行
+      const { data: { text, confidence } } = await Tesseract.recognize(
+        file,
+        'jpn+eng', // 日本語と英語を認識
+        {
+          logger: m => {
+            if (m.status === 'recognizing text') {
+              console.log(`OCR進捗: ${Math.round(m.progress * 100)}%`);
+            }
+          }
+        }
+      );
+
+      console.log('OCR結果:', text);
+      console.log('信頼度:', confidence);
+
+      // 商品情報の抽出
+      const { productName, brand, ingredients } = extractProductInfo(text);
+      
+      // アレルギー成分の検出
+      const detectedAllergens = detectAllergens(text);
+
+      const extractedInfo = {
+        productName,
+        brand,
+        ingredients,
+        allergens: detectedAllergens,
+        confidence: Math.round(confidence * 100),
+        lastUpdated: new Date(),
+        rawText: text // デバッグ用
       };
 
-      // 類似商品の検索（モック）
-      const mockSimilarProducts = [
-        {
-          id: 'similar1',
-          name: 'グルテンフリー米粉パン（別ブランド）',
-          brand: '健康パン工房',
-          lastUpdated: '2024年1月15日',
-          allergens: ['soy'],
-          confidence: 92,
-          userCount: 15
-        },
-        {
-          id: 'similar2', 
-          name: 'グルテンフリー米粉パン（同ブランド・旧版）',
-          brand: 'アレルギー対応パン工房',
-          lastUpdated: '2023年11月20日',
-          allergens: ['wheat', 'soy'],
-          confidence: 78,
-          userCount: 8
-        }
-      ];
-
-      setExtractedInfo(mockExtractedInfo);
-      setSimilarProducts(mockSimilarProducts);
-      setShowSimilarProducts(mockSimilarProducts.length > 0);
+      setExtractedInfo(extractedInfo);
+      setSimilarProducts([]); // 実際のOCRでは類似商品検索は行わない
+      setShowSimilarProducts(false);
       
       setEditedInfo({
-        productName: mockExtractedInfo.productName,
-        brand: mockExtractedInfo.brand,
-        ingredients: mockExtractedInfo.ingredients,
-        allergens: mockExtractedInfo.allergens,
-        notes: '',
-        lastUpdated: mockExtractedInfo.lastUpdated,
-        confidence: mockExtractedInfo.confidence
+        productName: extractedInfo.productName,
+        brand: extractedInfo.brand,
+        ingredients: extractedInfo.ingredients,
+        allergens: extractedInfo.allergens,
+        notes: `OCR信頼度: ${extractedInfo.confidence}%\n\n認識されたテキスト:\n${text.substring(0, 500)}${text.length > 500 ? '...' : ''}`,
+        lastUpdated: extractedInfo.lastUpdated,
+        confidence: extractedInfo.confidence
       });
+      
+    } catch (error) {
+      console.error('OCR処理エラー:', error);
+      alert('画像の解析中にエラーが発生しました。手動で情報を入力してください。');
+      
+      // エラー時は空の情報を設定
+      const errorInfo = {
+        productName: '',
+        brand: '',
+        ingredients: [],
+        allergens: [],
+        confidence: 0,
+        lastUpdated: new Date()
+      };
+      
+      setExtractedInfo(errorInfo);
+      setEditedInfo({
+        ...errorInfo,
+        notes: 'OCR処理でエラーが発生しました。手動で情報を入力してください。'
+      });
+    } finally {
       setIsProcessing(false);
       setStep(2);
-    }, 2000);
+    }
   };
 
   // 類似商品を選択
@@ -241,7 +365,7 @@ const Upload = () => {
                   className="w-full flex items-center justify-center space-x-3 bg-gradient-to-r from-orange-500 to-red-500 text-white py-4 px-6 rounded-lg hover:from-orange-600 hover:to-red-600 transition-colors shadow-md"
                 >
                   <SafeIcon icon={FiCamera} className="w-6 h-6" />
-                  <span className="text-lg font-semibold">カメラで撮影する</span>
+                  <span className="text-lg font-semibold">カメラで撮影する（最大3枚）</span>
                 </button>
 
                 {/* ファイルアップロードボタン */}
@@ -250,7 +374,7 @@ const Upload = () => {
                   className="w-full flex items-center justify-center space-x-3 bg-gray-100 text-gray-700 py-4 px-6 rounded-lg hover:bg-gray-200 transition-colors border-2 border-dashed border-gray-300"
                 >
                   <SafeIcon icon={FiUpload} className="w-6 h-6" />
-                  <span className="text-lg font-semibold">写真をアップロード</span>
+                  <span className="text-lg font-semibold">写真をアップロード（最大3枚）</span>
                 </button>
 
                 <input
@@ -258,6 +382,7 @@ const Upload = () => {
                   type="file"
                   accept="image/*"
                   capture="environment"
+                  multiple
                   onChange={handleCameraCapture}
                   className="hidden"
                 />
@@ -265,6 +390,7 @@ const Upload = () => {
                   ref={fileInputRef}
                   type="file"
                   accept="image/*"
+                  multiple
                   onChange={handleFileUpload}
                   className="hidden"
                 />
@@ -280,6 +406,7 @@ const Upload = () => {
                     <li>• 明るい場所で撮影し、影が入らないようにしてください</li>
                     <li>• 文字がぼけないよう、ピントを合わせてください</li>
                     <li>• パッケージ全体ではなく、成分表示部分を大きく撮影してください</li>
+                    <li>• 最大3枚まで選択できます（複数枚選択時は最初の写真で解析）</li>
                   </ul>
                 </div>
               </div>
@@ -322,7 +449,7 @@ const Upload = () => {
                   画像を解析しています...
                 </h3>
                 <p className="text-gray-600">
-                  AIが成分表示を読み取っています。しばらくお待ちください。
+                  OCRで文字を読み取っています。しばらくお待ちください。
                 </p>
               </div>
             )}

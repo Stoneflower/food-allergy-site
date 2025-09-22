@@ -99,6 +99,20 @@ export const RestaurantProvider = ({ children }) => {
     return allergyInfo;
   };
 
+  // 利用シーン（products.category 文字列）→ 内部カテゴリIDへの正規化
+  const normalizeCategory = (categoryText) => {
+    if (!categoryText || typeof categoryText !== 'string') return 'products';
+    // 複数選択時はスラッシュ区切りで保存されている想定
+    const tokens = categoryText.split(/[\/、,\s]+/).filter(Boolean);
+    const text = categoryText;
+    // 優先順位: スーパー → ネットショップ → テイクアウト → レストラン
+    if (tokens.some(t => t.includes('スーパー')) || text.includes('スーパー')) return 'supermarkets';
+    if (tokens.some(t => t.includes('ネットショップ')) || text.includes('ネットショップ')) return 'online';
+    if (tokens.some(t => t.includes('テイクアウト')) || text.includes('テイクアウト')) return 'products';
+    if (tokens.some(t => t.includes('レストラン')) || text.includes('レストラン')) return 'restaurants';
+    return 'products';
+  };
+
   // Supabaseからデータを取得する関数
   const fetchDataFromSupabase = async () => {
     console.log('fetchDataFromSupabase開始...');
@@ -324,7 +338,7 @@ export const RestaurantProvider = ({ children }) => {
                 price: '¥500～¥1,500',
                 area: store.address || '',
                 cuisine: '商品',
-                category: 'restaurants',
+                category: normalizeCategory(product.category),
                 brand: product.brand || '',
                 allergyInfo: defaultAllergyInfo,
                 allergyFree: allergyFree,
@@ -368,7 +382,7 @@ export const RestaurantProvider = ({ children }) => {
               price: '¥500～¥1,500',
               area: product.brand || '',
               cuisine: '商品',
-              category: 'restaurants',
+              category: normalizeCategory(product.category),
               brand: product.brand || '',
               allergyInfo: defaultAllergyInfo,
               allergyFree: allergyFree,

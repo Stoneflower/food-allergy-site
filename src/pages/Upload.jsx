@@ -163,6 +163,13 @@ const Upload = () => {
   const handleSubmit = async () => {
     setIsProcessing(true);
     try {
+      // 入力バリデーション（商品名またはブランドのどちらか必須）
+      const productNameForSave = (editedInfo.brand || editedInfo.productName || '').trim();
+      if (!productNameForSave) {
+        alert('商品名またはブランド・メーカーのいずれかを入力してください');
+        setIsProcessing(false);
+        return;
+      }
       // 利用シーンを products.category へ（複数選択時はスラッシュ区切り）
       const channelLabels = Object.entries(channels)
         .filter(([, v]) => v)
@@ -178,7 +185,7 @@ const Upload = () => {
 
       // products へ登録（name はブランド・メーカー入力、他はNULL）
       const insertPayload = {
-        name: (editedInfo.brand || '').trim() || null,
+        name: productNameForSave,
         brand: null,
         category: categoryValue,
         description: null,
@@ -222,7 +229,7 @@ const Upload = () => {
       setStep(3);
     } catch (err) {
       console.error('保存エラー:', err);
-      alert('保存に失敗しました。時間をおいて再度お試しください。');
+      alert(`保存に失敗しました: ${err?.message || '不明なエラー'}`);
     } finally {
       setIsProcessing(false);
     }
@@ -641,7 +648,7 @@ const Upload = () => {
               </button>
               <button
                 onClick={handleSubmit}
-                disabled={!editedInfo.productName || !editedInfo.brand}
+                disabled={!editedInfo.productName && !editedInfo.brand}
                 className="flex-1 py-3 px-6 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold flex items-center justify-center space-x-2"
               >
                 <SafeIcon icon={FiSave} className="w-5 h-5" />

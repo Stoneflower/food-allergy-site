@@ -201,7 +201,9 @@ const Upload = () => {
             .slice(0, 2)
             .map(f => ({ name: f.file.name, size: f.file.size, type: f.file.type }))
         );
-      } catch (_) {}
+      } catch (e) {
+        console.warn('[UploadAPI] files log failed:', e);
+      }
       let uploadedUrls = [];
       let uploadErrors = [];
       if (capturedImages.length > 0 && uploadApiUrl && uploadApiKey) {
@@ -225,7 +227,7 @@ const Upload = () => {
                 const res = await fetch(uploadApiUrl, { method: 'POST', headers: { 'X-API-KEY': uploadApiKey }, body: fd });
                 console.log(`[UploadAPI] response index=${idx}`, res.status);
                 let bodyTxt = '';
-                try { bodyTxt = await res.clone().text(); } catch (_) {}
+                try { bodyTxt = await res.clone().text(); } catch (e) { console.warn('[UploadAPI] read body failed:', e); }
                 console.log(`[UploadAPI] body index=${idx}`, bodyTxt?.slice(0, 300));
                 const json = bodyTxt ? JSON.parse(bodyTxt) : {};
                 if (!res.ok || !json?.url) throw new Error(json?.error || 'upload_failed');

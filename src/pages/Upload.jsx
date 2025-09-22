@@ -69,16 +69,16 @@ const Upload = () => {
     // 複数画像を読み込んで配列に格納
     const imagePromises = files.map(file => {
       return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
           resolve({
             id: Date.now() + Math.random(), // ユニークID
             url: e.target.result,
             file: file,
             name: file.name
           });
-        };
-        reader.readAsDataURL(file);
+    };
+    reader.readAsDataURL(file);
       });
     });
 
@@ -275,8 +275,8 @@ const Upload = () => {
       // 画像URL               <= products.source_url
 
       // 既存チェック: 優先はバーコード、無ければ (name + product_title)
-      const productTitleToSave = (editedInfo.productName || '').trim() || null;
-      const nameToSave = (editedInfo.brand || '').trim() || null;
+      const productTitleToSave = (editedInfo.productName || '').trim() || null; // 商品名 → products.product_title
+      const nameToSave = (editedInfo.brand || '').trim() || null;              // メーカー → products.name
 
       let existingProduct = null;
       if (editedInfo.barcode && String(editedInfo.barcode).trim()) {
@@ -478,41 +478,41 @@ const Upload = () => {
 
             {capturedImages.length === 0 && !isProcessing && (
               <div className="space-y-4">
-                {/* カメラ撮影ボタン */}
-                <button
-                  onClick={() => cameraInputRef.current?.click()}
-                  className="w-full flex items-center justify-center space-x-3 bg-gradient-to-r from-orange-500 to-red-500 text-white py-4 px-6 rounded-lg hover:from-orange-600 hover:to-red-600 transition-colors shadow-md"
-                >
-                  <SafeIcon icon={FiCamera} className="w-6 h-6" />
+                    {/* カメラ撮影ボタン */}
+                    <button
+                      onClick={() => cameraInputRef.current?.click()}
+                      className="w-full flex items-center justify-center space-x-3 bg-gradient-to-r from-orange-500 to-red-500 text-white py-4 px-6 rounded-lg hover:from-orange-600 hover:to-red-600 transition-colors shadow-md"
+                    >
+                      <SafeIcon icon={FiCamera} className="w-6 h-6" />
                   <span className="text-lg font-semibold">カメラで撮影する（最大2枚）</span>
-                </button>
+                    </button>
 
-                {/* ファイルアップロードボタン */}
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-full flex items-center justify-center space-x-3 bg-gray-100 text-gray-700 py-4 px-6 rounded-lg hover:bg-gray-200 transition-colors border-2 border-dashed border-gray-300"
-                >
-                  <SafeIcon icon={FiUpload} className="w-6 h-6" />
+                    {/* ファイルアップロードボタン */}
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-full flex items-center justify-center space-x-3 bg-gray-100 text-gray-700 py-4 px-6 rounded-lg hover:bg-gray-200 transition-colors border-2 border-dashed border-gray-300"
+                    >
+                      <SafeIcon icon={FiUpload} className="w-6 h-6" />
                   <span className="text-lg font-semibold">写真をアップロード（最大2枚）</span>
-                </button>
+                    </button>
 
-                <input
-                  ref={cameraInputRef}
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
+                    <input
+                      ref={cameraInputRef}
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
                   multiple
-                  onChange={handleCameraCapture}
-                  className="hidden"
-                />
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
+                      onChange={handleCameraCapture}
+                      className="hidden"
+                    />
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
                   multiple
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
 
                 {/* 撮影のコツ */}
                 <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -520,13 +520,13 @@ const Upload = () => {
                     <SafeIcon icon={FiAlertCircle} className="w-5 h-5" />
                     <span>きれいに撮影するコツ</span>
                   </h3>
-                  <ul className="text-sm text-blue-700 space-y-1">
-                    <li>• 原材料名の部分を中心に撮影してください</li>
-                    <li>• 明るい場所で撮影し、影が入らないようにしてください</li>
+                    <ul className="text-sm text-blue-700 space-y-1">
+                      <li>• 原材料名の部分を中心に撮影してください</li>
+                      <li>• 明るい場所で撮影し、影が入らないようにしてください</li>
                     <li>• 文字がはっきり見えるよう、ピントを合わせてください</li>
-                    <li>• パッケージ全体ではなく、成分表示部分を大きく撮影してください</li>
+                      <li>• パッケージ全体ではなく、成分表示部分を大きく撮影してください</li>
                     <li>• 最大2枚まで選択できます（参考用として表示されます）</li>
-                  </ul>
+                    </ul>
                 </div>
               </div>
             )}
@@ -719,7 +719,7 @@ const Upload = () => {
                   </button>
                 ))}
               </div>
-            </div>
+                </div>
 
             {/* 都道府県 */}
             <div className="bg-white rounded-xl shadow-lg p-6">
@@ -894,14 +894,6 @@ const Upload = () => {
               >
                 もう一つ投稿する
               </button>
-              {createdProductId && (
-                <button
-                  onClick={() => setShowImageUploader(true)}
-                  className="flex-1 py-3 px-6 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-semibold"
-                >
-                  今すぐ画像を追加
-                </button>
-              )}
               <button
                 onClick={() => window.location.href = '/'}
                 className="flex-1 py-3 px-6 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
@@ -912,24 +904,7 @@ const Upload = () => {
           </motion.div>
         )}
       </div>
-      {/* 後から画像追加用のモーダル */}
-      {showImageUploader && createdProductId && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-2xl relative">
-            <button className="absolute top-3 right-3 text-gray-500 hover:text-gray-700" onClick={() => setShowImageUploader(false)}>
-              <SafeIcon icon={FiX} className="w-5 h-5" />
-            </button>
-            <h3 className="text-lg font-semibold mb-4">画像を追加</h3>
-            <MultiImageUploader
-              productId={createdProductId}
-              maxImages={3}
-              variant="public"
-              onUploadComplete={() => setShowImageUploader(false)}
-              onError={(e) => console.warn('追加アップロード失敗:', e)}
-            />
-          </div>
-        </div>
-      )}
+      {/* 後から画像追加用のモーダルは非表示（要望によりボタンも削除） */}
     </div>
   );
 };

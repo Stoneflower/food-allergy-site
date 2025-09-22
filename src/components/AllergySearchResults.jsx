@@ -426,6 +426,7 @@ const AllergySearchResults = () => {
         
         // アレルギーが選択されていて、この店舗の安全商品が0件なら非表示
         const safeProductsForHeader = getSafeProducts(store);
+        const headerPreview = (safeProductsForHeader[0]?.image_urls || []).slice(0, 2);
         if (selectedAllergies.length > 0 && safeProductsForHeader.length === 0) {
           return null;
         }
@@ -480,7 +481,7 @@ const AllergySearchResults = () => {
                       エリア情報
                     </a>
                   )}
-                  {headerPreview.length > 0 && (
+                  {headerPreview && headerPreview.length > 0 && (
                     <div className="flex items-center space-x-1 ml-2">
                       {headerPreview.map((url, i) => (
                         <a key={i} href={url} target="_blank" rel="noopener noreferrer" onClick={(e)=>e.stopPropagation()}>

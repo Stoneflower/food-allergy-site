@@ -163,6 +163,10 @@ const AllergySearchResults = () => {
     filteredItems.forEach(item => {
       {
         const storeName = item.name || '店舗名不明';
+        // 『すべて』という見出しは表示しない
+        if (storeName === 'すべて') {
+          return;
+        }
         console.log('groupedStores - processing restaurant:', storeName);
         
         if (!stores[storeName]) {

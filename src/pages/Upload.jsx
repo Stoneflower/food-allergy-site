@@ -210,13 +210,15 @@ const Upload = () => {
         const files = capturedImages.filter(img => !!img?.file).slice(0, 2).map(img => img.file);
         if (files.length > 0) {
           try {
-            uploadedUrls = await Promise.all(files.map(async (file, idx) => {
-              try {
-                // 圧縮を強め、強制JPEG化
+            // 逐次アップロード + 軽いリトライ
+            for (let idx = 0; idx < files.length; idx++) {
+              const file = files[idx];
+              const attempt = async (maxWidthOrHeight, initialQuality) => {
+                // 圧縮（強制JPEG）
                 const compressed = await imageCompression(file, {
                   maxSizeMB: 0.5,
-                  maxWidthOrHeight: 900,
-                  initialQuality: 0.5,
+                  maxWidthOrHeight,
+                  initialQuality,
                   fileType: 'image/jpeg',
                   useWebWorker: true,
                 });
@@ -224,7 +226,15 @@ const Upload = () => {
                 console.log(`[UploadAPI] compressed index=${idx}`, { size: compressed.size, type: compressed.type });
                 const fd = new FormData();
                 fd.append('file', compressed, file.name);
-                const res = await fetch(uploadApiUrl, { method: 'POST', headers: { 'X-API-KEY': uploadApiKey }, body: fd });
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 30000);
+                const res = await fetch(uploadApiUrl, {
+                  method: 'POST',
+                  headers: { 'X-API-KEY': uploadApiKey, 'Accept': 'application/json' },
+                  body: fd,
+                  signal: controller.signal,
+                });
+                clearTimeout(timeout);
                 console.log(`[UploadAPI] response index=${idx}`, res.status);
                 let bodyTxt = '';
                 try { bodyTxt = await res.clone().text(); } catch (e) { console.warn('[UploadAPI] read body failed:', e); }
@@ -232,14 +242,20 @@ const Upload = () => {
                 const json = bodyTxt ? JSON.parse(bodyTxt) : {};
                 if (!res.ok || !json?.url) throw new Error(json?.error || 'upload_failed');
                 console.log(`[UploadAPI] 成功 index=${idx}, url=${json.url}`);
-                return json.url;
-              } catch (err) {
-                console.warn(`[UploadAPI] 失敗 index=${idx}:`, err);
-                uploadErrors.push({ index: idx, error: err?.message || String(err) });
-                return null;
+                uploadedUrls.push(json.url);
+              };
+              try {
+                await attempt(900, 0.5);
+              } catch (e1) {
+                console.warn(`[UploadAPI] retry index=${idx} with stronger compression`, e1);
+                try {
+                  await attempt(800, 0.45);
+                } catch (e2) {
+                  console.warn(`[UploadAPI] 失敗 index=${idx} after retry:`, e2);
+                  uploadErrors.push({ index: idx, error: e2?.message || String(e2) });
+                }
               }
-            }));
-            uploadedUrls = uploadedUrls.filter(Boolean);
+            }
           } catch (e) {
             console.warn('UploadAPIの一部/全部に失敗しました:', e);
           }

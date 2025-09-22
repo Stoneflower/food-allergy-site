@@ -3,13 +3,14 @@ import { motion } from 'framer-motion';
 import SafeIcon from '../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
 import { useRestaurant } from '../context/RestaurantContext';
-import Tesseract from 'tesseract.js';
+import { supabase } from '../lib/supabase';
+import { PREFECTURES } from '../constants/prefectures';
 
 const { FiCamera, FiUpload, FiX, FiCheck, FiAlertCircle, FiEdit3, FiSave, FiImage, FiRefreshCw, FiTrendingUp } = FiIcons;
 
 const Upload = () => {
   const [step, setStep] = useState(1); // 1: 撮影/アップロード, 2: 情報確認, 3: 完了
-  const [capturedImage, setCapturedImage] = useState(null);
+  const [capturedImages, setCapturedImages] = useState([]); // 複数画像を管理
   const [isProcessing, setIsProcessing] = useState(false);
   const [extractedInfo, setExtractedInfo] = useState(null);
   const [editedInfo, setEditedInfo] = useState({
@@ -17,12 +18,19 @@ const Upload = () => {
     brand: '',
     ingredients: [],
     allergens: [],
-    notes: '',
     lastUpdated: new Date(),
     confidence: 0
   });
+  const [fragranceAllergens, setFragranceAllergens] = useState([]); // 香料に含まれるアレルギー
   const [similarProducts, setSimilarProducts] = useState([]);
   const [showSimilarProducts, setShowSimilarProducts] = useState(false);
+  const [channels, setChannels] = useState({
+    restaurant: false,
+    takeout: false,
+    supermarket: false,
+    onlineShop: false
+  });
+  const [selectedPrefecture, setSelectedPrefecture] = useState('すべて');
   
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
@@ -52,191 +60,62 @@ const Upload = () => {
       files = files.slice(0, 3);
     }
 
-    if (files.length === 1) {
-      // 1枚の場合は従来通り
-      const file = files[0];
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setCapturedImage(e.target.result);
-        processImage(file);
-      };
-      reader.readAsDataURL(file);
-    } else {
-      // 複数枚の場合は最初の画像を表示して処理
-      const firstFile = files[0];
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setCapturedImage(e.target.result);
-        processImage(firstFile);
-      };
-      reader.readAsDataURL(firstFile);
-      
-      // 複数枚選択されたことをユーザーに通知
-      if (files.length > 1) {
-        alert(`${files.length}枚の写真が選択されました。最初の写真で解析を開始します。`);
-      }
-    }
-  };
-
-  // アレルギー成分の検出
-  const detectAllergens = (text) => {
-    const allergenKeywords = {
-      'wheat': ['小麦', 'グルテン', 'wheat', 'gluten'],
-      'soy': ['大豆', 'soy', 'soybean', 'レシチン'],
-      'milk': ['乳', '牛乳', 'milk', '乳製品', 'バター', 'チーズ'],
-      'egg': ['卵', 'egg', 'たまご'],
-      'peanut': ['落花生', 'ピーナッツ', 'peanut'],
-      'tree_nut': ['アーモンド', 'くるみ', 'カシューナッツ', 'almond', 'walnut'],
-      'fish': ['魚', 'fish', 'さかな'],
-      'shellfish': ['甲殻類', 'エビ', 'カニ', 'shrimp', 'crab'],
-      'sesame': ['ごま', 'sesame'],
-      'sulfite': ['亜硫酸', 'sulfite']
-    };
-
-    const detectedAllergens = [];
-    const lowerText = text.toLowerCase();
-
-    Object.entries(allergenKeywords).forEach(([allergenId, keywords]) => {
-      const found = keywords.some(keyword => 
-        lowerText.includes(keyword.toLowerCase()) || text.includes(keyword)
-      );
-      if (found) {
-        detectedAllergens.push(allergenId);
-      }
+    // 複数画像を読み込んで配列に格納
+    const imagePromises = files.map(file => {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          resolve({
+            id: Date.now() + Math.random(), // ユニークID
+            url: e.target.result,
+            file: file,
+            name: file.name
+          });
+        };
+        reader.readAsDataURL(file);
+      });
     });
 
-    return detectedAllergens;
-  };
-
-  // 商品情報の抽出
-  const extractProductInfo = (text) => {
-    const lines = text.split('\n').filter(line => line.trim());
-    
-    // 商品名の推定（最初の行または長い行）
-    let productName = '';
-    let brand = '';
-    let ingredients = [];
-
-    // 商品名の検出（最初の数行から推定）
-    for (let i = 0; i < Math.min(3, lines.length); i++) {
-      const line = lines[i].trim();
-      if (line.length > 3 && line.length < 50 && !line.includes('原材料') && !line.includes('成分')) {
-        if (!productName) productName = line;
-        else if (!brand && line.length < 30) brand = line;
-      }
-    }
-
-    // 原材料の検出
-    let inIngredientsSection = false;
-    for (const line of lines) {
-      const trimmedLine = line.trim();
-      
-      if (trimmedLine.includes('原材料') || trimmedLine.includes('成分') || trimmedLine.includes('材料')) {
-        inIngredientsSection = true;
-        continue;
-      }
-      
-      if (inIngredientsSection) {
-        if (trimmedLine.includes('アレルギー') || trimmedLine.includes('注意') || trimmedLine.includes('製造')) {
-          break;
-        }
-        
-        // 原材料らしき行を抽出
-        if (trimmedLine.length > 1 && trimmedLine.length < 100) {
-          // カンマやスペースで分割
-          const parts = trimmedLine.split(/[,、]/);
-          parts.forEach(part => {
-            const cleanPart = part.trim();
-            if (cleanPart && cleanPart.length > 1 && !ingredients.includes(cleanPart)) {
-              ingredients.push(cleanPart);
-            }
-          });
-        }
-      }
-    }
-
-    // デフォルト値の設定
-    if (!productName) productName = '商品名を入力してください';
-    if (!brand) brand = 'ブランド名を入力してください';
-    if (ingredients.length === 0) ingredients = ['原材料を入力してください'];
-
-    return { productName, brand, ingredients };
-  };
-
-  // 実際のOCR処理
-  const processImage = async (file) => {
-    setIsProcessing(true);
-    
-    try {
-      // Tesseract.jsでOCR実行
-      const { data: { text, confidence } } = await Tesseract.recognize(
-        file,
-        'jpn+eng', // 日本語と英語を認識
-        {
-          logger: m => {
-            if (m.status === 'recognizing text') {
-              console.log(`OCR進捗: ${Math.round(m.progress * 100)}%`);
-            }
-          }
-        }
-      );
-
-      console.log('OCR結果:', text);
-      console.log('信頼度:', confidence);
-
-      // 商品情報の抽出
-      const { productName, brand, ingredients } = extractProductInfo(text);
-      
-      // アレルギー成分の検出
-      const detectedAllergens = detectAllergens(text);
-
-      const extractedInfo = {
-        productName,
-        brand,
-        ingredients,
-        allergens: detectedAllergens,
-        confidence: Math.round(confidence * 100),
-        lastUpdated: new Date(),
-        rawText: text // デバッグ用
-      };
-
-      setExtractedInfo(extractedInfo);
-      setSimilarProducts([]); // 実際のOCRでは類似商品検索は行わない
-      setShowSimilarProducts(false);
-      
-      setEditedInfo({
-        productName: extractedInfo.productName,
-        brand: extractedInfo.brand,
-        ingredients: extractedInfo.ingredients,
-        allergens: extractedInfo.allergens,
-        notes: `OCR信頼度: ${extractedInfo.confidence}%\n\n認識されたテキスト:\n${text.substring(0, 500)}${text.length > 500 ? '...' : ''}`,
-        lastUpdated: extractedInfo.lastUpdated,
-        confidence: extractedInfo.confidence
-      });
-      
-    } catch (error) {
-      console.error('OCR処理エラー:', error);
-      alert('画像の解析中にエラーが発生しました。手動で情報を入力してください。');
-      
-      // エラー時は空の情報を設定
-      const errorInfo = {
-        productName: '',
-        brand: '',
-        ingredients: [],
-        allergens: [],
-        confidence: 0,
-        lastUpdated: new Date()
-      };
-      
-      setExtractedInfo(errorInfo);
-      setEditedInfo({
-        ...errorInfo,
-        notes: 'OCR処理でエラーが発生しました。手動で情報を入力してください。'
-      });
-    } finally {
-      setIsProcessing(false);
+    Promise.all(imagePromises).then(images => {
+      setCapturedImages(images);
+      // 手動入力用の初期データを設定
+      initializeManualInput();
+      // 画像を表示して手動入力フォームに進む
       setStep(2);
+    });
+    
+    // 複数枚選択されたことをユーザーに通知
+    if (files.length > 1) {
+      alert(`${files.length}枚の写真が選択されました。`);
     }
+  };
+
+  // 手動入力用の初期データ設定
+  const initializeManualInput = () => {
+    const initialInfo = {
+      productName: '',
+      brand: '',
+      ingredients: [],
+      allergens: [],
+      confidence: 0,
+      lastUpdated: new Date()
+    };
+
+    setExtractedInfo(initialInfo);
+    setSimilarProducts([]);
+    setShowSimilarProducts(false);
+    
+    setEditedInfo({
+      productName: '',
+      brand: '',
+      ingredients: [],
+      allergens: [],
+      lastUpdated: new Date(),
+      confidence: 0
+    });
+    setFragranceAllergens([]);
+    setChannels({ restaurant: false, takeout: false, supermarket: false, onlineShop: false });
+    setSelectedPrefecture('すべて');
   };
 
   // 類似商品を選択
@@ -279,21 +158,79 @@ const Upload = () => {
     }));
   };
 
-  // 投稿完了
+  // 投稿完了（CSVコンバーターと同ロジック方針）
   const handleSubmit = async () => {
     setIsProcessing(true);
-    
-    // 実際にはサーバーに送信
-    setTimeout(() => {
-      setIsProcessing(false);
+    try {
+      // 利用シーンを products.category へ（複数選択時はスラッシュ区切り）
+      const channelLabels = Object.entries(channels)
+        .filter(([, v]) => v)
+        .map(([k]) => ({
+          restaurant: 'レストラン',
+          takeout: 'テイクアウト',
+          supermarket: 'スーパー',
+          onlineShop: 'ネットショップ'
+        }[k]))
+        .filter(Boolean);
+
+      const categoryValue = channelLabels.length > 0 ? channelLabels.join('/') : null;
+
+      // products へ登録（name はブランド・メーカー入力、他はNULL）
+      const insertPayload = {
+        name: (editedInfo.brand || '').trim() || null,
+        brand: null,
+        category: categoryValue,
+        description: null,
+        image_url: null,
+        image_id: null,
+        barcode: null
+      };
+
+      const { data: productData, error: productError } = await supabase
+        .from('products')
+        .insert([insertPayload])
+        .select()
+        .single();
+      if (productError) throw productError;
+
+      const productId = productData?.id;
+
+      // 都道府県は「すべて」を含め常に store_locations.address として保存
+      if (productId && selectedPrefecture) {
+        const { error: locError } = await supabase
+          .from('store_locations')
+          .insert([{ product_id: productId, address: selectedPrefecture, branch_name: null, phone: null, hours: null, source_url: null, store_list_url: null, closed: null, notes: null }]);
+        if (locError) throw locError;
+      }
+
+      // 香料に含まれるアレルギー成分を product_allergies へ presence_type='trace' で保存（複数可）
+      if (productId && Array.isArray(fragranceAllergens) && fragranceAllergens.length > 0) {
+        const rows = fragranceAllergens.map(allergyId => ({
+          product_id: productId,
+          allergy_item_id: allergyId,
+          presence_type: 'trace',
+          amount_level: 'unknown',
+          notes: null
+        }));
+        const { error: paError } = await supabase
+          .from('product_allergies')
+          .insert(rows);
+        if (paError) throw paError;
+      }
+
       setStep(3);
-    }, 1000);
+    } catch (err) {
+      console.error('保存エラー:', err);
+      alert('保存に失敗しました。時間をおいて再度お試しください。');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   // リセット
   const resetForm = () => {
     setStep(1);
-    setCapturedImage(null);
+    setCapturedImages([]);
     setExtractedInfo(null);
     setSimilarProducts([]);
     setShowSimilarProducts(false);
@@ -302,10 +239,12 @@ const Upload = () => {
       brand: '',
       ingredients: [],
       allergens: [],
-      notes: '',
       lastUpdated: new Date(),
       confidence: 0
     });
+    setFragranceAllergens([]);
+    setChannels({ restaurant: false, takeout: false, supermarket: false, onlineShop: false });
+    setSelectedPrefecture('すべて');
   };
 
   return (
@@ -350,14 +289,14 @@ const Upload = () => {
                 <SafeIcon icon={FiCamera} className="w-10 h-10 text-orange-600" />
               </div>
               <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                アレルギー情報を取得
+                商品情報を入力
               </h2>
               <p className="text-gray-600">
-                商品パッケージを撮影してアレルギー情報を取得できます
+                商品パッケージを撮影して、手動でアレルギー情報を入力できます
               </p>
             </div>
 
-            {!capturedImage && !isProcessing && (
+            {capturedImages.length === 0 && !isProcessing && (
               <div className="space-y-4">
                 {/* カメラ撮影ボタン */}
                 <button
@@ -404,55 +343,49 @@ const Upload = () => {
                   <ul className="text-sm text-blue-700 space-y-1">
                     <li>• 原材料名の部分を中心に撮影してください</li>
                     <li>• 明るい場所で撮影し、影が入らないようにしてください</li>
-                    <li>• 文字がぼけないよう、ピントを合わせてください</li>
+                    <li>• 文字がはっきり見えるよう、ピントを合わせてください</li>
                     <li>• パッケージ全体ではなく、成分表示部分を大きく撮影してください</li>
-                    <li>• 最大3枚まで選択できます（複数枚選択時は最初の写真で解析）</li>
+                    <li>• 最大3枚まで選択できます（参考用として表示されます）</li>
                   </ul>
                 </div>
               </div>
             )}
 
             {/* 撮影した画像の表示 */}
-            {capturedImage && !isProcessing && (
+            {capturedImages.length > 0 && !isProcessing && (
               <div className="space-y-4">
-                <div className="relative">
-                  <img
-                    src={capturedImage}
-                    alt="撮影した商品画像"
-                    className="w-full max-h-96 object-contain rounded-lg shadow-md"
-                  />
+                <div className="text-center mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    選択された画像 ({capturedImages.length}枚)
+                  </h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {capturedImages.map((image, index) => (
+                    <div key={image.id} className="relative group">
+                      <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                        <img
+                          src={image.url}
+                          alt={`商品画像 ${index + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="absolute top-2 left-2 bg-blue-500 text-white rounded-full px-2 py-1 text-xs font-medium">
+                        {index + 1}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="text-center">
                   <button
                     onClick={resetForm}
-                    className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors"
+                    className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
                   >
-                    <SafeIcon icon={FiX} className="w-4 h-4" />
+                    画像を変更する
                   </button>
                 </div>
-                <button
-                  onClick={() => processImage(null)}
-                  className="w-full bg-orange-500 text-white py-3 px-6 rounded-lg hover:bg-orange-600 transition-colors font-semibold"
-                >
-                  この画像で解析を開始
-                </button>
               </div>
             )}
 
-            {/* 処理中 */}
-            {isProcessing && (
-              <div className="text-center py-8">
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                  className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full mx-auto mb-4"
-                />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  画像を解析しています...
-                </h3>
-                <p className="text-gray-600">
-                  OCRで文字を読み取っています。しばらくお待ちください。
-                </p>
-              </div>
-            )}
           </motion.div>
         )}
 
@@ -515,40 +448,84 @@ const Upload = () => {
               </div>
             )}
 
-            {/* 解析結果の信頼度 */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-gray-900">解析結果</h2>
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm text-gray-600">信頼度:</span>
-                  <span className={`font-semibold ${
-                    extractedInfo.confidence >= 80 ? 'text-green-600' : 
-                    extractedInfo.confidence >= 60 ? 'text-yellow-600' : 'text-red-600'
-                  }`}>
-                    {extractedInfo.confidence}%
-                  </span>
-                </div>
-              </div>
-              {extractedInfo.confidence < 80 && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
-                  <p className="text-yellow-800 text-sm">
-                    解析の信頼度が低いため、情報を確認・修正してください。
-                  </p>
-                </div>
-              )}
-            </div>
 
             {/* 撮影画像 */}
             <div className="bg-white rounded-xl shadow-lg p-6">
               <h3 className="text-lg font-semibold mb-4 flex items-center space-x-2">
                 <SafeIcon icon={FiImage} className="w-5 h-5" />
-                <span>撮影した画像</span>
+                <span>撮影した画像 ({capturedImages.length}枚)</span>
               </h3>
-              <img
-                src={capturedImage}
-                alt="撮影した商品画像"
-                className="w-full max-h-48 object-contain rounded-lg shadow-sm"
-              />
+              {capturedImages.length === 1 ? (
+                <img
+                  src={capturedImages[0].url}
+                  alt="撮影した商品画像"
+                  className="w-full max-h-48 object-contain rounded-lg shadow-sm"
+                />
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {capturedImages.map((image, index) => (
+                    <div key={image.id} className="relative">
+                      <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                        <img
+                          src={image.url}
+                          alt={`商品画像 ${index + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="absolute top-1 left-1 bg-blue-500 text-white rounded-full px-2 py-1 text-xs font-medium">
+                        {index + 1}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* 利用シーン */}
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <h3 className="text-lg font-semibold mb-4">利用シーン</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {[
+                  { key: 'restaurant', label: 'レストラン' },
+                  { key: 'takeout', label: 'テイクアウト' },
+                  { key: 'supermarket', label: 'スーパー' },
+                  { key: 'onlineShop', label: 'ネットショップ' }
+                ].map(item => (
+                  <button
+                    key={item.key}
+                    onClick={() => setChannels(prev => ({ ...prev, [item.key]: !prev[item.key] }))}
+                    className={`p-3 rounded-lg border-2 text-sm transition-all ${
+                      channels[item.key]
+                        ? 'bg-indigo-500 text-white border-indigo-500'
+                        : 'bg-white border-gray-200 hover:border-indigo-300'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 都道府県 */}
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <h3 className="text-lg font-semibold mb-4">都道府県</h3>
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
+                <button
+                  onClick={() => setSelectedPrefecture('すべて')}
+                  className={`p-2 rounded border text-sm ${selectedPrefecture === 'すべて' ? 'bg-teal-500 text-white border-teal-500' : 'bg-white border-gray-200 hover:border-teal-300'}`}
+                >
+                  すべて
+                </button>
+                {PREFECTURES.map(pref => (
+                  <button
+                    key={pref}
+                    onClick={() => setSelectedPrefecture(pref)}
+                    className={`p-2 rounded border text-sm ${selectedPrefecture === pref ? 'bg-teal-500 text-white border-teal-500' : 'bg-white border-gray-200 hover:border-teal-300'}`}
+                  >
+                    {pref}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* 商品情報編集 */}
@@ -582,21 +559,7 @@ const Upload = () => {
                     placeholder="ブランド名を入力"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    原材料名
-                  </label>
-                  <textarea
-                    value={editedInfo.ingredients.join('\n')}
-                    onChange={(e) => updateIngredients(e.target.value)}
-                    rows={6}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                    placeholder="原材料を1行に1つずつ入力"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    原材料を1行に1つずつ入力してください
-                  </p>
-                </div>
+                {/* 原材料名は仕様により非表示 */}
               </div>
             </div>
 
@@ -623,16 +586,34 @@ const Upload = () => {
               </div>
             </div>
 
-            {/* メモ・コメント */}
+            {/* 香料に含まれるアレルギー成分 */}
             <div className="bg-white rounded-xl shadow-lg p-6">
-              <h3 className="text-lg font-semibold mb-4">メモ・コメント（任意）</h3>
-              <textarea
-                value={editedInfo.notes}
-                onChange={(e) => handleInfoChange('notes', e.target.value)}
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                placeholder="商品についての補足情報があれば入力してください"
-              />
+              <h3 className="text-lg font-semibold mb-4">香料に含まれるアレルギー成分</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {allergyOptions.map(allergy => (
+                  <button
+                    key={`frag-${allergy.id}`}
+                    onClick={() => setFragranceAllergens(prev => (
+                      prev.includes(allergy.id)
+                        ? prev.filter(id => id !== allergy.id)
+                        : [...prev, allergy.id]
+                    ))}
+                    className={`p-3 rounded-lg border-2 text-sm transition-all ${
+                      fragranceAllergens.includes(allergy.id)
+                        ? 'bg-purple-500 text-white border-purple-500'
+                        : 'bg-white border-gray-200 hover:border-purple-300'
+                    }`}
+                  >
+                    <div className="text-center">
+                      <div className="text-2xl mb-1">{allergy.icon}</div>
+                      <div className="font-medium">{allergy.name}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+              {fragranceAllergens.length > 0 && (
+                <p className="text-xs text-gray-500 mt-2">選択: {fragranceAllergens.map(id => allergyOptions.find(a => a.id === id)?.name).filter(Boolean).join('、')}</p>
+              )}
             </div>
 
             {/* アクションボタン */}
@@ -683,6 +664,20 @@ const Upload = () => {
                     ? editedInfo.allergens.map(id => allergyOptions.find(a => a.id === id)?.name).join('、')
                     : 'なし'
                 }</p>
+                <p><strong>香料由来:</strong> {
+                  fragranceAllergens.length > 0
+                    ? fragranceAllergens.map(id => allergyOptions.find(a => a.id === id)?.name).filter(Boolean).join('、')
+                    : 'なし'
+                }</p>
+                <p><strong>利用シーン:</strong> {
+                  Object.entries(channels).filter(([,v]) => v).map(([k]) => ({
+                    restaurant: 'レストラン',
+                    takeout: 'テイクアウト',
+                    supermarket: 'スーパー',
+                    onlineShop: 'ネットショップ'
+                  }[k])).filter(Boolean).join('、') || '未選択'
+                }</p>
+                <p><strong>都道府県:</strong> {selectedPrefecture}</p>
               </div>
             </div>
 

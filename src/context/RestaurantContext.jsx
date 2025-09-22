@@ -113,6 +113,18 @@ export const RestaurantProvider = ({ children }) => {
     return 'products';
   };
 
+  // すべての含有カテゴリトークンを配列で返す（フィルタ用）
+  const getCategoryTokens = (categoryText) => {
+    if (!categoryText || typeof categoryText !== 'string') return [];
+    const tokens = categoryText.split(/[/、,\s]+/).filter(Boolean);
+    const result = new Set();
+    if (tokens.some(t => t.includes('スーパー')) || categoryText.includes('スーパー')) result.add('supermarkets');
+    if (tokens.some(t => t.includes('ネットショップ')) || categoryText.includes('ネットショップ')) result.add('online');
+    if (tokens.some(t => t.includes('テイクアウト')) || categoryText.includes('テイクアウト')) result.add('products');
+    if (tokens.some(t => t.includes('レストラン')) || categoryText.includes('レストラン')) result.add('restaurants');
+    return Array.from(result);
+  };
+
   // Supabaseからデータを取得する関数
   const fetchDataFromSupabase = async () => {
     console.log('fetchDataFromSupabase開始...');
@@ -368,6 +380,7 @@ export const RestaurantProvider = ({ children }) => {
                 area: store.address || '',
                 cuisine: '商品',
                 category: normalizeCategory(product.category),
+                category_tokens: getCategoryTokens(product.category),
                 brand: product.brand || '',
                 allergyInfo: defaultAllergyInfo,
                 allergyFree: allergyFree,
@@ -412,6 +425,7 @@ export const RestaurantProvider = ({ children }) => {
               area: 'すべて',
               cuisine: '商品',
               category: normalizeCategory(product.category),
+              category_tokens: getCategoryTokens(product.category),
               brand: product.brand || '',
               allergyInfo: defaultAllergyInfo,
               allergyFree: allergyFree,
@@ -531,7 +545,11 @@ export const RestaurantProvider = ({ children }) => {
     console.log('getFilteredItems - selectedArea:', selectedArea);
 
     if (selectedCategory !== 'all') {
-      items = items.filter(item => item.category === selectedCategory);
+      items = items.filter(item => {
+        if (item.category === selectedCategory) return true;
+        if (Array.isArray(item.category_tokens) && item.category_tokens.includes(selectedCategory)) return true;
+        return false;
+      });
       console.log('getFilteredItems - after category filter:', items);
     }
 

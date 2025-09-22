@@ -393,6 +393,33 @@ const Upload = () => {
         if (paError) throw paError;
       }
 
+      // 通常のアレルギー選択（含有）も product_allergies に保存（presence_type='direct'）
+      if (productId && Array.isArray(editedInfo.allergens)) {
+        // 既存の該当品目を削除してから挿入（重複回避）
+        if (editedInfo.allergens.length > 0) {
+          const { error: delErr } = await supabase
+            .from('product_allergies')
+            .delete()
+            .match({ product_id: productId })
+            .in('allergy_item_id', editedInfo.allergens);
+          if (delErr) console.warn('product_allergies 既存削除で警告:', delErr);
+        }
+
+        if (editedInfo.allergens.length > 0) {
+          const rows = editedInfo.allergens.map(allergyId => ({
+            product_id: productId,
+            allergy_item_id: allergyId,
+            presence_type: 'direct',
+            amount_level: 'unknown',
+            notes: null
+          }));
+          const { error: insErr } = await supabase
+            .from('product_allergies')
+            .insert(rows);
+          if (insErr) throw insErr;
+        }
+      }
+
       // 画像アップロードに失敗・未実施の場合も保存は継続し、後から追加できるUIを出す
       if ((uploadedUrls?.length || 0) === 0 && productId) {
         console.warn('画像なしで保存完了。後から画像を追加できます。');

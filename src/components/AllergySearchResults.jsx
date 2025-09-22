@@ -159,9 +159,9 @@ const AllergySearchResults = () => {
     
     console.log('groupedStores - filteredItems processing:', filteredItems);
     
-    // restaurantsカテゴリのアイテムのみを処理（これが店舗データ）
+    // すでに上位でカテゴリフィルタ済みなので、ここでは全アイテムを処理
     filteredItems.forEach(item => {
-      if (item.category === 'restaurants') {
+      {
         const storeName = item.name || '店舗名不明';
         console.log('groupedStores - processing restaurant:', storeName);
         

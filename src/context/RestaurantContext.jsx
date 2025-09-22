@@ -192,6 +192,23 @@ export const RestaurantProvider = ({ children }) => {
         console.error('product_allergies_matrixテーブルアクセスエラー:', err);
       }
 
+      // 追加: product_allergies（行形式）も取得し、UI用にproduct_allergies_matrix風に組み立てる
+      let productAllergiesRows = [];
+      try {
+        console.log('product_allergiesテーブルにアクセス中...');
+        const { data: par, error: parErr } = await supabase
+          .from('product_allergies')
+          .select('*');
+        if (!parErr && par) {
+          productAllergiesRows = par;
+          console.log('product_allergiesデータ取得成功:', par.length, '件');
+        } else {
+          console.error('product_allergiesテーブルエラー:', parErr);
+        }
+      } catch (err) {
+        console.error('product_allergiesテーブルアクセスエラー:', err);
+      }
+
       // アレルギー項目を分類
       if (allergyData && allergyData.length > 0) {
         const mandatory = allergyData.filter(item => item.category === 'mandatory');
@@ -317,7 +334,19 @@ export const RestaurantProvider = ({ children }) => {
           console.log(`商品 ${product.name} の関連店舗:`, relatedStores);
           
           // この商品のproduct_allergies_matrixを取得
-          const productMatrix = matrixData.filter(matrix => matrix.product_id === product.id);
+          let productMatrix = matrixData.filter(matrix => matrix.product_id === product.id);
+          // 行形式のproduct_allergiesからもmatrix風オブジェクトを生成して追加
+          const rowsForProduct = productAllergiesRows.filter(r => r.product_id === product.id);
+          if (rowsForProduct.length > 0) {
+            const generated = {};
+            rowsForProduct.forEach(r => {
+              // presence_typeのマッピング: Included→trace, none→none, trace→trace, その他はそのまま
+              let mapped = r.presence_type;
+              if (mapped === 'Included') mapped = 'trace';
+              generated[r.allergy_item_id] = mapped;
+            });
+            productMatrix.push({ ...generated, menu_name: product.name });
+          }
           console.log(`商品 ${product.name} のmatrix:`, productMatrix);
           
           // 関連店舗がある場合は店舗ごとにデータを作成、ない場合は商品データとして作成
@@ -380,7 +409,7 @@ export const RestaurantProvider = ({ children }) => {
               rating: 4.0,
               reviewCount: 0,
               price: '¥500～¥1,500',
-              area: product.brand || '',
+              area: 'すべて',
               cuisine: '商品',
               category: normalizeCategory(product.category),
               brand: product.brand || '',

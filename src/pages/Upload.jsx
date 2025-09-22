@@ -189,8 +189,8 @@ const Upload = () => {
       const categoryValue = channelLabels.length > 0 ? channelLabels.join('/') : null;
 
       // 選択された最大2枚を圧縮→シンレンタルサーバーAPIにアップロード
-      const uploadApiUrl = import.meta?.env?.VITE_UPLOAD_API_URL;
-      const uploadApiKey = import.meta?.env?.VITE_UPLOAD_API_KEY;
+      const uploadApiUrl = import.meta?.env?.VITE_UPLOAD_API_URL || 'https://stoneflower.net/api/upload.php';
+      const uploadApiKey = import.meta?.env?.VITE_UPLOAD_API_KEY || '9d8c74e1b6a5f234c98b02e37f46d01e5bb2c8e5f77d9a6210c5d4939f82d7ab';
       // デバッグ: 環境値と対象ファイル
       console.log('[UploadAPI] url=', uploadApiUrl, 'key set=', !!uploadApiKey);
       try {

@@ -22,6 +22,7 @@ const Upload = () => {
     confidence: 0
   });
   const [fragranceAllergens, setFragranceAllergens] = useState([]); // 香料に含まれるアレルギー
+  const [fragranceOpen, setFragranceOpen] = useState(false); // 香料セクション開閉
   const [similarProducts, setSimilarProducts] = useState([]);
   const [showSimilarProducts, setShowSimilarProducts] = useState(false);
   const [channels, setChannels] = useState({
@@ -586,33 +587,45 @@ const Upload = () => {
               </div>
             </div>
 
-            {/* 香料に含まれるアレルギー成分 */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h3 className="text-lg font-semibold mb-4">香料に含まれるアレルギー成分</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {allergyOptions.map(allergy => (
-                  <button
-                    key={`frag-${allergy.id}`}
-                    onClick={() => setFragranceAllergens(prev => (
-                      prev.includes(allergy.id)
-                        ? prev.filter(id => id !== allergy.id)
-                        : [...prev, allergy.id]
+            {/* 香料に含まれるアレルギー成分（折りたたみ） */}
+            <div className="bg-white rounded-xl shadow-lg">
+              <button
+                type="button"
+                className="w-full flex items-center justify-between p-6"
+                onClick={() => setFragranceOpen(v => !v)}
+              >
+                <h3 className="text-lg font-semibold">香料に含まれるアレルギー成分</h3>
+                <span className="text-sm text-gray-500">
+                  {fragranceAllergens.length > 0
+                    ? `選択: ${fragranceAllergens.map(id => allergyOptions.find(a => a.id === id)?.name).filter(Boolean).join('、')}`
+                    : (fragranceOpen ? '閉じる' : '開く')}
+                </span>
+              </button>
+              {fragranceOpen && (
+                <div className="p-6 pt-0">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {allergyOptions.map(allergy => (
+                      <button
+                        key={`frag-${allergy.id}`}
+                        onClick={() => setFragranceAllergens(prev => (
+                          prev.includes(allergy.id)
+                            ? prev.filter(id => id !== allergy.id)
+                            : [...prev, allergy.id]
+                        ))}
+                        className={`p-3 rounded-lg border-2 text-sm transition-all ${
+                          fragranceAllergens.includes(allergy.id)
+                            ? 'bg-purple-500 text-white border-purple-500'
+                            : 'bg-white border-gray-200 hover:border-purple-300'
+                        }`}
+                      >
+                        <div className="text-center">
+                          <div className="text-2xl mb-1">{allergy.icon}</div>
+                          <div className="font-medium">{allergy.name}</div>
+                        </div>
+                      </button>
                     ))}
-                    className={`p-3 rounded-lg border-2 text-sm transition-all ${
-                      fragranceAllergens.includes(allergy.id)
-                        ? 'bg-purple-500 text-white border-purple-500'
-                        : 'bg-white border-gray-200 hover:border-purple-300'
-                    }`}
-                  >
-                    <div className="text-center">
-                      <div className="text-2xl mb-1">{allergy.icon}</div>
-                      <div className="font-medium">{allergy.name}</div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-              {fragranceAllergens.length > 0 && (
-                <p className="text-xs text-gray-500 mt-2">選択: {fragranceAllergens.map(id => allergyOptions.find(a => a.id === id)?.name).filter(Boolean).join('、')}</p>
+                  </div>
+                </div>
               )}
             </div>
 

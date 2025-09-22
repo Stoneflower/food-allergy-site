@@ -36,6 +36,7 @@ const Upload = () => {
   const [selectedPrefecture, setSelectedPrefecture] = useState('すべて');
   const [createdProductId, setCreatedProductId] = useState(null);
   const [showImageUploader, setShowImageUploader] = useState(false);
+  const [uploadErrorsState, setUploadErrorsState] = useState([]); // 画像アップロード失敗の可視化
   
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
@@ -60,9 +61,9 @@ const Upload = () => {
   // 複数画像ファイル処理（上限3枚）
   const handleImageFiles = (files) => {
     // 上限チェック
-    if (files.length > 3) {
-      alert('最大3枚まで選択できます。最初の3枚を使用します。');
-      files = files.slice(0, 3);
+    if (files.length > 2) {
+      alert('最大2枚まで選択できます。最初の2枚を使用します。');
+      files = files.slice(0, 2);
     }
 
     // 複数画像を読み込んで配列に格納
@@ -187,18 +188,25 @@ const Upload = () => {
 
       const categoryValue = channelLabels.length > 0 ? channelLabels.join('/') : null;
 
-      // 選択された最大3枚を圧縮→シンレンタルサーバーAPIにアップロード
+      // 選択された最大2枚を圧縮→シンレンタルサーバーAPIにアップロード
       const uploadApiUrl = import.meta?.env?.VITE_UPLOAD_API_URL;
       const uploadApiKey = import.meta?.env?.VITE_UPLOAD_API_KEY;
       let uploadedUrls = [];
       let uploadErrors = [];
       if (capturedImages.length > 0 && uploadApiUrl && uploadApiKey) {
-        const files = capturedImages.filter(img => !!img?.file).slice(0, 3).map(img => img.file);
+        const files = capturedImages.filter(img => !!img?.file).slice(0, 2).map(img => img.file);
         if (files.length > 0) {
           try {
             uploadedUrls = await Promise.all(files.map(async (file, idx) => {
               try {
-                const compressed = await imageCompression(file, { maxSizeMB: 0.8, maxWidthOrHeight: 1600, useWebWorker: true });
+                // 圧縮を強め、強制JPEG化
+                const compressed = await imageCompression(file, {
+                  maxSizeMB: 0.5,
+                  maxWidthOrHeight: 900,
+                  initialQuality: 0.5,
+                  fileType: 'image/jpeg',
+                  useWebWorker: true,
+                });
                 const fd = new FormData();
                 fd.append('file', compressed, file.name);
                 const res = await fetch(uploadApiUrl, { method: 'POST', headers: { 'X-API-KEY': uploadApiKey }, body: fd });
@@ -220,34 +228,116 @@ const Upload = () => {
       }
 
       const uploadedImageUrl = uploadedUrls[0] || null;
+      // 失敗一覧を状態に反映
+      setUploadErrorsState(uploadErrors);
 
-      // products へ登録（name はブランド・メーカー入力、画像はCloudflareの結果を保存）
-      const insertPayload = {
-        name: productNameForSave,
-        brand: null,
-        category: categoryValue,
-        description: null,
-        image_url: uploadedImageUrl,
-        image_id: null,
-        barcode: null
-      };
+      // マッピング変更:
+      // products.product_title <= 商品名（editedInfo.productName）
+      // products.name          <= ブランド・メーカー（editedInfo.brand）
+      // products.brand         <= NULL（未使用）
+      // products.category      <= 利用シーン
+      // 画像URL               <= products.source_url
 
-      const { data: productData, error: productError } = await supabase
-        .from('products')
-        .insert([insertPayload])
-        .select()
-        .single();
-      if (productError) throw productError;
+      // 既存チェック: 優先はバーコード、無ければ (name + product_title)
+      const productTitleToSave = (editedInfo.productName || '').trim() || null;
+      const nameToSave = (editedInfo.brand || '').trim() || null;
 
-      const productId = productData?.id;
+      let existingProduct = null;
+      if (editedInfo.barcode && String(editedInfo.barcode).trim()) {
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .eq('barcode', String(editedInfo.barcode).trim())
+          .maybeSingle();
+        if (error) throw error;
+        existingProduct = data || null;
+      }
+      if (!existingProduct && nameToSave && productTitleToSave) {
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .eq('name', nameToSave)
+          .eq('product_title', productTitleToSave)
+          .maybeSingle();
+        if (error) throw error;
+        existingProduct = data || null;
+      }
+
+      // さらに片方欠損するケースも考慮: product_title 単独でも既存チェック（すり抜け防止）
+      if (!existingProduct && productTitleToSave) {
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .eq('product_title', productTitleToSave)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (error) throw error;
+        existingProduct = data || null;
+      }
+
+      let productId = null;
+      if (existingProduct) {
+        // 既存があれば更新（画像URLは取得できたときのみ上書き）
+        const updatePayload = {
+          name: nameToSave || existingProduct.name,
+          product_title: productTitleToSave || existingProduct.product_title,
+          brand: null,
+          category: categoryValue,
+          description: existingProduct.description || null,
+          barcode: editedInfo.barcode ? String(editedInfo.barcode).trim() : (existingProduct.barcode || null),
+        };
+        // 画像URLは products.source_url へ保存
+        if (uploadedImageUrl) updatePayload.source_url = uploadedImageUrl;
+        const { error: upErr } = await supabase
+          .from('products')
+          .update(updatePayload)
+          .eq('id', existingProduct.id);
+        if (upErr) throw upErr;
+        productId = existingProduct.id;
+      } else {
+        // 無ければ新規作成
+        const insertPayload = {
+          name: nameToSave,
+          product_title: productTitleToSave,
+          brand: null,
+          category: categoryValue,
+          description: null,
+          source_url: uploadedImageUrl,
+          image_url: null,
+          image_id: null,
+          barcode: editedInfo.barcode ? String(editedInfo.barcode).trim() : null
+        };
+        const { data: productData, error: productError } = await supabase
+          .from('products')
+          .insert([insertPayload])
+          .select()
+          .single();
+        if (productError) throw productError;
+        productId = productData?.id;
+      }
       setCreatedProductId(productId || null);
 
-      // 都道府県は「すべて」を含め常に store_locations.address として保存
+      // 都道府県は「すべて」を含め常に store_locations.address として保存（既存あれば上書き、無ければ追加）
       if (productId && selectedPrefecture) {
-        const { error: locError } = await supabase
+        const { data: loc, error: locSelErr } = await supabase
           .from('store_locations')
-          .insert([{ product_id: productId, address: selectedPrefecture, branch_name: null, phone: null, hours: null, source_url: null, store_list_url: null, closed: null, notes: null }]);
-        if (locError) throw locError;
+          .select('*')
+          .eq('product_id', productId)
+          .maybeSingle();
+        if (locSelErr) throw locSelErr;
+        if (loc) {
+          const { error: locUpErr } = await supabase
+            .from('store_locations')
+            .update({ address: selectedPrefecture })
+            .eq('id', loc.id);
+          if (locUpErr) throw locUpErr;
+        } else {
+          const { error: locInsErr } = await supabase
+            .from('store_locations')
+            .insert([{ product_id: productId, address: selectedPrefecture, branch_name: null, phone: null, hours: null, notes: null, closed: null, source_url: null, store_list_url: null }]);
+          if (locInsErr) throw locInsErr;
+        }
       }
 
       // 香料に含まれるアレルギー成分を product_allergies へ presence_type='Included' で保存（複数可）
@@ -356,7 +446,7 @@ const Upload = () => {
                   className="w-full flex items-center justify-center space-x-3 bg-gradient-to-r from-orange-500 to-red-500 text-white py-4 px-6 rounded-lg hover:from-orange-600 hover:to-red-600 transition-colors shadow-md"
                 >
                   <SafeIcon icon={FiCamera} className="w-6 h-6" />
-                  <span className="text-lg font-semibold">カメラで撮影する（最大3枚）</span>
+                  <span className="text-lg font-semibold">カメラで撮影する（最大2枚）</span>
                 </button>
 
                 {/* ファイルアップロードボタン */}
@@ -365,7 +455,7 @@ const Upload = () => {
                   className="w-full flex items-center justify-center space-x-3 bg-gray-100 text-gray-700 py-4 px-6 rounded-lg hover:bg-gray-200 transition-colors border-2 border-dashed border-gray-300"
                 >
                   <SafeIcon icon={FiUpload} className="w-6 h-6" />
-                  <span className="text-lg font-semibold">写真をアップロード（最大3枚）</span>
+                  <span className="text-lg font-semibold">写真をアップロード（最大2枚）</span>
                 </button>
 
                 <input
@@ -397,7 +487,7 @@ const Upload = () => {
                     <li>• 明るい場所で撮影し、影が入らないようにしてください</li>
                     <li>• 文字がはっきり見えるよう、ピントを合わせてください</li>
                     <li>• パッケージ全体ではなく、成分表示部分を大きく撮影してください</li>
-                    <li>• 最大3枚まで選択できます（参考用として表示されます）</li>
+                    <li>• 最大2枚まで選択できます（参考用として表示されます）</li>
                   </ul>
                 </div>
               </div>
@@ -681,6 +771,18 @@ const Upload = () => {
                 </div>
               )}
             </div>
+
+            {/* アップロード失敗の表示 */}
+            {uploadErrorsState && uploadErrorsState.length > 0 && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <p className="text-red-700 text-sm font-medium">一部の画像アップロードに失敗しました。</p>
+                <ul className="mt-1 text-xs text-red-700 list-disc list-inside space-y-0.5">
+                  {uploadErrorsState.map((e, i) => (
+                    <li key={i}>画像{(e.index ?? i) + 1}: {e.error}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {/* アクションボタン */}
             <div className="flex space-x-4">

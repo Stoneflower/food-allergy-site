@@ -11,6 +11,7 @@ import FoodSearch from './pages/FoodSearch';
 import IntegratedPDFProcessor from './components/IntegratedPDFProcessor';
 import CsvConverter from './pages/CsvConverter';
 import AdminTools from './pages/AdminTools';
+import ImageUploadDemo from './pages/ImageUploadDemo';
 import { RestaurantProvider } from './context/RestaurantContext';
 import './App.css';
 
@@ -31,6 +32,7 @@ function App() {
             <Route path="/pdf-processor" element={<IntegratedPDFProcessor />} />
             <Route path="/csv-converter" element={<CsvConverter />} />
             <Route path="/admin-tools" element={<AdminTools />} />
+            <Route path="/image-upload-demo" element={<ImageUploadDemo />} />
           </Routes>
         </div>
       </Router>

@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import ImageUpload from './ImageUpload'
+import MultiImageUploader from './MultiImageUploader'
+import { buildImageUrl } from '../utils/cloudflareImages'
 
 const ProductAllergyManager = () => {
   const [products, setProducts] = useState([])
@@ -8,12 +11,17 @@ const ProductAllergyManager = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [showAddProduct, setShowAddProduct] = useState(false)
+  const [showMultiUploader, setShowMultiUploader] = useState(false)
+  
+  // Cloudflare Images の設定（実際の運用時は環境変数から取得）
+  const CF_ACCOUNT_HASH = process.env.REACT_APP_CF_ACCOUNT_HASH || 'your-account-hash'
   const [newProduct, setNewProduct] = useState({
     name: '',
     brand: '',
     category: '',
     description: '',
-    barcode: ''
+    barcode: '',
+    image_id: null
   })
 
   // データ取得
@@ -78,7 +86,7 @@ const ProductAllergyManager = () => {
       if (error) throw error
 
       setMessage('✅ 商品を追加しました')
-      setNewProduct({ name: '', brand: '', category: '', description: '', barcode: '' })
+      setNewProduct({ name: '', brand: '', category: '', description: '', barcode: '', image_id: null })
       setShowAddProduct(false)
       fetchData()
     } catch (error) {
@@ -156,12 +164,18 @@ const ProductAllergyManager = () => {
         </div>
       )}
 
-      <div className="mb-6">
+      <div className="mb-6 flex space-x-4">
         <button
           onClick={() => setShowAddProduct(!showAddProduct)}
           className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
         >
           {showAddProduct ? 'キャンセル' : '商品を追加'}
+        </button>
+        <button
+          onClick={() => setShowMultiUploader(!showMultiUploader)}
+          className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded"
+        >
+          {showMultiUploader ? 'キャンセル' : '複数画像アップロード'}
         </button>
       </div>
 
@@ -205,6 +219,28 @@ const ProductAllergyManager = () => {
             onChange={(e) => setNewProduct({...newProduct, description: e.target.value})}
             className="w-full p-2 border rounded mt-4 h-20"
           />
+          
+          {/* 画像アップロード */}
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              商品画像（任意）
+            </label>
+            <ImageUpload
+              onImageUploaded={(imageData) => {
+                setNewProduct({...newProduct, image_id: imageData.imageId});
+              }}
+              onError={(error) => {
+                console.error('画像アップロードエラー:', error);
+                setMessage(`❌ 画像アップロードエラー: ${error.message}`);
+              }}
+              maxSizeMB={1}
+              maxWidthOrHeight={1200}
+              variant="w=800,q=75"
+              showPreview={true}
+              multiple={false}
+            />
+          </div>
+          
           <button
             onClick={addProduct}
             className="mt-4 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded"
@@ -214,18 +250,74 @@ const ProductAllergyManager = () => {
         </div>
       )}
 
+      {/* 複数画像アップローダー */}
+      {showMultiUploader && (
+        <div className="mb-6 p-4 border rounded-lg bg-gray-50">
+          <h3 className="text-lg font-bold mb-4">複数画像アップロード</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            最大3枚までの画像を選択して、一括でアップロードできます。
+            商品IDを指定すると、自動的にSupabaseに保存されます。
+          </p>
+          <MultiImageUploader
+            maxImages={3}
+            maxSizeMB={0.5}
+            maxWidthOrHeight={1024}
+            accountHash={CF_ACCOUNT_HASH}
+            variant="w=800,q=75"
+            onUploadComplete={(uploadedImages) => {
+              setMessage(`✅ ${uploadedImages.length}件の画像がアップロードされました`);
+              setShowMultiUploader(false);
+            }}
+            onError={(error) => {
+              setMessage(`❌ アップロードエラー: ${error.message}`);
+            }}
+          />
+        </div>
+      )}
+
       {/* 商品一覧 */}
       <div className="space-y-6">
         {products.map((product) => (
           <div key={product.id} className="border rounded-lg p-4">
             <div className="flex justify-between items-start mb-4">
-              <div>
-                <h3 className="text-lg font-bold">{product.name}</h3>
-                <p className="text-sm text-gray-600">{product.brand} - {product.category}</p>
-                {product.description && (
-                  <p className="text-sm text-gray-500 mt-1">{product.description}</p>
-                )}
+              <div className="flex space-x-4">
+                {/* 商品画像 */}
+                <div className="flex-shrink-0">
+                  {product.image_id ? (
+                    <img
+                      src={buildImageUrl({ 
+                        accountHash: CF_ACCOUNT_HASH, 
+                        imageId: product.image_id, 
+                        variant: 'w=150,h=150,q=75' 
+                      })}
+                      alt={product.name}
+                      className="w-20 h-20 object-cover rounded-lg border"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'flex';
+                      }}
+                    />
+                  ) : null}
+                  <div 
+                    className={`w-20 h-20 bg-gray-200 rounded-lg border flex items-center justify-center text-gray-400 text-xs ${product.image_id ? 'hidden' : 'flex'}`}
+                  >
+                    画像なし
+                  </div>
+                </div>
+                
+                {/* 商品情報 */}
+                <div className="flex-1">
+                  <h3 className="text-lg font-bold">{product.name}</h3>
+                  <p className="text-sm text-gray-600">{product.brand} - {product.category}</p>
+                  {product.description && (
+                    <p className="text-sm text-gray-500 mt-1">{product.description}</p>
+                  )}
+                  {product.barcode && (
+                    <p className="text-xs text-gray-400 mt-1">バーコード: {product.barcode}</p>
+                  )}
+                </div>
               </div>
+              
               <ProductAllergyForm 
                 product={product}
                 allergyItems={allergyItems}

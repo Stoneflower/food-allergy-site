@@ -50,7 +50,8 @@ CREATE TABLE IF NOT EXISTS products (
   brand VARCHAR(100), -- ブランド名
   category VARCHAR(50), -- 商品カテゴリ
   description TEXT, -- 商品説明
-  image_url VARCHAR(500), -- 商品画像URL
+  image_url VARCHAR(500), -- 商品画像URL（レガシー用）
+  image_id VARCHAR(100), -- Cloudflare Imagesの画像ID
   barcode VARCHAR(50), -- バーコード
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -214,6 +215,7 @@ CREATE TABLE IF NOT EXISTS menu_items (
   name VARCHAR(200) NOT NULL,
   price VARCHAR(50),
   notes TEXT,
+  image_id VARCHAR(100), -- Cloudflare Imagesの画像ID
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import SafeIcon from '../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
 import { useRestaurant } from '../context/RestaurantContext';
+import ImageUpload from './ImageUpload';
 
 const { FiX, FiAlertTriangle, FiCheck, FiEdit3, FiClock, FiUser, FiTrendingUp } = FiIcons;
 
@@ -19,6 +20,7 @@ const ProductUpdateModal = ({ product, onClose, onUpdate }) => {
   });
   const [changeReason, setChangeReason] = useState('');
   const [evidenceImage, setEvidenceImage] = useState(null);
+  const [evidenceImageId, setEvidenceImageId] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { allergyOptions } = useRestaurant();
@@ -47,15 +49,13 @@ const ProductUpdateModal = ({ product, onClose, onUpdate }) => {
     }
   ];
 
-  const handleImageUpload = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setEvidenceImage(e.target.result);
-      };
-      reader.readAsDataURL(file);
-    }
+  const handleImageUploaded = (imageData) => {
+    setEvidenceImage(URL.createObjectURL(imageData.file));
+    setEvidenceImageId(imageData.imageId);
+  };
+
+  const handleImageError = (error) => {
+    console.error('画像アップロードエラー:', error);
   };
 
   const toggleAllergen = (allergenId) => {
@@ -146,6 +146,7 @@ const ProductUpdateModal = ({ product, onClose, onUpdate }) => {
       updatedInfo,
       changeReason,
       evidenceImage,
+      evidenceImageId,
       submittedBy: 'current_user', // 実際のユーザーIDに置き換え
       submittedAt: new Date(),
       status: 'pending_review'
@@ -383,11 +384,15 @@ const ProductUpdateModal = ({ product, onClose, onUpdate }) => {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 証拠画像（任意）
               </label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              <ImageUpload
+                onImageUploaded={handleImageUploaded}
+                onError={handleImageError}
+                maxSizeMB={1}
+                maxWidthOrHeight={1200}
+                variant="w=800,q=75"
+                showPreview={true}
+                multiple={false}
+                className="mb-4"
               />
               {evidenceImage && (
                 <div className="mt-2">

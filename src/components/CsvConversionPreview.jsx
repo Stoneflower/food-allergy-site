@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FiEdit3, FiSave, FiRotateCcw, FiCheckCircle, FiAlertCircle, FiTrash2 } from 'react-icons/fi';
+import { FiEdit3, FiSave, FiRotateCcw, FiCheckCircle, FiAlertCircle, FiTrash2, FiImage } from 'react-icons/fi';
+import { buildImageUrl } from '../utils/cloudflareImages';
 
-const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
+const CsvConversionPreview = ({ csvData, rules, uploadedImages = [], onConversion, onBack }) => {
   const [convertedData, setConvertedData] = useState([]);
   const [editingCell, setEditingCell] = useState(null);
   const [stats, setStats] = useState({ total: 0, converted: 0, errors: 0 });
+  
+  // Cloudflare Images の設定（実際の運用時は環境変数から取得）
+  const CF_ACCOUNT_HASH = process.env.REACT_APP_CF_ACCOUNT_HASH || 'your-account-hash';
 
   // 標準アレルギー項目
   const standardAllergens = [
@@ -369,13 +373,43 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
     }
   };
 
+  // 商品名から画像を検索する関数
+  const findImageForProduct = (productName) => {
+    if (!productName || !uploadedImages.length) return null;
+    
+    // 商品名から不要な文字を除去して正規化
+    const normalizedProductName = productName
+      .replace(/【|】|／|（|）|＊|・/g, '')
+      .replace(/\s+/g, '')
+      .toLowerCase();
+    
+    // ファイル名から拡張子を除去して正規化
+    const matchingImage = uploadedImages.find(imageData => {
+      const fileName = imageData.file.name
+        .replace(/\.(jpg|jpeg|png|webp)$/i, '')
+        .replace(/\s+/g, '')
+        .toLowerCase();
+      
+      // 商品名とファイル名が一致するか、商品名がファイル名に含まれるかチェック
+      return fileName === normalizedProductName || 
+             fileName.includes(normalizedProductName) ||
+             normalizedProductName.includes(fileName);
+    });
+    
+    return matchingImage;
+  };
+
   const handleNext = () => {
     // 変換されたデータを整理
     const finalData = convertedData.map(row => {
+      const productName = row.original[0] || '';
+      const associatedImage = findImageForProduct(productName);
+      
       const result = {
         rowIndex: row.rowIndex,
         original: row.original,
-        converted: {}
+        converted: {},
+        image_id: associatedImage?.imageId || null
       };
 
       // 標準アレルギー項目の順序で整理
@@ -467,8 +501,32 @@ const CsvConversionPreview = ({ csvData, rules, onConversion, onBack }) => {
                   <td className="px-3 py-2 text-sm text-gray-900">
                     {rowIndex + 1}
                   </td>
-                  <td className="px-3 py-2 text-sm text-gray-900 max-w-xs truncate">
-                    {row.original[0] || '商品名なし'}
+                  <td className="px-3 py-2 text-sm text-gray-900 max-w-xs">
+                    <div className="flex items-center space-x-2">
+                      <div className="flex-shrink-0">
+                        {(() => {
+                          const associatedImage = findImageForProduct(row.original[0]);
+                          if (associatedImage) {
+                            return (
+                              <img
+                                src={URL.createObjectURL(associatedImage.file)}
+                                alt={row.original[0]}
+                                className="w-8 h-8 object-cover rounded border"
+                                title={`画像: ${associatedImage.file.name}`}
+                              />
+                            );
+                          }
+                          return (
+                            <div className="w-8 h-8 bg-gray-200 rounded border flex items-center justify-center">
+                              <FiImage className="w-3 h-3 text-gray-400" />
+                            </div>
+                          );
+                        })()}
+                      </div>
+                      <div className="truncate">
+                        {row.original[0] || '商品名なし'}
+                      </div>
+                    </div>
                   </td>
                   <td className="px-3 py-2 text-sm">
                     <button

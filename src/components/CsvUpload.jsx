@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FiUpload, FiFile, FiAlertCircle, FiCheckCircle } from 'react-icons/fi';
 import Papa from 'papaparse';
+import ImageUpload from './ImageUpload';
 
 const CsvUpload = ({ onUpload }) => {
   const [dragActive, setDragActive] = useState(false);
@@ -9,6 +10,7 @@ const CsvUpload = ({ onUpload }) => {
   const [csvData, setCsvData] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [uploadedImages, setUploadedImages] = useState([]);
 
   const handleDrag = (e) => {
     e.preventDefault();
@@ -117,8 +119,17 @@ const CsvUpload = ({ onUpload }) => {
 
   const handleUpload = () => {
     if (csvData) {
-      onUpload(csvData);
+      onUpload(csvData, uploadedImages);
     }
+  };
+
+  const handleImageUploaded = (imageData) => {
+    setUploadedImages(prev => [...prev, imageData]);
+  };
+
+  const handleImageError = (error) => {
+    console.error('画像アップロードエラー:', error);
+    setError(`画像アップロードエラー: ${error.message}`);
   };
 
   return (
@@ -249,6 +260,40 @@ const CsvUpload = ({ onUpload }) => {
               </div>
             )}
           </div>
+        </motion.div>
+      )}
+
+      {/* Image Upload Section */}
+      {csvData && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-4"
+        >
+          <h3 className="text-lg font-semibold text-gray-900">
+            商品画像のアップロード（任意）
+          </h3>
+          <p className="text-sm text-gray-600">
+            CSVに含まれる商品の画像を一括でアップロードできます。
+            商品名とファイル名が一致する場合、自動的に関連付けられます。
+          </p>
+          <ImageUpload
+            onImageUploaded={handleImageUploaded}
+            onError={handleImageError}
+            maxSizeMB={1}
+            maxWidthOrHeight={1200}
+            variant="w=800,q=75"
+            showPreview={true}
+            multiple={true}
+          />
+          {uploadedImages.length > 0 && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-blue-700 text-sm">
+                {uploadedImages.length}件の画像がアップロードされました。
+                次のステップで商品と関連付けられます。
+              </p>
+            </div>
+          )}
         </motion.div>
       )}
 

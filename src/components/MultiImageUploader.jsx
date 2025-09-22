@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiUpload, FiImage, FiX, FiCheckCircle, FiAlertCircle, FiLoader, FiTrash2 } from 'react-icons/fi';
+import imageCompression from 'browser-image-compression';
 import { compressAndUpload, buildImageUrl } from '../utils/cloudflareImages';
 import { supabase } from '../lib/supabase';
 

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import SafeIcon from '../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
@@ -324,13 +325,15 @@ const About = () => {
             <p className="text-xl mb-8 opacity-90">
               無料会員登録で、より詳細なアレルギー情報やお気に入り機能をご利用いただけます
             </p>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="bg-white text-orange-500 px-8 py-3 rounded-lg font-semibold text-lg hover:bg-gray-100 transition-colors shadow-lg"
-            >
-              今すぐ無料登録して安心な食事を始める
-            </motion.button>
+            <Link to="/login">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="bg-white text-orange-500 px-8 py-3 rounded-lg font-semibold text-lg hover:bg-gray-100 transition-colors shadow-lg"
+              >
+                今すぐ無料登録して安心な食事を始める
+              </motion.button>
+            </Link>
           </motion.div>
         </div>
       </section>

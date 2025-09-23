@@ -97,8 +97,8 @@ const Header = () => {
           <div className="flex items-center space-x-6">
             {/* Logo - PC版とスマホ版共通 */}
             <Link to="/" className="flex items-center space-x-3 p-2 -m-2 rounded-lg hover:bg-white/10 transition-colors">
-              <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-red-500 rounded-lg flex items-center justify-center shadow-lg">
-                <span className="text-white font-bold text-lg">📸</span>
+              <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center shadow-lg">
+                <span className="text-white font-bold text-lg">🍦</span>
               </div>
               <div className="flex flex-col">
                 <div className="flex items-baseline space-x-1">
@@ -144,7 +144,7 @@ const Header = () => {
             >
               <div className="flex items-center space-x-2 bg-gradient-to-r from-yellow-400 to-orange-400 text-orange-900 px-6 py-3 rounded-xl font-bold hover:from-yellow-300 hover:to-orange-300 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105">
                 <SafeIcon icon={FiCamera} className="w-5 h-5" />
-                <span>📸 商品を撮影して共有</span>
+                <span>商品を撮影して共有</span>
               </div>
               {/* ホバー時のツールチップ */}
               <div className="absolute -bottom-12 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-3 py-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-50">
@@ -353,9 +353,11 @@ const Header = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="lg:hidden fixed inset-x-0 top-20 bottom-0 z-[10000] bg-white overflow-auto"
+          className="lg:hidden fixed inset-x-0 top-28 bottom-0 z-[10000] bg-white overflow-auto"
         >
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 pb-4">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-4">
+            {/* ヘッダー下の余白を確保して見出しが隠れないようにする */}
+            <div className="h-2" aria-hidden="true" />
             <form onSubmit={handleSearch} className="space-y-3">
               {/* Mobile Category Selection */}
               <div>
@@ -544,6 +546,13 @@ const Header = () => {
               >
                 <SafeIcon icon={FiCamera} className="w-5 h-5" />
                 <span>商品を投稿する</span>
+              </Link>
+              <Link
+                to="/contact"
+                className="flex items-center space-x-3 px-4 py-3 text-blue-700 hover:bg-blue-50 rounded-lg font-semibold"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <span>✉️ お問合せ</span>
               </Link>
               <Link
                 to="/about"

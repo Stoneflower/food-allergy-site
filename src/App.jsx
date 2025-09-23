@@ -7,6 +7,7 @@ import SearchResults from './pages/SearchResults';
 import Login from './pages/Login';
 import About from './pages/About';
 import Upload from './pages/Upload';
+import Contact from './pages/Contact';
 import FoodSearch from './pages/FoodSearch';
 import IntegratedPDFProcessor from './components/IntegratedPDFProcessor';
 import CsvConverter from './pages/CsvConverter';
@@ -29,6 +30,7 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/about" element={<About />} />
             <Route path="/upload" element={<Upload />} />
+            <Route path="/contact" element={<Contact />} />
             <Route path="/pdf-processor" element={<IntegratedPDFProcessor />} />
             <Route path="/csv-converter" element={<CsvConverter />} />
             <Route path="/admin-tools" element={<AdminTools />} />

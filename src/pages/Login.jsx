@@ -103,7 +103,7 @@ const Login = () => {
       >
         <div className="text-center mb-8">
           <div className="w-16 h-16 bg-gradient-to-br from-orange-400 to-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="text-white font-bold text-2xl">🍽️</span>
+            <span className="text-white font-bold text-2xl">🍦</span>
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
             {isLogin ? 'ログイン' : (currentStep === 1 ? '無料会員登録' : 'アレルギー設定')}

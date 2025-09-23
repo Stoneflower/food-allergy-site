@@ -7,7 +7,7 @@ const CategoryFilter = () => {
 
   return (
     <div className="flex flex-wrap gap-3 justify-center mb-8">
-      {categories.map((category, index) => (
+      {categories.filter(c => c.id !== 'all').map((category, index) => (
         <motion.button
           key={category.id}
           initial={{ opacity: 0, scale: 0.9 }}
@@ -22,7 +22,6 @@ const CategoryFilter = () => {
             }
           `}
         >
-          <span className="text-lg">{category.icon}</span>
           <span className="font-medium">{category.name}</span>
         </motion.button>
       ))}

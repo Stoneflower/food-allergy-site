@@ -36,9 +36,17 @@ const Home = () => {
       case 'products':
         return filteredItems.filter(item => item.category === 'products').slice(0, 6);
       case 'supermarkets':
-        return filteredItems.filter(item => item.category === 'supermarkets').slice(0, 6);
+        // products.category が『スーパー/ネットショップ』のような複合指定でも
+        // RestaurantContext で category_tokens に分解済みなので、トークンを参照して判定
+        return filteredItems
+          .filter(item => item.category === 'products' || item.category === 'supermarkets' || item.category === 'online')
+          .filter(item => Array.isArray(item.category_tokens) && item.category_tokens.includes('supermarkets'))
+          .slice(0, 6);
       case 'online':
-        return filteredItems.filter(item => item.category === 'online').slice(0, 6);
+        return filteredItems
+          .filter(item => item.category === 'products' || item.category === 'supermarkets' || item.category === 'online')
+          .filter(item => Array.isArray(item.category_tokens) && item.category_tokens.includes('online'))
+          .slice(0, 6);
       case 'all':
       default:
         return filteredItems.slice(0, 6);
@@ -338,14 +346,14 @@ const Home = () => {
             >
               <div className="text-center mb-12">
                 <div className="flex items-center justify-center space-x-3 mb-4">
-                  <span className="text-4xl">🌟</span>
+                  <span className="text-4xl">📦</span>
                   <h2 className="text-3xl font-bold text-gray-900">
-                    みんなが共有した人気情報
+                    最近登録した商品
                   </h2>
-                  <span className="text-4xl">🤝</span>
+                  <span className="text-4xl">🆕</span>
                 </div>
                 <p className="text-gray-600">
-                  コミュニティのみんなが共有してくれた、安心して利用できる情報をご紹介
+                  直近に共有された商品をピックアップしてご紹介します
                 </p>
               </div>
               

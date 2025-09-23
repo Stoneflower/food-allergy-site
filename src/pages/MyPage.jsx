@@ -222,7 +222,13 @@ const MyPage = () => {
               </div>
             </div>
             {showAddFamily && (
-              <div className="mb-4 border border-gray-200 rounded-lg p-4 bg-gray-50">
+              <div className="mb-4 border border-gray-200 rounded-lg p-4 bg-gray-50 relative">
+                <button
+                  type="button"
+                  aria-label="閉じる"
+                  className="absolute top-2 right-2 px-2 h-8 rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300"
+                  onClick={()=>setShowAddFamily(false)}
+                >×</button>
                 <h3 className="font-semibold text-gray-900 mb-3">家族を追加</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
                   <div>
@@ -276,7 +282,7 @@ const MyPage = () => {
                 </div>
               </div>
             )}
-            <p className="text-sm text-gray-700 mb-4">おこさまのお名前を追加し、アレルギー設定を変更できます（最大10人）。現在: {familyCount}人</p>
+            <p className="text-sm text-gray-700 mb-4">おこさまのお名前を追加し、アレルギー設定を変更できます（最大10人）。現在: {1 + (familyCount || 0)}人（本人を含む）</p>
             <form onSubmit={saveProfile} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">お名前</label>

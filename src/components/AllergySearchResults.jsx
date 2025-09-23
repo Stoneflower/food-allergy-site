@@ -470,7 +470,15 @@ const AllergySearchResults = ({ items }) => {
         
         // アレルギーが選択されていて、この店舗の安全商品が0件なら非表示
         const safeProductsForHeader = getSafeProducts(store);
-        const headerPreview = (safeProductsForHeader[0]?.image_urls || []).slice(0, 2);
+        // サムネイル候補（最大2枚）を抽出し、URL妥当性チェック＋重複排除
+        const headerPreviewRaw = (safeProductsForHeader[0]?.image_urls || []).slice(0, 2);
+        const headerPreview = Array.from(
+          new Set(
+            headerPreviewRaw.filter(
+              (url) => typeof url === 'string' && /^https?:\/\//.test(url)
+            )
+          )
+        );
         if (selectedAllergies.length > 0 && safeProductsForHeader.length === 0) {
           return null;
         }

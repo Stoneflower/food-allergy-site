@@ -134,7 +134,27 @@ const AllergySearchResults = ({ items }) => {
       });
       
       console.log(`商品 ${menuItem.name} の選択アレルギー含有: ${hasSelectedAllergy}`);
-      return !hasSelectedAllergy; // 選択されたアレルギーが含まれていない場合は表示
+      if (hasSelectedAllergy) return false;
+
+      // 追加: ユーザー設定の非表示（included / trace）が1つでも該当したら商品を非表示
+      const matrix = menuItem.product_allergies_matrix[0] || {};
+      // included（香料にふくむ）
+      const hasFragranceExcluded = (selectedFragranceForSearch || []).some(aid => {
+        const val = matrix[aid];
+        const arr = Array.isArray(val) ? val : (val ? [val] : []);
+        return arr.includes('Included');
+      });
+      if (hasFragranceExcluded) return false;
+
+      // trace（コンタミネーション）
+      const hasTraceExcluded = (selectedTraceForSearch || []).some(aid => {
+        const val = matrix[aid];
+        const arr = Array.isArray(val) ? val : (val ? [val] : []);
+        return arr.includes('trace');
+      });
+      if (hasTraceExcluded) return false;
+
+      return true; // いずれにも該当しなければ表示
     });
   };
 
@@ -175,20 +195,14 @@ const AllergySearchResults = ({ items }) => {
           if (value === 'trace') {
             const allergy = allergyOptions.find(a => a.id === allergyId);
             if (allergy) {
-              // ユーザー設定でtrace除外対象に入っていればスキップ
-              if (!selectedTraceForSearch?.includes(allergyId)) {
-                contaminationAllergies.push(allergy.name);
-              }
+              contaminationAllergies.push(allergy.name);
               console.log(`コンタミネーション発見: ${allergy.name}コンタミネーション`);
             }
           } else if (value === 'Included') {
             const allergy = allergyOptions.find(a => a.id === allergyId);
             console.log(`🔍 アレルギー検索 - ID: ${allergyId}, 見つかったアレルギー:`, allergy);
             if (allergy) {
-              // ユーザー設定でincluded除外対象に入っていればスキップ
-              if (!selectedFragranceForSearch?.includes(allergyId)) {
-                fragranceAllergies.push(allergy.name);
-              }
+              fragranceAllergies.push(allergy.name);
               console.log(`香料含有発見: ${allergy.name}香料にふくむ`);
             } else {
               console.warn(`⚠️ アレルギーID "${allergyId}" が見つかりません`);
@@ -335,8 +349,8 @@ const AllergySearchResults = ({ items }) => {
     );
   }
 
-  // アレルギー成分を選択していない場合は全ての商品を表示
-  if (selectedAllergies.length === 0) {
+  // アレルギー成分（直接）も非表示指定（included/trace）も選択していない場合のみ全件表示
+  if (selectedAllergies.length === 0 && (selectedFragranceForSearch?.length || 0) === 0 && (selectedTraceForSearch?.length || 0) === 0) {
     return (
       <div className="space-y-6">
         {/* 検索条件表示 */}
@@ -464,12 +478,33 @@ const AllergySearchResults = ({ items }) => {
       <div className="bg-blue-50 rounded-lg p-4">
         <h3 className="font-semibold text-blue-900 mb-2">検索条件</h3>
         <div className="flex flex-wrap gap-2">
+          {/* 通常 */}
           {selectedAllergies.map(allergyId => {
             const allergy = allergyOptions.find(a => a.id === allergyId);
             return allergy ? (
-              <span key={allergyId} className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm flex items-center space-x-1">
+              <span key={`n-${allergyId}`} className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm flex items-center space-x-1">
                 <span>{allergy.icon}</span>
                 <span>{allergy.name}</span>
+              </span>
+            ) : null;
+          })}
+          {/* 香料にふくむ（included） */}
+          {(selectedFragranceForSearch || []).map(allergyId => {
+            const allergy = allergyOptions.find(a => a.id === allergyId);
+            return allergy ? (
+              <span key={`f-${allergyId}`} className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm flex items-center space-x-1">
+                <span>{allergy.icon}</span>
+                <span>香料 {allergy.name}</span>
+              </span>
+            ) : null;
+          })}
+          {/* コンタミ（trace） */}
+          {(selectedTraceForSearch || []).map(allergyId => {
+            const allergy = allergyOptions.find(a => a.id === allergyId);
+            return allergy ? (
+              <span key={`t-${allergyId}`} className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm flex items-center space-x-1">
+                <span>{allergy.icon}</span>
+                <span>コンタミ {allergy.name}</span>
               </span>
             ) : null;
           })}
@@ -499,7 +534,8 @@ const AllergySearchResults = ({ items }) => {
             )
           )
         );
-        if (selectedAllergies.length > 0 && safeProductsForHeader.length === 0) {
+        // 商品が0件なら会社名ごと非表示
+        if (safeProductsForHeader.length === 0) {
           return null;
         }
 

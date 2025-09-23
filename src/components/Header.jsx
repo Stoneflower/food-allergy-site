@@ -30,6 +30,8 @@ const Header = () => {
     selectedCategory,
     setSelectedCategory,
     categories,
+    selectedFragranceForSearch,
+    selectedTraceForSearch,
     // userSettings, // 未使用
     // isLoggedIn  // コンテキストでは管理せず、Supabaseのセッションで判定
   } = useRestaurant();
@@ -270,11 +272,14 @@ const Header = () => {
                   >
                     <div className="flex items-center space-x-1 min-w-0 flex-1">
                       <span className="whitespace-nowrap">アレルギーを選択</span>
-                      {selectedAllergies.length > 0 && (
-                        <span className="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center ml-2">
-                          {selectedAllergies.length}
-                        </span>
-                      )}
+                      {(() => {
+                        const total = (selectedAllergies?.length || 0) + (selectedFragranceForSearch?.length || 0) + (selectedTraceForSearch?.length || 0);
+                        return total > 0 ? (
+                          <span className="bg-red-500 text-white text-xs rounded-full min-w-[1.25rem] h-5 px-1 flex items-center justify-center ml-2">
+                            {total}
+                          </span>
+                        ) : null;
+                      })()}
                     </div>
                     <SafeIcon icon={FiChevronDown} className="w-4 h-4 ml-2 flex-shrink-0" />
                   </button>

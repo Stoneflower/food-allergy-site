@@ -467,6 +467,8 @@ const AllergySearchResults = ({ items }) => {
           })}
         </div>
       </div>
+      {/* 検索条件の直下アンカー（スマホでスクロール先） */}
+      <div id="after-search-conditions" />
 
       {/* 店舗リスト */}
       {groupedStores.map((store, index) => {

@@ -350,12 +350,12 @@ const Header = () => {
       {/* Mobile Search - 28品目すべて表示 */}
       {showMobileSearch && (
         <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: 'auto' }}
-          exit={{ opacity: 0, height: 0 }}
-          className="lg:hidden bg-white shadow-lg border-t border-gray-200 py-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="lg:hidden fixed inset-0 z-[10002] bg-white overflow-auto"
         >
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <form onSubmit={handleSearch} className="space-y-3">
               {/* Mobile Category Selection */}
               <div>
@@ -512,6 +512,8 @@ const Header = () => {
               >
                 検索
               </button>
+              {/* ガード: 下に他ページの要素が見えないよう全画面固定＋余白終端 */}
+              <div className="pb-6" />
             </form>
           </div>
         </motion.div>

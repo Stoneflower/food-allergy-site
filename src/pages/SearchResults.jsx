@@ -447,9 +447,16 @@ const SearchResults = () => {
                 <h3 className="text-lg font-semibold mb-4">検索実行</h3>
                 <button
                   onClick={() => {
+                    // デバッグログ
+                    console.log('検索ボタンクリック - selectedArea:', selectedArea);
+                    console.log('検索ボタンクリック - inputPrefecture:', inputPrefecture);
+                    
                     // 都道府県の入力チェック
                     const currentPrefecture = selectedArea || inputPrefecture;
+                    console.log('検索ボタンクリック - currentPrefecture:', currentPrefecture);
+                    
                     if (!currentPrefecture || currentPrefecture.trim() === '' || currentPrefecture === 'すべて') {
+                      console.log('都道府県が未入力のためアラート表示');
                       alert('都道府県名を入力して、アレルギー対応店舗を検索できます');
                       return;
                     }
@@ -460,6 +467,7 @@ const SearchResults = () => {
                     
                     // 入力された都道府県をコンテキストに反映
                     if (inputPrefecture && inputPrefecture !== selectedArea) {
+                      console.log('inputPrefectureをselectedAreaに設定:', inputPrefecture);
                       setSelectedArea(inputPrefecture);
                     }
                     

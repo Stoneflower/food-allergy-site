@@ -461,6 +461,7 @@ const Upload = () => {
             if (allergyIdInt) {
               allergyRows.push({
                 product_id: productId,
+                allergy_item_id: allergyIdString, // 文字列IDも設定
                 allergy_item_id_int: allergyIdInt,
                 presence_type: 'Included',
                 amount_level: 'unknown',
@@ -477,6 +478,7 @@ const Upload = () => {
             if (allergyIdInt) {
               allergyRows.push({
                 product_id: productId,
+                allergy_item_id: allergyIdString, // 文字列IDも設定
                 allergy_item_id_int: allergyIdInt,
                 presence_type: 'direct',
                 amount_level: 'unknown',
@@ -486,12 +488,31 @@ const Upload = () => {
           }
         }
 
-        // アレルギー情報を一括挿入
+        // アレルギー情報を一括挿入（重複チェック付き）
         if (allergyRows.length > 0) {
-          const { error: insErr } = await supabase
-            .from('product_allergies')
-            .insert(allergyRows);
-          if (insErr) throw insErr;
+          console.log('挿入予定のアレルギー情報:', allergyRows);
+          
+          // 重複を避けるために、各レコードを個別に挿入
+          for (const row of allergyRows) {
+            try {
+              const { error: insErr } = await supabase
+                .from('product_allergies')
+                .insert([row]);
+              if (insErr) {
+                console.error('アレルギー情報挿入エラー:', insErr);
+                // ユニーク制約違反の場合は警告のみで続行
+                if (insErr.code === '23505') {
+                  console.warn('重複するアレルギー情報のためスキップ:', row);
+                  continue;
+                }
+                throw insErr;
+              }
+              console.log('アレルギー情報挿入成功:', row);
+            } catch (err) {
+              console.error('アレルギー情報挿入例外エラー:', err);
+              throw err;
+            }
+          }
         }
       }
 

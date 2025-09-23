@@ -307,11 +307,11 @@ const Upload = () => {
                 uploadedUrls.push(json.url);
               };
               try {
-                await attempt(900, 0.5);
+                await attempt(500, 0.5);
               } catch (e1) {
                 console.warn(`[UploadAPI] retry index=${idx} with stronger compression`, e1);
                 try {
-                  await attempt(800, 0.45);
+                  await attempt(400, 0.45);
                 } catch (e2) {
                   console.warn(`[UploadAPI] 失敗 index=${idx} after retry:`, e2);
                   uploadErrors.push({ index: idx, error: e2?.message || String(e2) });

@@ -8,6 +8,7 @@ import QRScanner from '../components/QRScanner';
 import LocationFinder from '../components/LocationFinder';
 import FavoritesSection from '../components/FavoritesSection';
 import { useRestaurant } from '../context/RestaurantContext';
+import { PREFECTURES } from '../constants/prefectures';
 import SafeIcon from '../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
 
@@ -31,11 +32,20 @@ const Home = () => {
   const recommendations = getRecommendations();
 
   // このセクションに限り、エリア未入力でも表示できるように、allItemsDataから最新を抽出
+  const isPrefectureNameItem = (name) => {
+    if (!name) return false;
+    if (name === 'すべて') return true;
+    return PREFECTURES.some(pref => name === pref || name.startsWith(pref + '(') || name === pref + ' ');
+  };
+
   const getLatestDisplayItems = () => {
     let items = Array.isArray(allItemsData) ? allItemsData : [];
     switch (selectedCategory) {
       case 'restaurants':
-        items = items.filter(item => item.category === 'restaurants');
+        items = items
+          .filter(item => item.category === 'restaurants')
+          // 都道府県名などの総称行は除外し、店舗名のみ表示
+          .filter(item => !isPrefectureNameItem(item.name));
         break;
       case 'products':
         items = items.filter(item => item.category === 'products');

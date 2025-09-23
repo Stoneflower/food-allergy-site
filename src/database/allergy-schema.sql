@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS products (
   image_url VARCHAR(500), -- 商品画像URL（レガシー用）
   image_id VARCHAR(100), -- Cloudflare Imagesの画像ID
   barcode VARCHAR(50), -- バーコード
+  heat_status VARCHAR(16), -- 'heated' | 'none' | 'uncertain' | 'unused'
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

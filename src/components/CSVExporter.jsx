@@ -15,6 +15,9 @@ const CsvExporter = ({ data, onBack }) => {
   const [productName, setProductName] = useState('びっくりドンキー');
   const [productBrand, setProductBrand] = useState('ハンバーグレストラン');
   const [productCategory, setProductCategory] = useState('レストラン');
+  // 追加: 香料と加熱ステータス
+  const [fragranceCsv, setFragranceCsv] = useState('none'); // 例: "egg,milk" or "none"
+  const [heatStatus, setHeatStatus] = useState('none'); // heated|none|uncertain|unused
 
   // 47都道府県リスト
   const prefectures = [
@@ -360,7 +363,9 @@ const CsvExporter = ({ data, onBack }) => {
       'raw_store_list_url',
       'raw_notes',
       'raw_menu_name',
-      ...standardAllergens.map(a => a.slug)
+      ...standardAllergens.map(a => a.slug),
+      'fragrance_allergens',
+      'heat_status'
     ];
 
     // 商品名は202件に限定して生成（都道府県で水増ししない）
@@ -386,6 +391,9 @@ const CsvExporter = ({ data, onBack }) => {
         const englishValue = normalizePresence(value);
         csvRow.push(englishValue);
       });
+      // 追加列
+      csvRow.push((fragranceCsv || 'none').trim() || 'none');
+      csvRow.push(heatStatus || 'none');
       return csvRow;
     }).filter(Boolean);
 
@@ -1013,6 +1021,40 @@ const CsvExporter = ({ data, onBack }) => {
         if (!finalProductError && finalProductData) {
           console.log('🔄 フォールバック完了後のproduct_allergies_matrix最終更新開始');
           await updateProductAllergiesMatrix(finalProductData.id, jobId);
+          // === 追加: 香料/加熱ステータスを保存 ===
+          const pid = finalProductData.id;
+          // heat_status 更新
+          try {
+            await supabase.from('products').update({ heat_status: heatStatus || 'none' }).eq('id', pid);
+          } catch (e) {
+            console.warn('heat_status 更新失敗:', e);
+          }
+          // fragrance_allergens を presence_type='direct' として保存（none/空ならスキップ）
+          const parsedFragrance = (fragranceCsv || '').trim();
+          if (parsedFragrance && parsedFragrance.toLowerCase() !== 'none') {
+            const ids = parsedFragrance.split(',').map(s => s.trim()).filter(Boolean);
+            if (ids.length > 0) {
+              try {
+                // 既存の香料由来（notesに[fragrance]を含む）や direct 重複回避のため、同一presence_type=direct を一旦削除
+                await supabase.from('product_allergies').delete().eq('product_id', pid).eq('presence_type', 'direct');
+              } catch (eDel) {
+                console.warn('fragrance 削除時の警告:', eDel?.message || eDel);
+              }
+              const rows = ids.map(itemId => ({
+                product_id: pid,
+                allergy_item_id: itemId,
+                presence_type: 'direct',
+                amount_level: 'unknown',
+                notes: '[fragrance] 香料由来'
+              }));
+              try {
+                const { error: insErr } = await supabase.from('product_allergies').insert(rows);
+                if (insErr) console.error('fragrance 追加エラー:', insErr);
+              } catch (eIns) {
+                console.error('fragrance 追加例外:', eIns);
+              }
+            }
+          }
         }
       } catch (finalUpdateError) {
         console.error('❌ 最終更新エラー:', finalUpdateError);

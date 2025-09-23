@@ -24,6 +24,8 @@ const Upload = () => {
     confidence: 0
   });
   const [fragranceAllergens, setFragranceAllergens] = useState([]); // 香料に含まれるアレルギー
+  const [contaminationAllergens, setContaminationAllergens] = useState([]); // コンタミネーション（混入可能性）
+  const [heatStatus, setHeatStatus] = useState('none'); // heated | none | uncertain | unused
   const [fragranceOpen, setFragranceOpen] = useState(false); // 香料セクション開閉
   const [similarProducts, setSimilarProducts] = useState([]);
   const [showSimilarProducts, setShowSimilarProducts] = useState(false);
@@ -182,6 +184,8 @@ const Upload = () => {
       confidence: 0
     });
     setFragranceAllergens([]);
+    setContaminationAllergens([]);
+    setHeatStatus('none');
     setChannels({ restaurant: false, takeout: false, supermarket: false, onlineShop: false });
     setSelectedPrefecture('すべて');
   };
@@ -385,6 +389,7 @@ const Upload = () => {
           product_category_id: selectedProductCategory?.id || null,
           description: existingProduct.description || null,
           barcode: editedInfo.barcode ? String(editedInfo.barcode).trim() : (existingProduct.barcode || null),
+          heat_status: heatStatus || 'none',
         };
         // 画像URLは products.source_url へ保存
         if (uploadedImageUrl) updatePayload.source_url = uploadedImageUrl;
@@ -408,7 +413,8 @@ const Upload = () => {
           source_url2: uploadedImageUrl2,
           image_url: null,
           image_id: null,
-          barcode: editedInfo.barcode ? String(editedInfo.barcode).trim() : null
+          barcode: editedInfo.barcode ? String(editedInfo.barcode).trim() : null,
+          heat_status: heatStatus || 'none',
         };
         const { data: productData, error: productError } = await supabase
           .from('products')
@@ -461,8 +467,11 @@ const Upload = () => {
         const uniqDirect = Array.isArray(editedInfo.allergens)
           ? Array.from(new Set(editedInfo.allergens.filter(Boolean)))
           : [];
+        const uniqContam = Array.isArray(contaminationAllergens)
+          ? Array.from(new Set(contaminationAllergens.filter(Boolean)))
+          : [];
 
-        // 香料に含まれるアレルギー成分（presence_type='Included'）
+        // 香料に含まれるアレルギー成分（presence_type='direct' として保存）
         if (uniqFragrance.length > 0) {
           for (const allergyIdString of uniqFragrance) {
             const allergyIdInt = await convertAllergyIdToInt(allergyIdString);
@@ -471,9 +480,9 @@ const Upload = () => {
                 product_id: productId,
                 allergy_item_id: allergyIdString, // 文字列IDも設定
                 allergy_item_id_int: allergyIdInt,
-                presence_type: 'Included',
+                presence_type: 'direct',
                 amount_level: 'unknown',
-                notes: null
+                notes: '[fragrance] 香料由来'
               });
             }
           }
@@ -491,6 +500,23 @@ const Upload = () => {
                 presence_type: 'direct',
                 amount_level: 'unknown',
                 notes: null
+              });
+            }
+          }
+        }
+
+        // コンタミネーション（presence_type='trace'）
+        if (uniqContam.length > 0) {
+          for (const allergyIdString of uniqContam) {
+            const allergyIdInt = await convertAllergyIdToInt(allergyIdString);
+            if (allergyIdInt) {
+              allergyRows.push({
+                product_id: productId,
+                allergy_item_id: allergyIdString,
+                allergy_item_id_int: allergyIdInt,
+                presence_type: 'trace',
+                amount_level: 'unknown',
+                notes: '[contamination] 可能性あり'
               });
             }
           }
@@ -540,6 +566,8 @@ const Upload = () => {
       confidence: 0
     });
     setFragranceAllergens([]);
+    setContaminationAllergens([]);
+    setHeatStatus('none');
     setChannels({ restaurant: false, takeout: false, supermarket: false, onlineShop: false });
     setSelectedPrefecture('すべて');
   };
@@ -890,6 +918,31 @@ const Upload = () => {
               </div>
                 </div>
 
+            {/* 加熱ステータス */}
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <h3 className="text-lg font-semibold mb-4">加熱ステータス</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {[
+                  { key: 'heated', label: '加熱（heated）' },
+                  { key: 'none', label: '非加熱（none）' },
+                  { key: 'uncertain', label: '未確定（uncertain）' },
+                  { key: 'unused', label: '使用しない（unused）' }
+                ].map(item => (
+                  <button
+                    key={item.key}
+                    onClick={() => setHeatStatus(item.key)}
+                    className={`p-3 rounded-lg border-2 text-sm transition-all ${
+                      heatStatus === item.key
+                        ? 'bg-emerald-500 text-white border-emerald-500'
+                        : 'bg-white border-gray-200 hover:border-emerald-300'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* 都道府県 */}
             <div className="bg-white rounded-xl shadow-lg p-6">
               <h3 className="text-lg font-semibold mb-4">都道府県</h3>
@@ -977,6 +1030,33 @@ const Upload = () => {
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* コンタミネーション（混入の可能性） */}
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <h3 className="text-lg font-semibold mb-4">コンタミネーション（混入の可能性）</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {allergyOptions.map(allergy => (
+                  <button
+                    key={`contam-${allergy.id}`}
+                    onClick={() => setContaminationAllergens(prev => (
+                      prev.includes(allergy.id)
+                        ? prev.filter(id => id !== allergy.id)
+                        : [...prev, allergy.id]
+                    ))}
+                    className={`p-3 rounded-lg border-2 text-sm transition-all ${
+                      contaminationAllergens.includes(allergy.id)
+                        ? 'bg-yellow-500 text-white border-yellow-500'
+                        : 'bg-white border-gray-200 hover:border-yellow-300'
+                    }`}
+                  >
+                    <div className="text-center">
+                      <div className="text-2xl mb-1">{allergy.icon}</div>
+                      <div className="font-medium">{allergy.name}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* アップロード失敗の表示 */}

@@ -12,6 +12,63 @@ const CsvUpload = ({ onUpload }) => {
   const [loading, setLoading] = useState(false);
   const [uploadedImages, setUploadedImages] = useState([]);
 
+  // テンプレート用の標準アレルゲン（Exporterに合わせたスラッグ）
+  const standardAllergens = [
+    'egg','milk','wheat','buckwheat','peanut','shrimp','crab','walnut',
+    'almond','abalone','squid','salmon_roe','orange','cashew','kiwi','beef',
+    'gelatin','sesame','salmon','mackerel','soybean','chicken','banana','pork',
+    'matsutake','peach','yam','apple','macadamia'
+  ];
+
+  // 推奨テンプレートをダウンロード
+  const handleDownloadTemplate = () => {
+    const headers = [
+      'raw_product_name',
+      'raw_category',
+      'raw_source_url',
+      'raw_branch_name',
+      'raw_address',
+      'raw_phone',
+      'raw_hours',
+      'raw_closed',
+      'raw_store_list_url',
+      'raw_notes',
+      'raw_menu_name',
+      ...standardAllergens,
+      'fragrance_allergens',
+      'heat_status'
+    ];
+
+    // サンプル1行（すべて none／空欄、編集して利用）
+    const sample = [
+      'サンプル商品名',
+      'レストラン',
+      'https://example.com',
+      'ブランド名',
+      '', // address
+      '', // phone
+      '', // hours
+      '', // closed
+      'https://example.com/stores',
+      '', // notes
+      'サンプルメニュー',
+      ...standardAllergens.map(() => 'none'),
+      'none',          // fragrance_allergens: カンマ区切り or none
+      'none'           // heat_status: heated|none|uncertain|unused
+    ];
+
+    const csv = Papa.unparse({ fields: headers, data: [sample] });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'allergy_upload_template.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const handleDrag = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -141,6 +198,14 @@ const CsvUpload = ({ onUpload }) => {
         <p className="text-gray-600">
           変換したいCSVファイルを選択してください
         </p>
+        <div className="mt-4">
+          <button
+            onClick={handleDownloadTemplate}
+            className="inline-flex items-center px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            テンプレートCSVをダウンロード
+          </button>
+        </div>
       </div>
 
       {/* File Upload Area */}

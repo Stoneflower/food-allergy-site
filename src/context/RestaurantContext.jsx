@@ -364,9 +364,15 @@ export const RestaurantProvider = ({ children }) => {
           if (rowsForProduct.length > 0) {
             const generated = {};
             rowsForProduct.forEach(r => {
-              // presence_typeのマッピング: そのまま保持（Includedは'Included'のまま）
+              // presence_typeのマッピング: DBのdirectでも香料由来([fragrance])なら互換のためIncludedとして扱う
               let mapped = r.presence_type;
-              // 'Included'は'Included'のまま保持して、AllergySearchResultsで正しく処理されるようにする
+              const isFragranceDirect = (
+                typeof r?.presence_type === 'string' && r.presence_type.toLowerCase() === 'direct' &&
+                typeof r?.notes === 'string' && r.notes.includes('[fragrance]')
+              );
+              if (isFragranceDirect) {
+                mapped = 'Included';
+              }
               
               // 同じallergy_item_idに対して複数のpresence_typeがある場合の処理
               if (generated[r.allergy_item_id]) {

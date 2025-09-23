@@ -409,7 +409,10 @@ const CsvConversionPreview = ({ csvData, rules, uploadedImages = [], onConversio
         rowIndex: row.rowIndex,
         original: row.original,
         converted: {},
-        image_id: associatedImage?.imageId || null
+        image_id: associatedImage?.imageId || null,
+        // 追加列の初期値
+        fragrance_allergens: 'none',
+        heat_status: 'none'
       };
 
       // 標準アレルギー項目の順序で整理

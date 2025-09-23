@@ -22,38 +22,50 @@ const Home = () => {
     selectedCategory,
     products,
     getRecommendations,
-    favorites
+    favorites,
+    allItemsData
   } = useRestaurant();
 
   const filteredItems = getFilteredItems();
   const filteredRestaurants = getFilteredRestaurants();
   const recommendations = getRecommendations();
 
-  const getDisplayItems = () => {
+  // このセクションに限り、エリア未入力でも表示できるように、allItemsDataから最新を抽出
+  const getLatestDisplayItems = () => {
+    let items = Array.isArray(allItemsData) ? allItemsData : [];
     switch (selectedCategory) {
       case 'restaurants':
-        return filteredRestaurants.slice(0, 6);
+        items = items.filter(item => item.category === 'restaurants');
+        break;
       case 'products':
-        return filteredItems.filter(item => item.category === 'products').slice(0, 6);
+        items = items.filter(item => item.category === 'products');
+        break;
       case 'supermarkets':
-        // products.category が『スーパー/ネットショップ』のような複合指定でも
-        // RestaurantContext で category_tokens に分解済みなので、トークンを参照して判定
-        return filteredItems
+        items = items
           .filter(item => item.category === 'products' || item.category === 'supermarkets' || item.category === 'online')
-          .filter(item => Array.isArray(item.category_tokens) && item.category_tokens.includes('supermarkets'))
-          .slice(0, 6);
+          .filter(item => Array.isArray(item.category_tokens) && item.category_tokens.includes('supermarkets'));
+        break;
       case 'online':
-        return filteredItems
+        items = items
           .filter(item => item.category === 'products' || item.category === 'supermarkets' || item.category === 'online')
-          .filter(item => Array.isArray(item.category_tokens) && item.category_tokens.includes('online'))
-          .slice(0, 6);
+          .filter(item => Array.isArray(item.category_tokens) && item.category_tokens.includes('online'));
+        break;
       case 'all':
       default:
-        return filteredItems.slice(0, 6);
+        // 全件はトップのおすすめで扱うため、ここでは空配列
+        items = [];
     }
+    // 簡易的に新しい順: updated_at/created_at/related_product.updated_at/ID を優先
+    items = items.slice().sort((a,b) => {
+      const va = (a.related_product?.updated_at || a.updated_at || a.created_at || a.id || 0);
+      const vb = (b.related_product?.updated_at || b.updated_at || b.created_at || b.id || 0);
+      return String(vb).localeCompare(String(va));
+    });
+    // ここで最大4件に絞る（小画面では後で2件まで表示）
+    return items.slice(0, 4);
   };
 
-  const displayItems = getDisplayItems();
+  const displayItems = getLatestDisplayItems();
 
   const renderCard = (item) => {
     switch (item.category) {
@@ -350,8 +362,10 @@ const Home = () => {
               </div>
               
               {displayItems.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {displayItems.map((item, index) => (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {displayItems
+                    .slice(0, 4) // PC最大4件
+                    .map((item, index) => (
                     <motion.div
                       key={`${item.category}-${item.id}`}
                       initial={{ opacity: 0, y: 20 }}

@@ -88,11 +88,16 @@ const Home = () => {
   const displayItems = getLatestDisplayItems();
 
   const renderCard = (item) => {
-    const pickFallbackImage = (name, current) => {
+    const pickFallbackImage = (name, current, related) => {
       if (current && String(current).trim()) return current;
-      const n = String(name || '').toLowerCase();
-      if (n.includes('びっくりドンキー')) return 'https://stoneflower.net/uploads/hamburger.jpg';
-      if (n.includes('スシロー') || n.includes('すしろー') || n.includes('sushiro')) return 'https://stoneflower.net/uploads/sushi.jpg';
+      const texts = [
+        String(name || ''),
+        String(related?.name || ''),
+        String(related?.product_title || ''),
+        String(related?.brand || ''),
+      ].join(' ').toLowerCase();
+      if (texts.includes('びっくりドンキー')) return 'https://stoneflower.net/uploads/hamburger.jpg';
+      if (texts.includes('スシロー') || texts.includes('すしろー') || texts.includes('sushiro')) return 'https://stoneflower.net/uploads/sushi.jpg';
       return 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=800&q=70&auto=format';
     };
 
@@ -100,13 +105,13 @@ const Home = () => {
       case 'products':
         return <ProductCard key={item.id} product={{
           ...item,
-          image: pickFallbackImage(item.name, item.image)
+          image: pickFallbackImage(item.name, item.image, item.related_product)
         }} />;
       case 'restaurants':
       default:
         return <RestaurantCard key={item.id} restaurant={{
           ...item,
-          image: pickFallbackImage(item.name, item.image)
+          image: pickFallbackImage(item.name, item.image, item.related_product)
         }} />;
     }
   };

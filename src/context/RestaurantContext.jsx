@@ -599,10 +599,10 @@ export const RestaurantProvider = ({ children }) => {
     // アレルギーフィルタリングはAllergySearchResults.jsxで行うため、ここでは削除
     // if (selectedAllergies.length > 0) { ... }
 
-    // エリア入力が空の場合は結果をクリア（DBアクセスを避ける）
+    // エリア入力が空の場合でも結果をクリアしない（トップ等で表示するため）
     if (!selectedArea || selectedArea.trim() === '') {
-      console.log('エリア入力が空のため、結果をクリア');
-      items = [];
+      console.log('エリア入力が空: クリアせず全件から他条件のみ適用');
+      // 何もしない（カテゴリ/検索キーワード等は上で適用済み）
     } else if (selectedArea) {
       // 都道府県名の判定（静的データを使用）
       const isPrefectureNameInput = isPrefectureName(selectedArea);

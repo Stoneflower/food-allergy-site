@@ -536,11 +536,30 @@ const Upload = () => {
               </p>
             </div>
 
+            {/* 常時マウントしておく隠し入力（カメラ/ファイル） */}
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              multiple
+              onChange={handleCameraCapture}
+              className="hidden"
+            />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+
             {capturedImages.length === 0 && !isProcessing && (
               <div className="space-y-4">
                     {/* カメラ撮影ボタン */}
                     <button
-                      onClick={() => cameraInputRef.current?.click()}
+                      onClick={() => { if (cameraInputRef.current) { cameraInputRef.current.value = ''; cameraInputRef.current.click(); } }}
                       className="w-full flex items-center justify-center space-x-3 bg-gradient-to-r from-orange-500 to-red-500 text-white py-4 px-6 rounded-lg hover:from-orange-600 hover:to-red-600 transition-colors shadow-md"
                     >
                       <SafeIcon icon={FiCamera} className="w-6 h-6" />
@@ -556,23 +575,7 @@ const Upload = () => {
                   <span className="text-lg font-semibold">写真をアップロード（最大2枚）</span>
                     </button>
 
-                    <input
-                      ref={cameraInputRef}
-                      type="file"
-                      accept="image/*"
-                      capture="environment"
-                  multiple
-                      onChange={handleCameraCapture}
-                      className="hidden"
-                    />
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                  multiple
-                      onChange={handleFileUpload}
-                      className="hidden"
-                    />
+                    {/* 隠し入力は上で常時マウント済み */}
 
                 {/* 撮影のコツ */}
                 <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -620,7 +623,7 @@ const Upload = () => {
                 {capturedImages.length === 1 && (
                   <div className="text-center mb-4">
                     <button
-                      onClick={() => cameraInputRef.current?.click()}
+                      onClick={() => { if (cameraInputRef.current) { cameraInputRef.current.value = ''; cameraInputRef.current.click(); } }}
                       className="px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors flex items-center justify-center space-x-2 mx-auto"
                     >
                       <SafeIcon icon={FiCamera} className="w-4 h-4" />

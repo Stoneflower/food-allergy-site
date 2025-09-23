@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import SafeIcon from '../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
@@ -38,6 +38,14 @@ const Header = () => {
   console.log('Header - allergyOptions length:', allergyOptions?.length);
 
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // ルート遷移時に各種オーバーレイ/メニューを閉じる（クリックブロック対策）
+  useEffect(() => {
+    setShowAllergyDropdown(false);
+    setIsMenuOpen(false);
+    setShowMobileSearch(false);
+  }, [location.pathname]);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -83,7 +91,7 @@ const Header = () => {
       </div>
 
       {/* Top Bar */}
-      <div className="bg-gradient-to-r from-orange-600 to-red-600 text-white text-sm py-3">
+      <div className="bg-gradient-to-r from-orange-600 to-red-600 text-white text-sm py-3 relative z-[10001]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center">
           {/* Left side with Logo - PC版とスマホ版両方に表示 */}
           <div className="flex items-center space-x-6">

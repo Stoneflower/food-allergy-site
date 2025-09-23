@@ -25,6 +25,7 @@ const Upload = () => {
   });
   const [fragranceAllergens, setFragranceAllergens] = useState([]); // 香料に含まれるアレルギー
   const [contaminationAllergens, setContaminationAllergens] = useState([]); // コンタミネーション（混入可能性）
+  const [contaminationOpen, setContaminationOpen] = useState(false); // コンタミ欄の開閉
   const [heatStatus, setHeatStatus] = useState('none'); // heated | none | uncertain | unused
   const [fragranceOpen, setFragranceOpen] = useState(false); // 香料セクション開閉
   const [similarProducts, setSimilarProducts] = useState([]);
@@ -918,31 +919,6 @@ const Upload = () => {
               </div>
                 </div>
 
-            {/* 加熱ステータス */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h3 className="text-lg font-semibold mb-4">加熱ステータス</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {[
-                  { key: 'heated', label: '加熱（heated）' },
-                  { key: 'none', label: '非加熱（none）' },
-                  { key: 'uncertain', label: '未確定（uncertain）' },
-                  { key: 'unused', label: '使用しない（unused）' }
-                ].map(item => (
-                  <button
-                    key={item.key}
-                    onClick={() => setHeatStatus(item.key)}
-                    className={`p-3 rounded-lg border-2 text-sm transition-all ${
-                      heatStatus === item.key
-                        ? 'bg-emerald-500 text-white border-emerald-500'
-                        : 'bg-white border-gray-200 hover:border-emerald-300'
-                    }`}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* 都道府県 */}
             <div className="bg-white rounded-xl shadow-lg p-6">
               <h3 className="text-lg font-semibold mb-4">都道府県</h3>
@@ -1032,28 +1008,68 @@ const Upload = () => {
               )}
             </div>
 
-            {/* コンタミネーション（混入の可能性） */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h3 className="text-lg font-semibold mb-4">コンタミネーション（混入の可能性）</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {allergyOptions.map(allergy => (
-                  <button
-                    key={`contam-${allergy.id}`}
-                    onClick={() => setContaminationAllergens(prev => (
-                      prev.includes(allergy.id)
-                        ? prev.filter(id => id !== allergy.id)
-                        : [...prev, allergy.id]
+            {/* コンタミネーション（混入の可能性） 折りたたみ */}
+            <div className="bg-white rounded-xl shadow-lg">
+              <button
+                type="button"
+                className="w-full flex items-center justify-between p-6"
+                onClick={() => setContaminationOpen(v => !v)}
+              >
+                <h3 className="text-lg font-semibold">コンタミネーション（混入の可能性）</h3>
+                <span className="text-sm text-gray-500">
+                  {contaminationAllergens.length > 0
+                    ? `選択: ${contaminationAllergens.map(id => allergyOptions.find(a => a.id === id)?.name).filter(Boolean).join('、')}`
+                    : (contaminationOpen ? '閉じる' : '開く')}
+                </span>
+              </button>
+              {contaminationOpen && (
+                <div className="p-6 pt-0">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {allergyOptions.map(allergy => (
+                      <button
+                        key={`contam-${allergy.id}`}
+                        onClick={() => setContaminationAllergens(prev => (
+                          prev.includes(allergy.id)
+                            ? prev.filter(id => id !== allergy.id)
+                            : [...prev, allergy.id]
+                        ))}
+                        className={`p-3 rounded-lg border-2 text-sm transition-all ${
+                          contaminationAllergens.includes(allergy.id)
+                            ? 'bg-yellow-500 text-white border-yellow-500'
+                            : 'bg-white border-gray-200 hover:border-yellow-300'
+                        }`}
+                      >
+                        <div className="text-center">
+                          <div className="text-2xl mb-1">{allergy.icon}</div>
+                          <div className="font-medium">{allergy.name}</div>
+                        </div>
+                      </button>
                     ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 加熱ステータス（コンタミの下に移動） */}
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <h3 className="text-lg font-semibold mb-4">加熱ステータス</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {[
+                  { key: 'heated', label: '加熱（heated）' },
+                  { key: 'none', label: '非加熱（none）' },
+                  { key: 'uncertain', label: '未確定（uncertain）' },
+                  { key: 'unused', label: '使用しない（unused）' }
+                ].map(item => (
+                  <button
+                    key={item.key}
+                    onClick={() => setHeatStatus(item.key)}
                     className={`p-3 rounded-lg border-2 text-sm transition-all ${
-                      contaminationAllergens.includes(allergy.id)
-                        ? 'bg-yellow-500 text-white border-yellow-500'
-                        : 'bg-white border-gray-200 hover:border-yellow-300'
+                      heatStatus === item.key
+                        ? 'bg-emerald-500 text-white border-emerald-500'
+                        : 'bg-white border-gray-200 hover:border-emerald-300'
                     }`}
                   >
-                    <div className="text-center">
-                      <div className="text-2xl mb-1">{allergy.icon}</div>
-                      <div className="font-medium">{allergy.name}</div>
-                    </div>
+                    {item.label}
                   </button>
                 ))}
               </div>

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import SafeIcon from '../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
@@ -37,10 +37,37 @@ const Upload = () => {
   const [createdProductId, setCreatedProductId] = useState(null);
   const [showImageUploader, setShowImageUploader] = useState(false);
   const [uploadErrorsState, setUploadErrorsState] = useState([]); // 画像アップロード失敗の可視化
+  const [productCategories, setProductCategories] = useState([]); // 商品カテゴリ一覧
+  const [selectedProductCategory, setSelectedProductCategory] = useState(null); // 選択された商品カテゴリ
   
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
   const { allergyOptions } = useRestaurant();
+
+  // 商品カテゴリを取得
+  useEffect(() => {
+    const fetchProductCategories = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('product_categories')
+          .select('*')
+          .eq('is_active', true)
+          .order('sort_order');
+        
+        if (error) {
+          console.error('商品カテゴリ取得エラー:', error);
+          return;
+        }
+        
+        setProductCategories(data || []);
+        console.log('商品カテゴリ取得成功:', data);
+      } catch (err) {
+        console.error('商品カテゴリ取得例外エラー:', err);
+      }
+    };
+
+    fetchProductCategories();
+  }, []);
 
   // カメラで撮影（複数枚対応）
   const handleCameraCapture = (event) => {
@@ -334,6 +361,7 @@ const Upload = () => {
           product_title: productTitleToSave || existingProduct.product_title,
           brand: null,
           category: categoryValue,
+          product_category_id: selectedProductCategory?.id || null,
           description: existingProduct.description || null,
           barcode: editedInfo.barcode ? String(editedInfo.barcode).trim() : (existingProduct.barcode || null),
         };
@@ -353,6 +381,7 @@ const Upload = () => {
           product_title: productTitleToSave,
           brand: null,
           category: categoryValue,
+          product_category_id: selectedProductCategory?.id || null,
           description: null,
           source_url: uploadedImageUrl,
           source_url2: uploadedImageUrl2,
@@ -782,6 +811,27 @@ const Upload = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                     placeholder="ブランド名を入力"
                   />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    商品カテゴリ
+                  </label>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {productCategories.map(category => (
+                      <button
+                        key={category.id}
+                        onClick={() => setSelectedProductCategory(category)}
+                        className={`p-3 rounded-lg border-2 text-sm transition-all ${
+                          selectedProductCategory?.id === category.id
+                            ? 'bg-blue-500 text-white border-blue-500'
+                            : 'bg-white border-gray-200 hover:border-blue-300'
+                        }`}
+                      >
+                        <span className="text-lg mr-2">{category.icon}</span>
+                        {category.name}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 {/* 原材料名は仕様により非表示 */}
               </div>

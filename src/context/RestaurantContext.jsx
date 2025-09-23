@@ -352,9 +352,9 @@ export const RestaurantProvider = ({ children }) => {
           if (rowsForProduct.length > 0) {
             const generated = {};
             rowsForProduct.forEach(r => {
-              // presence_typeのマッピング: Included→trace, none→none, trace→trace, その他はそのまま
+              // presence_typeのマッピング: そのまま保持（Includedは'Included'のまま）
               let mapped = r.presence_type;
-              if (mapped === 'Included') mapped = 'trace';
+              // 'Included'は'Included'のまま保持して、AllergySearchResultsで正しく処理されるようにする
               generated[r.allergy_item_id] = mapped;
             });
             productMatrix.push({ ...generated, menu_name: product.product_title || product.name });

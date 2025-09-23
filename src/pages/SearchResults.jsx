@@ -11,6 +11,7 @@ import AllergySearchResults from '../components/AllergySearchResults';
 import { useRestaurant } from '../context/RestaurantContext';
 import SafeIcon from '../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
+import { supabase } from '../lib/supabase';
 
 const { FiFilter, FiGrid, FiList, FiMapPin, FiStar, FiInfo, FiShield, FiUser, FiFileText, FiPlus, FiCamera } = FiIcons;
 
@@ -20,6 +21,8 @@ const SearchResults = () => {
   const [sortBy, setSortBy] = useState('rating');
   const [showSourceFilter, setShowSourceFilter] = useState(false);
   const [selectedSourceTypes, setSelectedSourceTypes] = useState([]);
+  const [selectedProductCategories, setSelectedProductCategories] = useState([]);
+  const [productCategories, setProductCategories] = useState([]);
   const [searchFilters, setSearchFilters] = useState({
     keyword: '',
     brand: '',
@@ -30,7 +33,32 @@ const SearchResults = () => {
     safetyLevel: 'all'
   });
 
-  const { getFilteredItems, selectedAllergies, searchKeyword, selectedArea, selectedCategory, setSelectedCategory, categories } = useRestaurant();
+  const { getFilteredItems, selectedAllergies, searchKeyword, selectedArea, selectedCategory, setSelectedCategory, setSelectedArea, categories } = useRestaurant();
+
+  // 商品カテゴリを取得
+  useEffect(() => {
+    const fetchProductCategories = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('product_categories')
+          .select('*')
+          .eq('is_active', true)
+          .order('sort_order');
+        
+        if (error) {
+          console.error('商品カテゴリ取得エラー:', error);
+          return;
+        }
+        
+        setProductCategories(data || []);
+        console.log('商品カテゴリ取得成功:', data);
+      } catch (err) {
+        console.error('商品カテゴリ取得例外エラー:', err);
+      }
+    };
+
+    fetchProductCategories();
+  }, []);
 
   const filteredItems = getFilteredItems();
 
@@ -62,12 +90,34 @@ const SearchResults = () => {
     return result;
   }, [filteredItems, searchFilters]);
 
+  // 商品カテゴリによるフィルタリング
+  const categoryFilteredItems = React.useMemo(() => {
+    if (selectedProductCategories.length === 0) {
+      return searchFilteredItems; // カテゴリが選択されていない場合は全て表示
+    }
+    
+    return searchFilteredItems.filter(item => {
+      // 商品データの場合のみカテゴリフィルターを適用
+      if (item.category === 'products' && item.related_product) {
+        const productCategoryId = item.related_product.product_category_id;
+        // product_category_idがnullまたはundefinedの場合は表示（CSVアップロードで未設定の場合）
+        if (productCategoryId === null || productCategoryId === undefined) {
+          return true;
+        }
+        // 選択されたカテゴリIDに含まれる場合のみ表示
+        return selectedProductCategories.includes(productCategoryId);
+      }
+      // 商品以外（レストラン等）は常に表示
+      return true;
+    });
+  }, [searchFilteredItems, selectedProductCategories]);
+
   // 情報源によるフィルタリング
   const sourceFilteredItems = selectedSourceTypes.length > 0
-    ? searchFilteredItems.filter(item => 
+    ? categoryFilteredItems.filter(item => 
         item.source && selectedSourceTypes.includes(item.source.type)
       )
-    : searchFilteredItems;
+    : categoryFilteredItems;
 
   const sortedItems = [...sourceFilteredItems].sort((a, b) => {
     switch (sortBy) {
@@ -301,10 +351,80 @@ const SearchResults = () => {
                 </div>
               </div>
 
+              {/* 県名入力欄（県名が入力されていない場合のみ表示） */}
+              {!selectedArea && (
+                <div className="bg-white rounded-xl shadow-md p-6">
+                  <h3 className="text-lg font-semibold mb-4">都道府県</h3>
+                  <div className="space-y-3">
+                    <div className="flex">
+                      <input
+                        type="text"
+                        placeholder="都道府県名を入力"
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            setSelectedArea(e.target.value.trim());
+                          }
+                        }}
+                      />
+                      <button
+                        onClick={(e) => {
+                          const input = e.target.previousElementSibling;
+                          setSelectedArea(input.value.trim());
+                        }}
+                        className="px-4 py-2 bg-orange-500 text-white rounded-r-lg hover:bg-orange-600 transition-colors"
+                      >
+                        <SafeIcon icon={FiMapPin} className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      県名を入力して地域の店舗を検索できます
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div className="bg-white rounded-xl shadow-md p-6">
                 <h3 className="text-lg font-semibold mb-4">アレルギーフィルター</h3>
                 <AllergyFilter />
               </div>
+
+              {/* 商品カテゴリフィルター */}
+              {productCategories.length > 0 && (
+                <div className="bg-white rounded-xl shadow-md p-6">
+                  <h3 className="text-lg font-semibold mb-4">商品カテゴリ</h3>
+                  <div className="grid grid-cols-1 gap-3">
+                    {productCategories.map(category => (
+                      <button
+                        key={category.id}
+                        onClick={() => {
+                          setSelectedProductCategories(prev => 
+                            prev.includes(category.id)
+                              ? prev.filter(id => id !== category.id)
+                              : [...prev, category.id]
+                          );
+                        }}
+                        className={`p-3 rounded-lg border-2 text-sm transition-all ${
+                          selectedProductCategories.includes(category.id)
+                            ? 'bg-blue-500 text-white border-blue-500'
+                            : 'bg-white border-gray-200 hover:border-blue-300'
+                        }`}
+                      >
+                        <span className="text-lg mr-2">{category.icon}</span>
+                        {category.name}
+                      </button>
+                    ))}
+                  </div>
+                  {selectedProductCategories.length > 0 && (
+                    <div className="mt-3 text-sm text-gray-600">
+                      選択中: {selectedProductCategories.map(id => {
+                        const category = productCategories.find(c => c.id === id);
+                        return category ? category.name : '';
+                      }).join(', ')}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Source Statistics */}
               <div className="bg-white rounded-xl shadow-md p-6">

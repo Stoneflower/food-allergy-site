@@ -464,19 +464,21 @@ const AllergySearchResults = () => {
                   </span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <a
-                    href={store.source?.url || '#'}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`px-2 py-1 text-xs rounded transition-colors ${
-                      store.source?.url 
-                        ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' 
-                        : 'bg-gray-100 text-gray-500'
-                    }`}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    アレルギー情報元
-                  </a>
+                  {!(selectedCategory === 'supermarkets' || selectedCategory === 'online') && (
+                    <a
+                      href={store.source?.url || '#'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`px-2 py-1 text-xs rounded transition-colors ${
+                        store.source?.url 
+                          ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' 
+                          : 'bg-gray-100 text-gray-500'
+                      }`}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      アレルギー情報元
+                    </a>
+                  )}
                   {!(selectedCategory === 'supermarkets' || selectedCategory === 'online') && (
                     <a
                       href={getAreaInfoUrl(store)}

@@ -353,7 +353,7 @@ const Header = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="lg:hidden fixed inset-0 z-[10002] bg-white overflow-auto"
+          className="lg:hidden fixed inset-x-0 top-16 bottom-0 z-[10000] bg-white overflow-auto"
         >
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <form onSubmit={handleSearch} className="space-y-3">
@@ -362,8 +362,9 @@ const Header = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   🏷️ カテゴリー
                 </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {categories.slice(0, 4).map(category => (
+                {/* 1列・5ボタン（「すべて」を含む） */}
+                <div className="grid grid-cols-1 gap-2">
+                  {categories.map(category => (
                     <button
                       key={category.id}
                       type="button"
@@ -374,9 +375,9 @@ const Header = () => {
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
-                      <div className="text-center">
-                        <div className="text-lg mb-1">{category.icon}</div>
-                        <div className="font-medium text-xs">{category.name}</div>
+                      <div className="flex items-center space-x-3">
+                        <div className="text-lg">{category.icon}</div>
+                        <div className="font-medium text-sm">{category.name}</div>
                       </div>
                     </button>
                   ))}

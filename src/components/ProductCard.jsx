@@ -90,6 +90,10 @@ const ProductCard = ({ product }) => {
             src={product.image}
             alt={product.name}
             className="w-full h-48 object-cover"
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = 'https://images.unsplash.com/photo-1551218808-94e220e084d2?w=800&q=70&auto=format';
+            }}
           />
           
           <div className="absolute top-3 right-3 bg-white bg-opacity-90 backdrop-blur-sm rounded-full px-2 py-1 flex items-center space-x-1">

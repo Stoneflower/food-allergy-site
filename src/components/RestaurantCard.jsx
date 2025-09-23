@@ -63,9 +63,13 @@ const RestaurantCard = ({ restaurant }) => {
         <div>
           <div className="relative">
             <img 
-              src={restaurant.image} 
+              src={restaurant.image}
               alt={restaurant.name}
               className="w-full h-48 object-cover"
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=800&q=70&auto=format';
+              }}
             />
             <div className="absolute top-3 right-3 bg-white bg-opacity-90 backdrop-blur-sm rounded-full px-2 py-1 flex items-center space-x-1">
               <SafeIcon icon={FiStar} className="w-4 h-4 text-yellow-500" />

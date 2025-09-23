@@ -88,18 +88,25 @@ const Home = () => {
   const displayItems = getLatestDisplayItems();
 
   const renderCard = (item) => {
+    const pickFallbackImage = (name, current) => {
+      if (current && String(current).trim()) return current;
+      const n = String(name || '').toLowerCase();
+      if (n.includes('びっくりドンキー')) return 'https://stoneflower.net/uploads/hamburger.jpg';
+      if (n.includes('スシロー') || n.includes('すしろー') || n.includes('sushiro')) return 'https://stoneflower.net/uploads/sushi.jpg';
+      return 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=800&q=70&auto=format';
+    };
+
     switch (item.category) {
       case 'products':
         return <ProductCard key={item.id} product={{
           ...item,
-          // 画像が無い場合はデフォルト画像にフォールバック
-          image: item.image || 'https://quest-media-storage-bucket.s3.us-east-2.amazonaws.com/placeholder_food.jpg'
+          image: pickFallbackImage(item.name, item.image)
         }} />;
       case 'restaurants':
       default:
         return <RestaurantCard key={item.id} restaurant={{
           ...item,
-          image: item.image || 'https://quest-media-storage-bucket.s3.us-east-2.amazonaws.com/placeholder_food.jpg'
+          image: pickFallbackImage(item.name, item.image)
         }} />;
     }
   };

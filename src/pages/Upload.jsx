@@ -618,7 +618,7 @@ const Upload = () => {
                 
                 {/* 2枚目撮影ボタン（1枚目の場合のみ表示） */}
                 {capturedImages.length === 1 && (
-                  <div className="text-center">
+                  <div className="text-center mb-4">
                     <button
                       onClick={() => cameraInputRef.current?.click()}
                       className="px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors flex items-center justify-center space-x-2 mx-auto"
@@ -629,16 +629,22 @@ const Upload = () => {
                   </div>
                 )}
                 
-                <div className="text-center space-x-4">
+                <div className="flex justify-center items-center gap-3">
                   <button
                     onClick={resetForm}
-                    className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                    className="px-4 sm:px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors whitespace-nowrap"
                   >
                     画像を変更する
                   </button>
                   <button
-                    onClick={() => setStep(2)}
-                    className="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                    onClick={() => {
+                      if (!capturedImages || capturedImages.length === 0) {
+                        alert('少なくとも1枚の画像を撮影または選択してください。');
+                        return;
+                      }
+                      setStep(2);
+                    }}
+                    className="px-4 sm:px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors whitespace-nowrap"
                   >
                     情報入力に進む
                   </button>
@@ -650,7 +656,7 @@ const Upload = () => {
         )}
 
         {/* Step 2: 情報確認・編集 */}
-        {step === 2 && extractedInfo && (
+        {step === 2 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -710,36 +716,38 @@ const Upload = () => {
 
 
             {/* 撮影画像 */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h3 className="text-lg font-semibold mb-4 flex items-center space-x-2">
-                <SafeIcon icon={FiImage} className="w-5 h-5" />
-                <span>撮影した画像 ({capturedImages.length}枚)</span>
-              </h3>
-              {capturedImages.length === 1 ? (
-                <img
-                  src={capturedImages[0].url}
-                  alt="撮影した商品画像"
-                  className="w-full max-h-48 object-contain rounded-lg shadow-sm"
-                />
-              ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {capturedImages.map((image, index) => (
-                    <div key={image.id} className="relative">
-                      <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
-                        <img
-                          src={image.url}
-                          alt={`商品画像 ${index + 1}`}
-                          className="w-full h-full object-cover"
-                        />
+            {capturedImages.length > 0 && (
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <h3 className="text-lg font-semibold mb-4 flex items-center space-x-2">
+                  <SafeIcon icon={FiImage} className="w-5 h-5" />
+                  <span>撮影した画像 ({capturedImages.length}枚)</span>
+                </h3>
+                {capturedImages.length === 1 ? (
+                  <img
+                    src={capturedImages[0].url}
+                    alt="撮影した商品画像"
+                    className="w-full max-h-48 object-contain rounded-lg shadow-sm"
+                  />
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {capturedImages.map((image, index) => (
+                      <div key={image.id} className="relative">
+                        <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                          <img
+                            src={image.url}
+                            alt={`商品画像 ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="absolute top-1 left-1 bg-blue-500 text-white rounded-full px-2 py-1 text-xs font-medium">
+                          {index + 1}
+                        </div>
                       </div>
-                      <div className="absolute top-1 left-1 bg-blue-500 text-white rounded-full px-2 py-1 text-xs font-medium">
-                        {index + 1}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* 商品情報編集（画像の直下） */}
             <div className="bg-white rounded-xl shadow-lg p-6">

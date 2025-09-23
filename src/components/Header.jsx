@@ -88,7 +88,7 @@ const Header = () => {
           {/* Left side with Logo - PC版とスマホ版両方に表示 */}
           <div className="flex items-center space-x-6">
             {/* Logo - PC版とスマホ版共通 */}
-            <Link to="/" className="flex items-center space-x-3">
+            <Link to="/" className="flex items-center space-x-3 p-2 -m-2 rounded-lg hover:bg-white/10 transition-colors">
               <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-red-500 rounded-lg flex items-center justify-center shadow-lg">
                 <span className="text-white font-bold text-lg">📸</span>
               </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import AllergyFilter from '../components/AllergyFilter';
 import CategoryFilter from '../components/CategoryFilter';
@@ -11,7 +12,7 @@ import { useRestaurant } from '../context/RestaurantContext';
 import SafeIcon from '../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
 
-const { FiFilter, FiGrid, FiList, FiMapPin, FiStar, FiInfo, FiShield, FiUser, FiFileText } = FiIcons;
+const { FiFilter, FiGrid, FiList, FiMapPin, FiStar, FiInfo, FiShield, FiUser, FiFileText, FiPlus, FiCamera } = FiIcons;
 
 const SearchResults = () => {
   const [showFilters, setShowFilters] = useState(true);
@@ -330,6 +331,7 @@ const SearchResults = () => {
             <AllergySearchResults />
           </div>
         </div>
+
       </div>
     </div>
   );

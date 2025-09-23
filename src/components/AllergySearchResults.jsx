@@ -13,7 +13,9 @@ const AllergySearchResults = ({ items }) => {
     searchKeyword, 
     selectedArea, 
     selectedCategory,
-    allergyOptions 
+    allergyOptions,
+    selectedFragranceForSearch,
+    selectedTraceForSearch
   } = useRestaurant();
 
   const filteredItems = items ?? getFilteredItems();
@@ -173,14 +175,20 @@ const AllergySearchResults = ({ items }) => {
           if (value === 'trace') {
             const allergy = allergyOptions.find(a => a.id === allergyId);
             if (allergy) {
-              contaminationAllergies.push(allergy.name);
+              // ユーザー設定でtrace除外対象に入っていればスキップ
+              if (!selectedTraceForSearch?.includes(allergyId)) {
+                contaminationAllergies.push(allergy.name);
+              }
               console.log(`コンタミネーション発見: ${allergy.name}コンタミネーション`);
             }
           } else if (value === 'Included') {
             const allergy = allergyOptions.find(a => a.id === allergyId);
             console.log(`🔍 アレルギー検索 - ID: ${allergyId}, 見つかったアレルギー:`, allergy);
             if (allergy) {
-              fragranceAllergies.push(allergy.name);
+              // ユーザー設定でincluded除外対象に入っていればスキップ
+              if (!selectedFragranceForSearch?.includes(allergyId)) {
+                fragranceAllergies.push(allergy.name);
+              }
               console.log(`香料含有発見: ${allergy.name}香料にふくむ`);
             } else {
               console.warn(`⚠️ アレルギーID "${allergyId}" が見つかりません`);

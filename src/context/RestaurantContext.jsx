@@ -27,6 +27,7 @@ export const RestaurantProvider = ({ children }) => {
 
   const [selectedAllergies, setSelectedAllergies] = useState([]);
   const [selectedFragranceForSearch, setSelectedFragranceForSearch] = useState([]);
+  const [selectedTraceForSearch, setSelectedTraceForSearch] = useState([]);
   const [activeAllergyTarget, setActiveAllergyTarget] = useState(() => {
     try {
       const raw = localStorage.getItem('activeAllergyTarget');
@@ -700,6 +701,7 @@ export const RestaurantProvider = ({ children }) => {
     selectedAllergies,
     setSelectedAllergies,
     selectedFragranceForSearch,
+    selectedTraceForSearch,
     activeAllergyTarget,
     searchKeyword,
     setSearchKeyword,
@@ -741,6 +743,7 @@ export const RestaurantProvider = ({ children }) => {
           localStorage.removeItem('activeAllergyTarget');
           setSelectedAllergies([]);
           setSelectedFragranceForSearch([]);
+          setSelectedTraceForSearch([]);
           return;
         }
 
@@ -755,12 +758,16 @@ export const RestaurantProvider = ({ children }) => {
           .match(match)
           .maybeSingle();
         const all = Array.isArray(data?.selected_allergies) ? data.selected_allergies : [];
-        const normal = all.filter(a => typeof a === 'string' && !a.startsWith('included:') && !a.startsWith('fragrance:'));
+        const normal = all.filter(a => typeof a === 'string' && !a.startsWith('included:') && !a.startsWith('fragrance:') && !a.startsWith('trace:'));
         const frag = all
           .filter(a => typeof a === 'string' && (a.startsWith('included:') || a.startsWith('fragrance:')))
           .map(a => a.replace('included:', '').replace('fragrance:', ''));
+        const trace = all
+          .filter(a => typeof a === 'string' && a.startsWith('trace:'))
+          .map(a => a.replace('trace:', ''));
         setSelectedAllergies(normal);
         setSelectedFragranceForSearch(frag);
+        setSelectedTraceForSearch(trace);
       } catch (e) {
         console.warn('applyAllergyTarget failed', e);
       }

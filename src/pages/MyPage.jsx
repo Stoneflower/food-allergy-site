@@ -12,6 +12,8 @@ const MyPage = () => {
   const [error, setError] = useState('');
   const [familyCount, setFamilyCount] = useState(0);
   const navigate = useNavigate();
+  const [showAddFamily, setShowAddFamily] = useState(false);
+  const [newMember, setNewMember] = useState({ name: '', birthday: '', notes: '' });
 
   // profile
   const [profile, setProfile] = useState({ name: '' });
@@ -27,6 +29,25 @@ const MyPage = () => {
   const [fragranceOpen, setFragranceOpen] = useState(false);
 
   useEffect(() => {
+    const loadTargetsAndCounts = async (uid, profName) => {
+      // build targets: user + family
+      const targetsList = [{ profileType: 'user', id: uid, label: profName || '本人' }];
+      const { data: fams } = await supabase
+        .from('family_members')
+        .select('id,name')
+        .eq('user_id', uid)
+        .order('id');
+      if (Array.isArray(fams)) {
+        fams.forEach(f => targetsList.push({ profileType: 'member', id: f.id, label: f.name || `家族${f.id}` }));
+      }
+      setTargets(targetsList);
+      const { count } = await supabase
+        .from('family_members')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', uid);
+      setFamilyCount(count || 0);
+    };
+
     const init = async () => {
       setLoading(true);
       setError('');
@@ -40,17 +61,7 @@ const MyPage = () => {
         const { data: prof } = await supabase.from('profiles').select('*').eq('id', uid).maybeSingle();
         if (prof) setProfile({ name: prof.name || '' });
 
-        // build targets: user + family
-        const targetsList = [{ profileType: 'user', id: uid, label: prof?.name || '本人' }];
-        const { data: fams } = await supabase
-          .from('family_members')
-          .select('id,name')
-          .eq('user_id', uid)
-          .order('id');
-        if (Array.isArray(fams)) {
-          fams.forEach(f => targetsList.push({ profileType: 'member', id: f.id, label: f.name || `家族${f.id}` }));
-        }
-        setTargets(targetsList);
+        await loadTargetsAndCounts(uid, prof?.name);
         setSelectedTarget({ profileType: 'user', id: uid, label: prof?.name || '本人' });
 
         // load allergy settings for user as initial
@@ -67,13 +78,6 @@ const MyPage = () => {
           setSelectedAllergies(normal);
           setSelectedFragranceAllergies(frag);
         }
-
-        // load family members count (limit 10)
-        const { count } = await supabase
-          .from('family_members')
-          .select('id', { count: 'exact', head: true })
-          .eq('user_id', uid);
-        setFamilyCount(count || 0);
       } catch (e) {
         setError(e?.message || '読み込みに失敗しました');
       } finally {
@@ -81,6 +85,14 @@ const MyPage = () => {
       }
     };
     init();
+    // 再表示・フォーカス時に家族を再取得
+    const onFocus = async () => {
+      if (!userId) return;
+      const { data: prof } = await supabase.from('profiles').select('name').eq('id', userId).maybeSingle();
+      await loadTargetsAndCounts(userId, prof?.name);
+    };
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
   }, []);
 
   const saveProfile = async (e) => {
@@ -200,7 +212,7 @@ const MyPage = () => {
               <div className="flex items-center space-x-2">
                 <button
                   type="button"
-                  onClick={() => navigate('/family')}
+                  onClick={() => setShowAddFamily(true)}
                   disabled={familyCount >= 10}
                   className={`px-3 py-1.5 rounded-lg text-sm font-semibold ${familyCount>=10 ? 'bg-gray-300 text-gray-600 cursor-not-allowed' : 'bg-orange-500 text-white hover:bg-orange-600'}`}
                   title={familyCount>=10 ? '家族追加は最大10人までです' : '家族を追加'}
@@ -209,6 +221,61 @@ const MyPage = () => {
                 </button>
               </div>
             </div>
+            {showAddFamily && (
+              <div className="mb-4 border border-gray-200 rounded-lg p-4 bg-gray-50">
+                <h3 className="font-semibold text-gray-900 mb-3">家族を追加</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1">お名前</label>
+                    <input value={newMember.name} onChange={(e)=>setNewMember({...newMember, name: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1">お誕生日</label>
+                    <input type="date" value={newMember.birthday} onChange={(e)=>setNewMember({...newMember, birthday: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1">メモ</label>
+                    <input value={newMember.notes} onChange={(e)=>setNewMember({...newMember, notes: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" />
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    className="px-4 py-2 rounded-lg bg-orange-500 text-white hover:bg-orange-600"
+                    onClick={async ()=>{
+                      if (!userId || !newMember.name.trim()) return;
+                      const { error } = await supabase.from('family_members').insert([{
+                        user_id: userId,
+                        name: newMember.name.trim(),
+                        birthday: newMember.birthday || null,
+                        notes: newMember.notes || null
+                      }]);
+                      if (!error) {
+                        setNewMember({ name: '', birthday: '', notes: '' });
+                        setShowAddFamily(false);
+                        // refresh
+                        const { data: prof } = await supabase.from('profiles').select('name').eq('id', userId).maybeSingle();
+                        // reuse internal loader defined above is out of scope; re-run minimal refresh
+                        const { data: fams } = await supabase
+                          .from('family_members')
+                          .select('id,name')
+                          .eq('user_id', userId)
+                          .order('id');
+                        const targetsList = [{ profileType: 'user', id: userId, label: prof?.name || '本人' }];
+                        if (Array.isArray(fams)) fams.forEach(f => targetsList.push({ profileType: 'member', id: f.id, label: f.name || `家族${f.id}` }));
+                        setTargets(targetsList);
+                        const { count } = await supabase
+                          .from('family_members')
+                          .select('id', { count: 'exact', head: true })
+                          .eq('user_id', userId);
+                        setFamilyCount(count || 0);
+                      }
+                    }}
+                  >追加する</button>
+                  <button type="button" className="px-4 py-2 rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300" onClick={()=>setShowAddFamily(false)}>キャンセル</button>
+                </div>
+              </div>
+            )}
             <p className="text-sm text-gray-700 mb-4">おこさまのお名前を追加し、アレルギー設定を変更できます（最大10人）。現在: {familyCount}人</p>
             <form onSubmit={saveProfile} className="space-y-4">
               <div>

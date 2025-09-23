@@ -402,22 +402,6 @@ const AllergySearchResults = () => {
 
   return (
     <div className="space-y-6">
-      {/* 検索条件表示 */}
-      <div className="bg-blue-50 rounded-lg p-4">
-        <h3 className="font-semibold text-blue-900 mb-2">検索条件</h3>
-        <div className="flex flex-wrap gap-2">
-          {selectedAllergies.map(allergyId => {
-            const allergy = allergyOptions.find(a => a.id === allergyId);
-            return allergy ? (
-              <span key={allergyId} className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm flex items-center space-x-1">
-                <span>{allergy.icon}</span>
-                <span>{allergy.name}</span>
-              </span>
-            ) : null;
-          })}
-        </div>
-      </div>
-
       {/* 店舗リスト */}
       {groupedStores.map((store, index) => {
         const safeProducts = getSafeProducts(store);
@@ -549,6 +533,22 @@ const AllergySearchResults = () => {
           </p>
         </div>
       )}
+
+      {/* 検索条件表示（下部に移動） */}
+      <div className="bg-blue-50 rounded-lg p-4">
+        <h3 className="font-semibold text-blue-900 mb-2">検索条件</h3>
+        <div className="flex flex-wrap gap-2">
+          {selectedAllergies.map(allergyId => {
+            const allergy = allergyOptions.find(a => a.id === allergyId);
+            return allergy ? (
+              <span key={allergyId} className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm flex items-center space-x-1">
+                <span>{allergy.icon}</span>
+                <span>{allergy.name}</span>
+              </span>
+            ) : null;
+          })}
+        </div>
+      </div>
 
       {/* フローティングトップボタン */}
       {showScrollTop && (

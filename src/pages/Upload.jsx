@@ -46,7 +46,7 @@ const Upload = () => {
   const handleCameraCapture = (event) => {
     const files = Array.from(event.target.files);
     if (files.length > 0) {
-      handleImageFiles(files);
+      handleImageFiles(files, true); // 追加モードを指定
     }
   };
 
@@ -58,36 +58,50 @@ const Upload = () => {
     }
   };
 
-  // 複数画像ファイル処理（上限3枚）
-  const handleImageFiles = (files) => {
-    // 上限チェック
-    if (files.length > 2) {
-      alert('最大2枚まで選択できます。最初の2枚を使用します。');
-      files = files.slice(0, 2);
+  // 複数画像ファイル処理（上限2枚）
+  const handleImageFiles = (files, isAppendMode = false) => {
+    // 追加モードの場合、既存画像数と合わせて上限チェック
+    const currentCount = isAppendMode ? capturedImages.length : 0;
+    const totalCount = currentCount + files.length;
+    
+    if (totalCount > 2) {
+      const availableSlots = 2 - currentCount;
+      if (availableSlots <= 0) {
+        alert('最大2枚まで選択できます。');
+        return;
+      }
+      alert(`最大2枚まで選択できます。残り${availableSlots}枚まで追加できます。`);
+      files = files.slice(0, availableSlots);
     }
 
     // 複数画像を読み込んで配列に格納
     const imagePromises = files.map(file => {
       return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
           resolve({
             id: Date.now() + Math.random(), // ユニークID
             url: e.target.result,
             file: file,
             name: file.name
           });
-    };
-    reader.readAsDataURL(file);
+        };
+        reader.readAsDataURL(file);
       });
     });
 
-    Promise.all(imagePromises).then(images => {
-      setCapturedImages(images);
-      // 手動入力用の初期データを設定
-      initializeManualInput();
-      // 画像を表示して手動入力フォームに進む
-      setStep(2);
+    Promise.all(imagePromises).then(newImages => {
+      if (isAppendMode) {
+        // 追加モード：既存画像に新しい画像を追加
+        setCapturedImages(prev => [...prev, ...newImages]);
+      } else {
+        // 置換モード：既存画像を新しい画像で置換
+        setCapturedImages(newImages);
+        // 手動入力用の初期データを設定
+        initializeManualInput();
+        // 画像を表示して手動入力フォームに進む
+        setStep(2);
+      }
     });
     
     // 複数枚選択されたことをユーザーに通知
@@ -582,7 +596,7 @@ const Upload = () => {
               <div className="space-y-4">
                 <div className="text-center mb-4">
                   <h3 className="text-lg font-semibold text-gray-900">
-                    選択された画像 ({capturedImages.length}枚)
+                    選択された画像 ({capturedImages.length}/2枚)
                   </h3>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -601,12 +615,32 @@ const Upload = () => {
                     </div>
                   ))}
                 </div>
-                <div className="text-center">
+                
+                {/* 2枚目撮影ボタン（1枚目の場合のみ表示） */}
+                {capturedImages.length === 1 && (
+                  <div className="text-center">
+                    <button
+                      onClick={() => cameraInputRef.current?.click()}
+                      className="px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors flex items-center justify-center space-x-2 mx-auto"
+                    >
+                      <SafeIcon icon={FiCamera} className="w-4 h-4" />
+                      <span>2枚目を撮影する</span>
+                    </button>
+                  </div>
+                )}
+                
+                <div className="text-center space-x-4">
                   <button
                     onClick={resetForm}
                     className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
                   >
                     画像を変更する
+                  </button>
+                  <button
+                    onClick={() => setStep(2)}
+                    className="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                  >
+                    情報入力に進む
                   </button>
                 </div>
               </div>

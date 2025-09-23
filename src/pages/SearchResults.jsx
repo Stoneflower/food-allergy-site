@@ -23,6 +23,7 @@ const SearchResults = () => {
   const [selectedSourceTypes, setSelectedSourceTypes] = useState([]);
   const [selectedProductCategories, setSelectedProductCategories] = useState([]);
   const [productCategories, setProductCategories] = useState([]);
+  const [inputPrefecture, setInputPrefecture] = useState(''); // 都道府県入力フィールド用
   const [searchFilters, setSearchFilters] = useState({
     keyword: '',
     brand: '',
@@ -96,20 +97,34 @@ const SearchResults = () => {
       return searchFilteredItems; // カテゴリが選択されていない場合は全て表示
     }
     
-    return searchFilteredItems.filter(item => {
+    console.log('商品カテゴリフィルタリング開始');
+    console.log('selectedProductCategories:', selectedProductCategories);
+    console.log('searchFilteredItems:', searchFilteredItems);
+    
+    const filtered = searchFilteredItems.filter(item => {
       // 商品データの場合のみカテゴリフィルターを適用
-      if (item.category === 'products' && item.related_product) {
+      if ((item.category === 'products' || item.category === 'supermarkets' || item.category === 'online') && item.related_product) {
         const productCategoryId = item.related_product.product_category_id;
+        console.log(`商品 ${item.name} のproduct_category_id:`, productCategoryId);
+        
         // product_category_idがnullまたはundefinedの場合は表示（CSVアップロードで未設定の場合）
         if (productCategoryId === null || productCategoryId === undefined) {
+          console.log(`商品 ${item.name} はカテゴリ未設定のため表示`);
           return true;
         }
+        
         // 選択されたカテゴリIDに含まれる場合のみ表示
-        return selectedProductCategories.includes(productCategoryId);
+        const isIncluded = selectedProductCategories.includes(productCategoryId);
+        console.log(`商品 ${item.name} は選択されたカテゴリに含まれるか:`, isIncluded);
+        return isIncluded;
       }
       // 商品以外（レストラン等）は常に表示
+      console.log(`商品以外 ${item.name} は常に表示`);
       return true;
     });
+    
+    console.log('フィルタリング結果:', filtered);
+    return filtered;
   }, [searchFilteredItems, selectedProductCategories]);
 
   // 情報源によるフィルタリング
@@ -326,7 +341,7 @@ const SearchResults = () => {
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="lg:w-96 space-y-6"
+              className="lg:w-96 space-y-6 lg:sticky lg:top-8 lg:self-start"
             >
               {/* Category Filter */}
               <div className="bg-white rounded-xl shadow-md p-6">
@@ -360,17 +375,18 @@ const SearchResults = () => {
                       <input
                         type="text"
                         placeholder="都道府県名を入力"
+                        value={inputPrefecture}
+                        onChange={(e) => setInputPrefecture(e.target.value)}
                         className="flex-1 px-3 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                         onKeyPress={(e) => {
                           if (e.key === 'Enter') {
-                            setSelectedArea(e.target.value.trim());
+                            setSelectedArea(inputPrefecture.trim());
                           }
                         }}
                       />
                       <button
-                        onClick={(e) => {
-                          const input = e.target.previousElementSibling;
-                          setSelectedArea(input.value.trim());
+                        onClick={() => {
+                          setSelectedArea(inputPrefecture.trim());
                         }}
                         className="px-4 py-2 bg-orange-500 text-white rounded-r-lg hover:bg-orange-600 transition-colors"
                       >
@@ -431,14 +447,28 @@ const SearchResults = () => {
                 <h3 className="text-lg font-semibold mb-4">検索実行</h3>
                 <button
                   onClick={() => {
-                    // 検索実行のロジック（必要に応じて実装）
-                    console.log('検索実行ボタンがクリックされました');
+                    // 都道府県の入力チェック
+                    const currentPrefecture = selectedArea || inputPrefecture;
+                    if (!currentPrefecture || currentPrefecture.trim() === '' || currentPrefecture === 'すべて') {
+                      alert('都道府県名を入力して、アレルギー対応店舗を検索できます');
+                      return;
+                    }
+                    
+                    // 検索実行のロジック
+                    console.log('検索ボタンがクリックされました');
+                    console.log('選択された都道府県:', currentPrefecture);
+                    
+                    // 入力された都道府県をコンテキストに反映
+                    if (inputPrefecture && inputPrefecture !== selectedArea) {
+                      setSelectedArea(inputPrefecture);
+                    }
+                    
                     // 現在のフィルター条件で検索を実行
                     window.location.reload(); // 簡単な実装としてページリロード
                   }}
                   className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 px-4 rounded-lg hover:from-orange-600 hover:to-red-600 transition-colors font-semibold"
                 >
-                  検索実行
+                  検索
                 </button>
               </div>
 

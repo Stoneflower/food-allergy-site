@@ -43,6 +43,27 @@ const Upload = () => {
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
   const { allergyOptions } = useRestaurant();
+  
+  // アレルギーIDを文字列から整数に変換する関数
+  const convertAllergyIdToInt = async (allergyIdString) => {
+    try {
+      const { data, error } = await supabase
+        .from('allergy_items')
+        .select('id')
+        .eq('item_id', allergyIdString)
+        .single();
+      
+      if (error) {
+        console.error('アレルギーID変換エラー:', error);
+        return null;
+      }
+      
+      return data?.id || null;
+    } catch (err) {
+      console.error('アレルギーID変換例外エラー:', err);
+      return null;
+    }
+  };
 
   // 商品カテゴリを取得
   useEffect(() => {
@@ -435,28 +456,34 @@ const Upload = () => {
 
         // 香料に含まれるアレルギー成分（presence_type='Included'）
         if (Array.isArray(fragranceAllergens) && fragranceAllergens.length > 0) {
-          fragranceAllergens.forEach(allergyId => {
-            allergyRows.push({
-              product_id: productId,
-              allergy_item_id_int: allergyId,
-              presence_type: 'Included',
-              amount_level: 'unknown',
-              notes: null
-            });
-          });
+          for (const allergyIdString of fragranceAllergens) {
+            const allergyIdInt = await convertAllergyIdToInt(allergyIdString);
+            if (allergyIdInt) {
+              allergyRows.push({
+                product_id: productId,
+                allergy_item_id_int: allergyIdInt,
+                presence_type: 'Included',
+                amount_level: 'unknown',
+                notes: null
+              });
+            }
+          }
         }
 
         // 通常のアレルギー選択（presence_type='direct'）
         if (Array.isArray(editedInfo.allergens) && editedInfo.allergens.length > 0) {
-          editedInfo.allergens.forEach(allergyId => {
-            allergyRows.push({
-              product_id: productId,
-              allergy_item_id_int: allergyId,
-              presence_type: 'direct',
-              amount_level: 'unknown',
-              notes: null
-            });
-          });
+          for (const allergyIdString of editedInfo.allergens) {
+            const allergyIdInt = await convertAllergyIdToInt(allergyIdString);
+            if (allergyIdInt) {
+              allergyRows.push({
+                product_id: productId,
+                allergy_item_id_int: allergyIdInt,
+                presence_type: 'direct',
+                amount_level: 'unknown',
+                notes: null
+              });
+            }
+          }
         }
 
         // アレルギー情報を一括挿入

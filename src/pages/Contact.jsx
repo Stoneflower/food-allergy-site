@@ -26,7 +26,9 @@ const Contact = () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name, email, message }),
         });
-      } catch (_) {}
+      } catch (err) {
+        console.warn('メール転送に失敗しました（Resend）:', err);
+      }
       setDone(true);
       setName('');
       setEmail('');

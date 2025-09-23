@@ -262,7 +262,10 @@ const AllergySearchResults = ({ items }) => {
           
           // product_allergies_matrixの全要素を処理
           item.product_allergies_matrix.forEach((matrix, index) => {
-            const menuName = matrix.menu_name || `商品${index + 1}`;
+            const menuName = (item?.related_product?.product_title)
+              || (item?.related_product?.name)
+              || matrix.menu_name
+              || `商品${index + 1}`;
             console.log(`商品${index + 1}:`, menuName, 'matrix:', matrix);
             
             // 不明な商品のチェック

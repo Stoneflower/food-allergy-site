@@ -167,9 +167,12 @@ const AllergySearchResults = () => {
             }
           } else if (value === 'Included') {
             const allergy = allergyOptions.find(a => a.id === allergyId);
+            console.log(`🔍 アレルギー検索 - ID: ${allergyId}, 見つかったアレルギー:`, allergy);
             if (allergy) {
               fragranceAllergies.push(allergy.name);
               console.log(`香料含有発見: ${allergy.name}香料にふくむ`);
+            } else {
+              console.warn(`⚠️ アレルギーID "${allergyId}" が見つかりません`);
             }
           }
         });

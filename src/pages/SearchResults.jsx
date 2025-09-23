@@ -53,6 +53,7 @@ const SearchResults = () => {
         
         setProductCategories(data || []);
         console.log('商品カテゴリ取得成功:', data);
+        console.log('商品カテゴリ数:', data?.length || 0);
       } catch (err) {
         console.error('商品カテゴリ取得例外エラー:', err);
       }
@@ -93,13 +94,15 @@ const SearchResults = () => {
 
   // 商品カテゴリによるフィルタリング
   const categoryFilteredItems = React.useMemo(() => {
+    console.log('🔍 商品カテゴリフィルタリング開始');
+    console.log('🔍 selectedProductCategories:', selectedProductCategories);
+    console.log('🔍 selectedProductCategories.length:', selectedProductCategories.length);
+    console.log('🔍 searchFilteredItems:', searchFilteredItems);
+    
     if (selectedProductCategories.length === 0) {
+      console.log('🔍 カテゴリが選択されていないため、全アイテムを表示');
       return searchFilteredItems; // カテゴリが選択されていない場合は全て表示
     }
-    
-    console.log('商品カテゴリフィルタリング開始');
-    console.log('selectedProductCategories:', selectedProductCategories);
-    console.log('searchFilteredItems:', searchFilteredItems);
     
     const filtered = searchFilteredItems.filter(item => {
       // 商品データの場合のみカテゴリフィルターを適用
@@ -412,7 +415,10 @@ const SearchResults = () => {
               </div>
 
               {/* 商品カテゴリフィルター */}
-              {productCategories.length > 0 && (
+              {(() => {
+                console.log('🔍 商品カテゴリフィルター表示チェック - productCategories.length:', productCategories.length);
+                return productCategories.length > 0;
+              })() && (
                 <div className="bg-white rounded-xl shadow-md p-6">
                   <h3 className="text-lg font-semibold mb-4">商品カテゴリー</h3>
                   <div className="grid grid-cols-3 gap-3">

@@ -134,6 +134,20 @@ const Home = () => {
     }
   };
 
+  // 共通ヘルパー: ユニーク化＆都道府県名など除外
+  const uniqueValidByName = (arr) => {
+    const seen = new Set();
+    const out = [];
+    for (const it of (arr || [])) {
+      const key = (it?.name || '').trim().toLowerCase();
+      if (!key || seen.has(key)) continue;
+      if (isPrefectureNameItem(it.name)) continue;
+      seen.add(key);
+      out.push(it);
+    }
+    return out;
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
@@ -449,60 +463,52 @@ const Home = () => {
               animate={{ opacity: 1 }}
               transition={{ duration: 0.6 }}
             >
-              <div className="text-center mb-12">
-                <div className="flex items-center justify-center space-x-3 mb-4">
-                  <span className="text-4xl">📦</span>
-                  <h2 className="text-3xl font-bold text-gray-900">
-                    最近登録した商品
-                  </h2>
-                  <span className="text-4xl">🆕</span>
-                </div>
-                <p className="text-gray-600">
-                  直近に共有された商品をピックアップしてご紹介します
-                </p>
-              </div>
-              
-              <div className="space-y-12">
-                {/* 商品 */}
-                <div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center space-x-2">
-                    <span>📦</span>
-                    <span>最近共有された商品</span>
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {(products || []).slice(0, 3).map((product, index) => (
-                      <motion.div
-                        key={product.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6, delay: index * 0.1 }}
-                      >
-                        <ProductCard product={product} />
-                      </motion.div>
-                    ))}
-                  </div>
-                </div>
+              {/* 4カテゴリをそれぞれ最大: スマホ2件/PC4件で表示 */}
+              {(() => {
+                const all = Array.isArray(allItemsData) ? allItemsData : [];
+                const latestRestaurants = uniqueValidByName(all.filter(i => i.category === 'restaurants')).slice(0, 4);
+                const latestTakeout = uniqueValidByName(all.filter(i => i.category === 'products')).slice(0, 4);
+                const latestSuper = uniqueValidByName(all
+                  .filter(i => i.category === 'products' || i.category === 'supermarkets' || i.category === 'online')
+                  .filter(i => Array.isArray(i.category_tokens) && i.category_tokens.includes('supermarkets'))
+                ).slice(0, 4);
+                const latestOnline = uniqueValidByName(all
+                  .filter(i => i.category === 'products' || i.category === 'supermarkets' || i.category === 'online')
+                  .filter(i => Array.isArray(i.category_tokens) && i.category_tokens.includes('online'))
+                ).slice(0, 4);
 
-                {/* レストラン */}
-                <div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center space-x-2">
-                    <span>🍽️</span>
-                    <span>おすすめレストラン</span>
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filteredRestaurants.slice(0, 2).map((restaurant, index) => (
-                      <motion.div
-                        key={restaurant.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6, delay: index * 0.1 }}
-                      >
-                        <RestaurantCard restaurant={restaurant} />
-                      </motion.div>
-                    ))}
+                const Block = ({ title, icon, items }) => (
+                  items && items.length > 0 ? (
+                    <div className="mb-12">
+                      <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center space-x-2">
+                        <span>{icon}</span>
+                        <span>{title}</span>
+                      </h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {items.slice(0, 4).map((it, idx) => (
+                          <motion.div
+                            key={`${it.category}-${it.id}`}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.6, delay: idx * 0.1 }}
+                          >
+                            {renderCard(it)}
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null
+                );
+
+                return (
+                  <div className="space-y-4">
+                    <Block title="おすすめレストラン" icon="🍽️" items={latestRestaurants} />
+                    <Block title="テイクアウト" icon="🥡" items={latestTakeout} />
+                    <Block title="スーパー" icon="🏪" items={latestSuper} />
+                    <Block title="ネットショップ" icon="🛒" items={latestOnline} />
                   </div>
-                </div>
-              </div>
+                );
+              })()}
             </motion.div>
           </div>
         </section>

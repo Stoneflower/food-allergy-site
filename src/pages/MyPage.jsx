@@ -27,6 +27,8 @@ const MyPage = () => {
   const [selectedAllergies, setSelectedAllergies] = useState([]); // normal
   const [selectedFragranceAllergies, setSelectedFragranceAllergies] = useState([]); // fragrance: collapsed section
   const [fragranceOpen, setFragranceOpen] = useState(false);
+  const [selectedTraceAllergies, setSelectedTraceAllergies] = useState([]); // trace contamination
+  const [traceOpen, setTraceOpen] = useState(false);
 
   useEffect(() => {
     const loadTargetsAndCounts = async (uid, profName) => {
@@ -73,10 +75,14 @@ const MyPage = () => {
           .maybeSingle();
         if (aset?.selected_allergies) {
           const all = Array.isArray(aset.selected_allergies) ? aset.selected_allergies : [];
-          const normal = all.filter(a => typeof a === 'string' && !a.startsWith('fragrance:'));
-          const frag = all.filter(a => typeof a === 'string' && a.startsWith('fragrance:')).map(a => a.replace('fragrance:', ''));
+          const normal = all.filter(a => typeof a === 'string' && !a.startsWith('included:') && !a.startsWith('fragrance:'));
+          const frag = all
+            .filter(a => typeof a === 'string' && (a.startsWith('included:') || a.startsWith('fragrance:')))
+            .map(a => a.replace('included:', '').replace('fragrance:', ''));
+          const trace = all.filter(a => typeof a === 'string' && a.startsWith('trace:')).map(a => a.replace('trace:', ''));
           setSelectedAllergies(normal);
           setSelectedFragranceAllergies(frag);
+          setSelectedTraceAllergies(trace);
         }
       } catch (e) {
         setError(e?.message || '読み込みに失敗しました');
@@ -117,7 +123,8 @@ const MyPage = () => {
     try {
       const payloadSelected = [
         ...selectedAllergies,
-        ...selectedFragranceAllergies.map(a => `fragrance:${a}`)
+        ...selectedFragranceAllergies.map(a => `included:${a}`),
+        ...selectedTraceAllergies.map(a => `trace:${a}`)
       ];
       const isUser = selectedTarget.profileType === 'user';
       const match = isUser
@@ -164,13 +171,18 @@ const MyPage = () => {
         .maybeSingle();
       if (aset?.selected_allergies) {
         const all = Array.isArray(aset.selected_allergies) ? aset.selected_allergies : [];
-        const normal = all.filter(a => typeof a === 'string' && !a.startsWith('fragrance:'));
-        const frag = all.filter(a => typeof a === 'string' && a.startsWith('fragrance:')).map(a => a.replace('fragrance:', ''));
+        const normal = all.filter(a => typeof a === 'string' && !a.startsWith('included:') && !a.startsWith('fragrance:'));
+        const frag = all
+          .filter(a => typeof a === 'string' && (a.startsWith('included:') || a.startsWith('fragrance:')))
+          .map(a => a.replace('included:', '').replace('fragrance:', ''));
+        const trace = all.filter(a => typeof a === 'string' && a.startsWith('trace:')).map(a => a.replace('trace:', ''));
         setSelectedAllergies(normal);
         setSelectedFragranceAllergies(frag);
+        setSelectedTraceAllergies(trace);
       } else {
         setSelectedAllergies([]);
         setSelectedFragranceAllergies([]);
+        setSelectedTraceAllergies([]);
       }
     } catch (_) {
       setSelectedAllergies([]);
@@ -183,6 +195,9 @@ const MyPage = () => {
   };
   const toggleFragrance = (id) => {
     setSelectedFragranceAllergies(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+  const toggleTrace = (id) => {
+    setSelectedTraceAllergies(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
 
   return (
@@ -282,7 +297,7 @@ const MyPage = () => {
                 </div>
               </div>
             )}
-            <p className="text-sm text-gray-700 mb-4">おこさまのお名前を追加し、アレルギー設定を変更できます（最大10人）。現在: {1 + (familyCount || 0)}人（本人を含む）</p>
+            <p className="text-sm text-gray-700 mb-4">家族の名前を追加し、アレルギー設定を変更できます（最大10人）。現在: {1 + (familyCount || 0)}人（本人を含む）</p>
             <form onSubmit={saveProfile} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">お名前</label>
@@ -293,6 +308,18 @@ const MyPage = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 />
               </div>
+              {targets.filter(t => t.profileType === 'member').length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">家族（登録済み）</label>
+                  <div className="flex flex-wrap gap-2">
+                    {targets.filter(t => t.profileType === 'member').map(t => (
+                      <span key={`member-chip-${t.id}`} className="px-2.5 py-1 text-xs bg-gray-100 border border-gray-200 rounded-lg text-gray-800">
+                        {t.label}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
               <motion.button whileHover={{scale:1.02}} whileTap={{scale:0.98}} type="submit" disabled={saving}
                 className={`px-6 py-2 rounded-lg text-white font-semibold ${saving?'bg-gray-400':'bg-orange-500 hover:bg-orange-600'}`}
               >{saving?'保存中...':'保存する'}</motion.button>
@@ -359,6 +386,31 @@ const MyPage = () => {
                         key={`frag-${a.id}`}
                         onClick={() => toggleFragrance(a.id)}
                         className={`p-2 rounded-lg border-2 text-xs transition-all ${selectedFragranceAllergies.includes(a.id) ? 'bg-yellow-500 text-white border-yellow-500' : 'bg-white border-gray-200 hover:border-yellow-300'}`}
+                      >
+                        <div className="text-center">
+                          <div className="text-lg mb-1">{a.icon}</div>
+                          <div className="font-medium">{a.name}</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* trace contamination collapsible (香料にふくむと同様の仕様) */}
+              <div>
+                <button type="button" onClick={()=>setTraceOpen(prev=>!prev)} className="w-full flex items-center justify-between px-3 py-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <span className="text-sm font-medium text-yellow-900">コンタミネーション</span>
+                  <span className="text-xs text-yellow-700">{traceOpen ? '閉じる' : 'クリックで表示'}</span>
+                </button>
+                {traceOpen && (
+                  <div className="mt-2 grid grid-cols-4 sm:grid-cols-6 gap-2">
+                    {allergyOptions.map(a => (
+                      <button
+                        type="button"
+                        key={`trace-${a.id}`}
+                        onClick={() => toggleTrace(a.id)}
+                        className={`p-2 rounded-lg border-2 text-xs transition-all ${selectedTraceAllergies.includes(a.id) ? 'bg-yellow-500 text-white border-yellow-500' : 'bg-white border-gray-200 hover:border-yellow-300'}`}
                       >
                         <div className="text-center">
                           <div className="text-lg mb-1">{a.icon}</div>

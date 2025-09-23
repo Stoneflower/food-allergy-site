@@ -755,8 +755,10 @@ export const RestaurantProvider = ({ children }) => {
           .match(match)
           .maybeSingle();
         const all = Array.isArray(data?.selected_allergies) ? data.selected_allergies : [];
-        const normal = all.filter(a => typeof a === 'string' && !a.startsWith('fragrance:'));
-        const frag = all.filter(a => typeof a === 'string' && a.startsWith('fragrance:')).map(a => a.replace('fragrance:', ''));
+        const normal = all.filter(a => typeof a === 'string' && !a.startsWith('included:') && !a.startsWith('fragrance:'));
+        const frag = all
+          .filter(a => typeof a === 'string' && (a.startsWith('included:') || a.startsWith('fragrance:')))
+          .map(a => a.replace('included:', '').replace('fragrance:', ''));
         setSelectedAllergies(normal);
         setSelectedFragranceForSearch(frag);
       } catch (e) {

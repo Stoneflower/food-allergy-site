@@ -26,7 +26,7 @@ const Login = () => {
     severityLevel: 'medium' // light, medium, strict
   });
 
-  const { allergyOptions, setUserSettings, setIsLoggedIn } = useRestaurant();
+  const { allergyOptions } = useRestaurant();
   const navigate = useNavigate();
 
   const [submitting, setSubmitting] = useState(false);
@@ -82,7 +82,6 @@ const Login = () => {
             .from('profiles')
             .upsert({ id: userId, name: metaName }, { onConflict: 'id' });
         }
-        setIsLoggedIn(true);
         setInfoMessage('ログインしました。マイページへ移動します...');
         navigate('/mypage');
       } else {
@@ -113,10 +112,6 @@ const Login = () => {
             await supabase.from('profiles').upsert({ id: uid, name: formData.name || null }, { onConflict: 'id' });
           }
           setInfoMessage('確認メールを送信しました。メール内のリンクで有効化してください。');
-        } else {
-          // 追加設定を保存（任意）
-          setUserSettings(allergySettings);
-          setInfoMessage('設定を保存しました。メール確認完了後にログインしてください。');
         }
       }
     } catch (err) {

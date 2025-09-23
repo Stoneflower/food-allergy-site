@@ -47,6 +47,20 @@ export const RestaurantProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // 画像フォールバック（名称ベース）
+  const pickFallbackImage = (name, current, related) => {
+    if (current && String(current).trim()) return current;
+    const texts = [
+      String(name || ''),
+      String(related?.name || ''),
+      String(related?.product_title || ''),
+      String(related?.brand || ''),
+    ].join(' ').toLowerCase();
+    if (texts.includes('びっくりドンキー')) return 'https://stoneflower.net/uploads/hamburger.jpg';
+    if (texts.includes('スシロー') || texts.includes('すしろー') || texts.includes('sushiro')) return 'https://stoneflower.net/uploads/sushi.jpg';
+    return 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=800&q=70&auto=format';
+  };
+
   // 検索実行関数（検索ボタン方式）
   const executeSearch = () => {
     console.log('検索実行:', { areaInputValue, searchKeyword, selectedCategory });
@@ -303,7 +317,7 @@ export const RestaurantProvider = ({ children }) => {
           const transformedItem = {
             id: store.id,
             name: storeName,
-            image: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400', // デフォルト画像
+            image: pickFallbackImage(storeName, relatedProduct?.source_url || relatedProduct?.image_url, relatedProduct),
             rating: 4.0, // デフォルト値
             reviewCount: 0,
             price: '¥1,000～¥2,000', // デフォルト値
@@ -403,7 +417,7 @@ export const RestaurantProvider = ({ children }) => {
               const transformedItem = {
                 id: `product-${product.id}-store-${store.id}`, // 商品と店舗の組み合わせID
                 name: store.branch_name || product.name || '店舗名不明',
-                image: product.source_url || product.source_url2 || product.image_url || 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400',
+            image: pickFallbackImage(product.name, product.source_url || product.source_url2 || product.image_url, product),
                 rating: 4.0,
                 reviewCount: 0,
                 price: '¥500～¥1,500',

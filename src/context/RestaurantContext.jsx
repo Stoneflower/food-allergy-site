@@ -385,7 +385,7 @@ export const RestaurantProvider = ({ children }) => {
               const transformedItem = {
                 id: `product-${product.id}-store-${store.id}`, // 商品と店舗の組み合わせID
                 name: store.branch_name || product.name || '店舗名不明',
-                image: product.image_url || 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400',
+                image: product.source_url || product.source_url2 || product.image_url || 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400',
                 rating: 4.0,
                 reviewCount: 0,
                 price: '¥500～¥1,500',
@@ -430,7 +430,7 @@ export const RestaurantProvider = ({ children }) => {
             const transformedItem = {
               id: product.id + 10000,
               name: product.name || '商品名不明',
-              image: product.image_url || 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400',
+              image: product.source_url || product.source_url2 || product.image_url || 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400',
               rating: 4.0,
               reviewCount: 0,
               price: '¥500～¥1,500',

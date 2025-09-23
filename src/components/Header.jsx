@@ -353,9 +353,9 @@ const Header = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="lg:hidden fixed inset-x-0 top-16 bottom-0 z-[10000] bg-white overflow-auto"
+          className="lg:hidden fixed inset-x-0 top-20 bottom-0 z-[10000] bg-white overflow-auto"
         >
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 pb-4">
             <form onSubmit={handleSearch} className="space-y-3">
               {/* Mobile Category Selection */}
               <div>

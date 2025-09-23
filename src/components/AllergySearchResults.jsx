@@ -129,6 +129,7 @@ const AllergySearchResults = () => {
   // アレルギー情報を取得（商品のすべてのアレルギー情報を表示）
   const getContaminationInfo = (menuItem) => {
     console.log(`🔍 getContaminationInfo 呼び出し - 商品: ${menuItem.name}, selectedAllergies:`, selectedAllergies);
+    console.log(`🔍 allergyOptions の内容:`, allergyOptions.map(a => ({ id: a.id, name: a.name })));
     
     if (!menuItem.product_allergies_matrix || !Array.isArray(menuItem.product_allergies_matrix)) {
       console.log(`❌ 商品 ${menuItem.name} にproduct_allergies_matrixがありません`);

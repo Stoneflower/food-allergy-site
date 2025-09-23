@@ -26,6 +26,15 @@ export const RestaurantProvider = ({ children }) => {
   ];
 
   const [selectedAllergies, setSelectedAllergies] = useState([]);
+  const [selectedFragranceForSearch, setSelectedFragranceForSearch] = useState([]);
+  const [activeAllergyTarget, setActiveAllergyTarget] = useState(() => {
+    try {
+      const raw = localStorage.getItem('activeAllergyTarget');
+      return raw ? JSON.parse(raw) : null; // { profileType: 'user'|'member', id, label }
+    } catch (_) {
+      return null;
+    }
+  });
   const [searchKeyword, setSearchKeyword] = useState('');
   // エリア入力（検索ボタン方式）
   const [areaInputValue, setAreaInputValue] = useState('');
@@ -690,6 +699,8 @@ export const RestaurantProvider = ({ children }) => {
     // 状態
     selectedAllergies,
     setSelectedAllergies,
+    selectedFragranceForSearch,
+    activeAllergyTarget,
     searchKeyword,
     setSearchKeyword,
     selectedArea,
@@ -722,6 +733,36 @@ export const RestaurantProvider = ({ children }) => {
     getRecommendations,
     fetchDataFromSupabase,
     testSupabaseConnection,
+    applyAllergyTarget: async (target) => {
+      try {
+        // target: null -> 設定をしない
+        if (!target || target.profileType === 'none') {
+          setActiveAllergyTarget(null);
+          localStorage.removeItem('activeAllergyTarget');
+          setSelectedAllergies([]);
+          setSelectedFragranceForSearch([]);
+          return;
+        }
+
+        setActiveAllergyTarget(target);
+        localStorage.setItem('activeAllergyTarget', JSON.stringify(target));
+        const match = target.profileType === 'user'
+          ? { profile_type: 'user', profile_id: target.id }
+          : { profile_type: 'member', member_id: target.id };
+        const { data } = await supabase
+          .from('allergy_settings')
+          .select('selected_allergies')
+          .match(match)
+          .maybeSingle();
+        const all = Array.isArray(data?.selected_allergies) ? data.selected_allergies : [];
+        const normal = all.filter(a => typeof a === 'string' && !a.startsWith('fragrance:'));
+        const frag = all.filter(a => typeof a === 'string' && a.startsWith('fragrance:')).map(a => a.replace('fragrance:', ''));
+        setSelectedAllergies(normal);
+        setSelectedFragranceForSearch(frag);
+      } catch (e) {
+        console.warn('applyAllergyTarget failed', e);
+      }
+    },
     
     // データ
     categories,

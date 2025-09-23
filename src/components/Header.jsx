@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import SafeIcon from '../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
 import { useRestaurant } from '../context/RestaurantContext';
+import { supabase } from '../lib/supabase';
 
 const { FiSearch, FiMenu, FiX, FiMapPin, FiUser, FiChevronDown, FiCamera, FiPlus, FiAlertTriangle, FiHeart } = FiIcons;
 
@@ -29,8 +30,8 @@ const Header = () => {
     selectedCategory,
     setSelectedCategory,
     categories,
-    userSettings,
-    isLoggedIn
+    // userSettings, // 未使用
+    // isLoggedIn  // コンテキストでは管理せず、Supabaseのセッションで判定
   } = useRestaurant();
 
   // デバッグ用ログ
@@ -39,6 +40,23 @@ const Header = () => {
 
   const navigate = useNavigate();
   const location = useLocation();
+
+  // 認証状態（Supabaseセッション）
+  const [isAuthed, setIsAuthed] = useState(false);
+  useEffect(() => {
+    let mounted = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (!mounted) return;
+      setIsAuthed(!!data?.session);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthed(!!session);
+    });
+    return () => {
+      mounted = false;
+      sub?.subscription?.unsubscribe?.();
+    };
+  }, []);
 
   // ルート遷移時に各種オーバーレイ/メニューを閉じる（クリックブロック対策）
   useEffect(() => {
@@ -53,6 +71,16 @@ const Header = () => {
     navigate('/search');
     setIsMenuOpen(false);
     setShowMobileSearch(false);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      setIsMenuOpen(false);
+      navigate('/');
+    } catch (e) {
+      console.warn('logout failed', e);
+    }
   };
 
   // Enterキーでの検索実行
@@ -164,12 +192,29 @@ const Header = () => {
             >
               CanIEatOo?について
             </Link>
-            <Link
-              to="/login"
-              className="hover:text-orange-200 transition-colors font-medium"
-            >
-              無料会員登録・ログイン
-            </Link>
+            {isAuthed ? (
+              <>
+                <Link
+                  to="/mypage"
+                  className="hover:text-orange-200 transition-colors font-medium"
+                >
+                  マイページ
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="hover:text-orange-200 transition-colors font-medium"
+                >
+                  ログアウト
+                </button>
+              </>
+            ) : (
+              <Link
+                to="/login"
+                className="hover:text-orange-200 transition-colors font-medium"
+              >
+                無料会員登録・ログイン
+              </Link>
+            )}
           </div>
         </div>
       </div>
@@ -326,7 +371,7 @@ const Header = () => {
                           </div>
 
                           {/* User Settings Notice */}
-                          {!isLoggedIn && (
+                          {!isAuthed && (
                             <div className="mt-3 p-2 bg-blue-50 rounded text-xs text-blue-700">
                               💡 会員登録すると、微量・加熱の詳細設定が可能です
                             </div>
@@ -491,7 +536,7 @@ const Header = () => {
                 )}
 
                 {/* User Settings Notice for Mobile */}
-                {!isLoggedIn && (
+                {!isAuthed && (
                   <div className="mt-3 p-2 bg-blue-50 rounded text-xs text-blue-700">
                     💡 会員登録すると、微量・加熱の詳細設定が可能です
                   </div>
@@ -567,13 +612,31 @@ const Header = () => {
               >
                 CanIEatOo?について
               </Link>
-              <Link
-                to="/login"
-                className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                無料会員登録・ログイン
-              </Link>
+              {isAuthed ? (
+                <>
+                  <Link
+                    to="/mypage"
+                    className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    マイページ
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+                  >
+                    ログアウト
+                  </button>
+                </>
+              ) : (
+                <Link
+                  to="/login"
+                  className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  無料会員登録・ログイン
+                </Link>
+              )}
             </div>
           </div>
         </motion.div>

@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import AllergyFilter from '../components/AllergyFilter';
-import { useRestaurant } from '../context/RestaurantContext';
 import CategoryFilter from '../components/CategoryFilter';
 import RestaurantCard from '../components/RestaurantCard';
 import ProductCard from '../components/ProductCard';

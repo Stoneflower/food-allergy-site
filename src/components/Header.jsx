@@ -153,6 +153,12 @@ const Header = () => {
               </div>
             </Link>
             <Link
+              to="/contact"
+              className="hover:text-orange-200 transition-colors font-medium"
+            >
+              お問合せ
+            </Link>
+            <Link
               to="/about"
               className="hover:text-orange-200 transition-colors font-medium"
             >

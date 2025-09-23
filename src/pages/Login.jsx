@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import SafeIcon from '../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
 import { useRestaurant } from '../context/RestaurantContext';
+import { supabase } from '../lib/supabase';
 
 const { FiMail, FiLock, FiUser, FiEye, FiEyeOff, FiCheck, FiInfo } = FiIcons;
 
@@ -26,22 +27,58 @@ const Login = () => {
 
   const { allergyOptions, setUserSettings, setIsLoggedIn } = useRestaurant();
 
-  const handleSubmit = (e) => {
+  const [submitting, setSubmitting] = useState(false);
+  const [authError, setAuthError] = useState('');
+  const [infoMessage, setInfoMessage] = useState('');
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (isLogin) {
-      // ログイン処理
-      console.log('ログイン', formData);
-      setIsLoggedIn(true);
-    } else {
-      if (currentStep === 1) {
-        // 次のステップへ
-        setCurrentStep(2);
-      } else {
-        // 会員登録完了
-        console.log('会員登録', { ...formData, allergySettings });
-        setUserSettings(allergySettings);
+    if (submitting) return;
+    setSubmitting(true);
+    setAuthError('');
+    setInfoMessage('');
+
+    try {
+      if (isLogin) {
+        // ログイン
+        const { error } = await supabase.auth.signInWithPassword({
+          email: formData.email.trim(),
+          password: formData.password,
+        });
+        if (error) throw error;
         setIsLoggedIn(true);
+      } else {
+        // 新規登録（メール確認）
+        if (currentStep === 1) {
+          if (!formData.email || !formData.password) {
+            throw new Error('メールとパスワードを入力してください');
+          }
+          if (formData.password.length < 6) {
+            throw new Error('パスワードは6文字以上で入力してください');
+          }
+          const redirectTo = `${import.meta.env.VITE_SITE_URL || window.location.origin}/#/login`;
+          const { error } = await supabase.auth.signUp({
+            email: formData.email.trim(),
+            password: formData.password,
+            options: {
+              data: { name: formData.name },
+              emailRedirectTo: redirectTo,
+            },
+          });
+          if (error) throw error;
+          setInfoMessage('確認メールを送信しました。メール内のリンクで有効化してください。');
+          // 必要なら次のステップを開く
+          // setCurrentStep(2);
+        } else {
+          // 追加設定を保存（任意）
+          setUserSettings(allergySettings);
+          setInfoMessage('設定を保存しました。メール確認完了後にログインしてください。');
+        }
       }
+    } catch (err) {
+      setAuthError(err?.message || 'エラーが発生しました');
+    } finally {
+      setSubmitting(false);
     }
   };
 

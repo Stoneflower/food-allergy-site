@@ -1,24 +1,42 @@
 import React, { useState } from 'react';
+import { supabase } from '../lib/supabase';
 
 const Contact = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
 
-  const handleSubmit = (e) => {
+  const [submitting, setSubmitting] = useState(false);
+  const [done, setDone] = useState(false);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const subject = encodeURIComponent('【お問い合わせ】CanIEatOo? から');
-    const header = '表示に問題があったり、こういうふうにしてほしいなど、ありましたらお送りください。\nお礼のメールもモチベーションに繋がるので、絶賛受付中です。\n\n';
-    const bodyLines = [
-      header,
-      `お名前: ${name}`,
-      `メール: ${email}`,
-      '',
-      '本文:',
-      message,
-    ];
-    const body = encodeURIComponent(bodyLines.join('\n'));
-    window.location.href = `mailto:stoneflowerkobe@gmail.com?subject=${subject}&body=${body}`;
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from('contact_messages')
+        .insert([{ name, email, message }]);
+      if (error) throw error;
+
+      // メール転送（Resend via Netlify Functions）
+      try {
+        await fetch('/.netlify/functions/contact-send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, message }),
+        });
+      } catch (_) {}
+      setDone(true);
+      setName('');
+      setEmail('');
+      setMessage('');
+    } catch (err) {
+      console.error('お問い合わせ送信エラー:', err);
+      alert('送信に失敗しました。時間をおいて再度お試しください。');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -70,9 +88,10 @@ const Contact = () => {
           <div className="pt-2">
             <button
               type="submit"
-              className="w-full py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white font-semibold rounded-lg hover:from-orange-600 hover:to-red-600 transition-colors"
+              disabled={submitting}
+              className={`w-full py-3 text-white font-semibold rounded-lg transition-colors ${submitting ? 'bg-gray-400' : 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600'}`}
             >
-              メールを作成する（メールアプリが起動します）
+              {submitting ? '送信中...' : (done ? '送信しました。ありがとうございます！' : '送信する')}
             </button>
           </div>
         </form>

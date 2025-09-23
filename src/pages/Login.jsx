@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import SafeIcon from '../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
@@ -26,6 +27,7 @@ const Login = () => {
   });
 
   const { allergyOptions, setUserSettings, setIsLoggedIn } = useRestaurant();
+  const navigate = useNavigate();
 
   const [submitting, setSubmitting] = useState(false);
   const [authError, setAuthError] = useState('');
@@ -59,24 +61,30 @@ const Login = () => {
     setSubmitting(true);
     setAuthError('');
     setInfoMessage('');
+    console.log('[Auth] submit start', { isLogin, currentStep });
 
     try {
       if (isLogin) {
         // ログイン
+        console.log('[Auth] signInWithPassword try');
         const { error } = await supabase.auth.signInWithPassword({
           email: formData.email.trim(),
           password: formData.password,
         });
         if (error) throw error;
+        console.log('[Auth] signInWithPassword ok');
         // プロフィールUPSERT（初回ログイン時/以降も上書き可）
         const { data: userData } = await supabase.auth.getUser();
         const userId = userData?.user?.id;
         if (userId) {
+          const metaName = userData?.user?.user_metadata?.name || formData.name || null;
           await supabase
             .from('profiles')
-            .upsert({ id: userId, name: formData.name || undefined }, { onConflict: 'id' });
+            .upsert({ id: userId, name: metaName }, { onConflict: 'id' });
         }
         setIsLoggedIn(true);
+        setInfoMessage('ログインしました。マイページへ移動します...');
+        navigate('/mypage');
       } else {
         // 新規登録（メール確認）
         if (currentStep === 1) {
@@ -87,6 +95,7 @@ const Login = () => {
             throw new Error('パスワードは6文字以上で入力してください');
           }
           const redirectTo = `${import.meta.env.VITE_SITE_URL || window.location.origin}/#/login`;
+          console.log('[Auth] signUp try');
           const { error } = await supabase.auth.signUp({
             email: formData.email.trim(),
             password: formData.password,
@@ -96,6 +105,13 @@ const Login = () => {
             },
           });
           if (error) throw error;
+          console.log('[Auth] signUp ok');
+          // 仮登録時点でもprofilesにnameを反映（存在しなければ作成）
+          const { data: u } = await supabase.auth.getUser();
+          const uid = u?.user?.id;
+          if (uid) {
+            await supabase.from('profiles').upsert({ id: uid, name: formData.name || null }, { onConflict: 'id' });
+          }
           setInfoMessage('確認メールを送信しました。メール内のリンクで有効化してください。');
         } else {
           // 追加設定を保存（任意）
@@ -105,8 +121,10 @@ const Login = () => {
       }
     } catch (err) {
       setAuthError(err?.message || 'エラーが発生しました');
+      console.error('[Auth] submit error', err);
     } finally {
       setSubmitting(false);
+      console.log('[Auth] submit end');
     }
   };
 

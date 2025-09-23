@@ -115,7 +115,7 @@ const AllergySearchResults = () => {
         }
         
         // 'direct'の場合は含有（除外）
-        // 'trace'の場合はコンタミネーション（表示する）
+        // 'trace'と'Included'の場合はコンタミネーション/香料含有（表示する）
         const isDirectContained = allergyValue === 'direct';
         console.log(`アレルギー値: ${allergyValue}, 直接含有: ${isDirectContained}`);
         return isDirectContained;
@@ -126,31 +126,38 @@ const AllergySearchResults = () => {
     });
   };
 
-  // コンタミネーション情報を取得（選択されたアレルギーのみ）
+  // アレルギー情報を取得（選択されたアレルギーのみ）
   const getContaminationInfo = (menuItem) => {
     if (!menuItem.product_allergies_matrix || !Array.isArray(menuItem.product_allergies_matrix)) {
       return [];
     }
 
-    const contaminations = [];
+    const allergyInfo = [];
     const matrix = menuItem.product_allergies_matrix[0]; // 最初の要素を使用
     
     if (matrix) {
       selectedAllergies.forEach(allergyId => {
         const allergyValue = matrix[allergyId];
-        console.log(`コンタミネーション確認 - 商品: ${menuItem.name}, アレルギー: ${allergyId}, 値: ${allergyValue}`);
+        console.log(`アレルギー確認 - 商品: ${menuItem.name}, アレルギー: ${allergyId}, 値: ${allergyValue}`);
+        
         if (allergyValue === 'trace') {
           const allergy = allergyOptions.find(a => a.id === allergyId);
           if (allergy) {
-            contaminations.push(`${allergy.name}コンタミネーション`);
+            allergyInfo.push(`${allergy.name}コンタミネーション`);
             console.log(`コンタミネーション発見: ${allergy.name}コンタミネーション`);
+          }
+        } else if (allergyValue === 'Included') {
+          const allergy = allergyOptions.find(a => a.id === allergyId);
+          if (allergy) {
+            allergyInfo.push(`${allergy.name}香料にふくむ`);
+            console.log(`香料含有発見: ${allergy.name}香料にふくむ`);
           }
         }
       });
     }
 
-    console.log(`商品 ${menuItem.name} のコンタミネーション:`, contaminations);
-    return contaminations;
+    console.log(`商品 ${menuItem.name} のアレルギー情報:`, allergyInfo);
+    return allergyInfo;
   };
 
   // 店舗データをグループ化
@@ -402,6 +409,22 @@ const AllergySearchResults = () => {
 
   return (
     <div className="space-y-6">
+      {/* 検索条件表示（上部に移動） */}
+      <div className="bg-blue-50 rounded-lg p-4">
+        <h3 className="font-semibold text-blue-900 mb-2">検索条件</h3>
+        <div className="flex flex-wrap gap-2">
+          {selectedAllergies.map(allergyId => {
+            const allergy = allergyOptions.find(a => a.id === allergyId);
+            return allergy ? (
+              <span key={allergyId} className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm flex items-center space-x-1">
+                <span>{allergy.icon}</span>
+                <span>{allergy.name}</span>
+              </span>
+            ) : null;
+          })}
+        </div>
+      </div>
+
       {/* 店舗リスト */}
       {groupedStores.map((store, index) => {
         const safeProducts = getSafeProducts(store);
@@ -533,22 +556,6 @@ const AllergySearchResults = () => {
           </p>
         </div>
       )}
-
-      {/* 検索条件表示（下部に移動） */}
-      <div className="bg-blue-50 rounded-lg p-4">
-        <h3 className="font-semibold text-blue-900 mb-2">検索条件</h3>
-        <div className="flex flex-wrap gap-2">
-          {selectedAllergies.map(allergyId => {
-            const allergy = allergyOptions.find(a => a.id === allergyId);
-            return allergy ? (
-              <span key={allergyId} className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm flex items-center space-x-1">
-                <span>{allergy.icon}</span>
-                <span>{allergy.name}</span>
-              </span>
-            ) : null;
-          })}
-        </div>
-      </div>
 
       {/* フローティングトップボタン */}
       {showScrollTop && (

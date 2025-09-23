@@ -283,19 +283,6 @@ const Login = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     パスワード（確認）
                   </label>
-              {/* Terms & Privacy consent */}
-              {!isLogin && (
-                <div className="pt-2 space-y-2">
-                  <label className="flex items-start space-x-3">
-                    <input type="checkbox" required className="mt-1 w-4 h-4 text-orange-600 rounded focus:ring-orange-500" />
-                    <span className="text-sm text-gray-700">
-                      <a href="#/terms" className="text-orange-600 hover:text-orange-800 underline">利用規約</a> と
-                      <a href="#/privacy" className="text-orange-600 hover:text-orange-800 underline ml-1">プライバシーポリシー</a>
-                      に同意します
-                    </span>
-                  </label>
-                </div>
-              )}
                   <div className="relative">
                     <SafeIcon icon={FiLock} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                     <input
@@ -307,6 +294,17 @@ const Login = () => {
                       placeholder="••••••••"
                       required={!isLogin}
                     />
+                  </div>
+                  {/* Terms & Privacy consent (move under confirm password) */}
+                  <div className="pt-3 space-y-2">
+                    <label className="flex items-start space-x-3">
+                      <input type="checkbox" required className="mt-1 w-4 h-4 text-orange-600 rounded focus:ring-orange-500" />
+                      <span className="text-sm text-gray-700">
+                        <a href="#/terms" className="text-orange-600 hover:text-orange-800 underline">利用規約</a> と
+                        <a href="#/privacy" className="text-orange-600 hover:text-orange-800 underline ml-1">プライバシーポリシー</a>
+                        に同意します
+                      </span>
+                    </label>
                   </div>
                 </div>
               )}

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import AllergyFilter from '../components/AllergyFilter';
+import { useRestaurant } from '../context/RestaurantContext';
 import CategoryFilter from '../components/CategoryFilter';
 import RestaurantCard from '../components/RestaurantCard';
 import ProductCard from '../components/ProductCard';
@@ -34,7 +35,7 @@ const SearchResults = () => {
     safetyLevel: 'all'
   });
 
-  const { getFilteredItems, selectedAllergies, searchKeyword, selectedArea, selectedCategory, setSelectedCategory, setSelectedArea, categories } = useRestaurant();
+  const { getFilteredItems, selectedAllergies, selectedFragranceForSearch, selectedTraceForSearch, searchKeyword, selectedArea, selectedCategory, setSelectedCategory, setSelectedArea, categories, allergyOptions } = useRestaurant();
 
   // 商品カテゴリを取得
   useEffect(() => {
@@ -373,6 +374,40 @@ const SearchResults = () => {
                       <span className="font-medium">{category.name}</span>
                     </button>
                   ))}
+                </div>
+              </div>
+
+              {/* 選択中のアレルギー表示（カテゴリーの下、アレルギーフィルターの上） */}
+              <div className="bg-blue-50 rounded-xl p-4">
+                <h3 className="text-sm font-semibold text-blue-900 mb-2">検索条件</h3>
+                <div className="flex flex-wrap gap-2">
+                  {Array.from(new Set(selectedAllergies || [])).map(id => {
+                    const a = allergyOptions.find(x => x.id === id);
+                    return a ? (
+                      <span key={`n-${id}`} className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-xs flex items-center space-x-1">
+                        <span>{a.icon}</span>
+                        <span>{a.name}</span>
+                      </span>
+                    ) : null;
+                  })}
+                  {Array.from(new Set(selectedFragranceForSearch || [])).map(id => {
+                    const a = allergyOptions.find(x => x.id === id);
+                    return a ? (
+                      <span key={`f-${id}`} className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs flex items-center space-x-1">
+                        <span>{a.icon}</span>
+                        <span>香料 {a.name}</span>
+                      </span>
+                    ) : null;
+                  })}
+                  {Array.from(new Set(selectedTraceForSearch || [])).map(id => {
+                    const a = allergyOptions.find(x => x.id === id);
+                    return a ? (
+                      <span key={`t-${id}`} className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-xs flex items-center space-x-1">
+                        <span>{a.icon}</span>
+                        <span>コンタミ {a.name}</span>
+                      </span>
+                    ) : null;
+                  })}
                 </div>
               </div>
 

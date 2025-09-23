@@ -273,7 +273,12 @@ const Header = () => {
                     <div className="flex items-center space-x-1 min-w-0 flex-1">
                       <span className="whitespace-nowrap">アレルギーを選択</span>
                       {(() => {
-                        const total = (selectedAllergies?.length || 0) + (selectedFragranceForSearch?.length || 0) + (selectedTraceForSearch?.length || 0);
+                        const keys = new Set([
+                          ...(selectedAllergies || []).map(id => `N:${id}`),
+                          ...(selectedFragranceForSearch || []).map(id => `F:${id}`),
+                          ...(selectedTraceForSearch || []).map(id => `T:${id}`)
+                        ]);
+                        const total = keys.size;
                         return total > 0 ? (
                           <span className="bg-red-500 text-white text-xs rounded-full min-w-[1.25rem] h-5 px-1 flex items-center justify-center ml-2">
                             {total}

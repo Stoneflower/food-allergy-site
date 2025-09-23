@@ -468,11 +468,14 @@ const SearchResults = () => {
                     // 入力された都道府県をコンテキストに反映
                     if (inputPrefecture && inputPrefecture !== selectedArea) {
                       console.log('inputPrefectureをselectedAreaに設定:', inputPrefecture);
-                      setSelectedArea(inputPrefecture);
+                      setSelectedArea(inputPrefecture.trim());
+                    } else if (!selectedArea && inputPrefecture) {
+                      console.log('selectedAreaが空でinputPrefectureがある場合の設定:', inputPrefecture);
+                      setSelectedArea(inputPrefecture.trim());
                     }
                     
-                    // 現在のフィルター条件で検索を実行
-                    window.location.reload(); // 簡単な実装としてページリロード
+                    // ページリロードではなく、状態更新で検索を実行
+                    console.log('検索実行完了 - selectedArea更新済み');
                   }}
                   className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 px-4 rounded-lg hover:from-orange-600 hover:to-red-600 transition-colors font-semibold"
                 >

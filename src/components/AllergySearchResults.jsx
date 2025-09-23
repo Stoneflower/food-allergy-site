@@ -18,6 +18,7 @@ const AllergySearchResults = ({ items }) => {
 
   const filteredItems = items ?? getFilteredItems();
   const [expandedStores, setExpandedStores] = useState(new Set());
+  const storeRefs = React.useRef({});
 
   // エリア情報URLを取得する関数
   const getAreaInfoUrl = (store) => {
@@ -75,6 +76,15 @@ const AllergySearchResults = ({ items }) => {
     } else {
       newExpandedStores.add(storeName);
       console.log('opening store:', storeName);
+      // スマホ時は会社名（ヘッダー）へスムーズスクロール
+      if (typeof window !== 'undefined' && window.innerWidth < 768) {
+        setTimeout(() => {
+          const el = storeRefs.current[storeName];
+          if (el && el.scrollIntoView) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }, 0);
+      }
     }
     console.log('new expandedStores:', newExpandedStores);
     setExpandedStores(newExpandedStores);
@@ -495,6 +505,8 @@ const AllergySearchResults = ({ items }) => {
             <div 
               className="bg-gray-50 border-b border-gray-200 p-3 cursor-pointer hover:bg-gray-100 transition-colors"
               onClick={() => toggleStoreExpansion(store.name)}
+              ref={(el) => { storeRefs.current[store.name] = el; }}
+              id={`store-${encodeURIComponent(store.name)}`}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">

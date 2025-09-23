@@ -421,63 +421,49 @@ const Upload = () => {
         }
       }
 
-      // 香料に含まれるアレルギー成分を product_allergies へ presence_type='Included' で保存（複数可・全置き換え）
-      if (productId && Array.isArray(fragranceAllergens)) {
-        // 既存の香料（Included）レコードを削除してから挿入（全置き換え）
-        if (fragranceAllergens.length > 0) {
-          const { error: delFragErr } = await supabase
-            .from('product_allergies')
-            .delete()
-            .match({ product_id: productId, presence_type: 'Included' })
-            .in('allergy_item_id', fragranceAllergens);
-          if (delFragErr) console.warn('product_allergies 香料(Included) 既存削除で警告:', delFragErr);
+      // アレルギー情報を全置き換え（重複エラーを完全に回避）
+      if (productId) {
+        // 既存のアレルギー情報を全て削除
+        const { error: delAllErr } = await supabase
+          .from('product_allergies')
+          .delete()
+          .eq('product_id', productId);
+        if (delAllErr) console.warn('product_allergies 既存全削除で警告:', delAllErr);
+
+        // 新しいアレルギー情報を挿入
+        const allergyRows = [];
+
+        // 香料に含まれるアレルギー成分（presence_type='Included'）
+        if (Array.isArray(fragranceAllergens) && fragranceAllergens.length > 0) {
+          fragranceAllergens.forEach(allergyId => {
+            allergyRows.push({
+              product_id: productId,
+              allergy_item_id_int: allergyId,
+              presence_type: 'Included',
+              amount_level: 'unknown',
+              notes: null
+            });
+          });
         }
 
-        if (fragranceAllergens.length > 0) {
-          const rows = fragranceAllergens.map(allergyId => ({
-            product_id: productId,
-            allergy_item_id: allergyId,
-            presence_type: 'Included',
-            amount_level: 'unknown',
-            notes: null
-          }));
-          const { error: paError } = await supabase
-            .from('product_allergies')
-            .insert(rows);
-          if (paError) throw paError;
-        } else {
-          // 香料を全て未選択にした場合は、その商品の Included を全削除
-          const { error: clearFragErr } = await supabase
-            .from('product_allergies')
-            .delete()
-            .match({ product_id: productId, presence_type: 'Included' });
-          if (clearFragErr) console.warn('product_allergies 香料(Included) 全削除で警告:', clearFragErr);
-        }
-      }
-
-      // 通常のアレルギー選択（含有）も product_allergies に保存（presence_type='direct'）
-      if (productId && Array.isArray(editedInfo.allergens)) {
-        // 既存の該当品目を削除してから挿入（重複回避）
-        if (editedInfo.allergens.length > 0) {
-          const { error: delErr } = await supabase
-            .from('product_allergies')
-            .delete()
-            .match({ product_id: productId })
-            .in('allergy_item_id', editedInfo.allergens);
-          if (delErr) console.warn('product_allergies 既存削除で警告:', delErr);
+        // 通常のアレルギー選択（presence_type='direct'）
+        if (Array.isArray(editedInfo.allergens) && editedInfo.allergens.length > 0) {
+          editedInfo.allergens.forEach(allergyId => {
+            allergyRows.push({
+              product_id: productId,
+              allergy_item_id_int: allergyId,
+              presence_type: 'direct',
+              amount_level: 'unknown',
+              notes: null
+            });
+          });
         }
 
-        if (editedInfo.allergens.length > 0) {
-          const rows = editedInfo.allergens.map(allergyId => ({
-            product_id: productId,
-            allergy_item_id: allergyId,
-            presence_type: 'direct',
-            amount_level: 'unknown',
-            notes: null
-          }));
+        // アレルギー情報を一括挿入
+        if (allergyRows.length > 0) {
           const { error: insErr } = await supabase
             .from('product_allergies')
-            .insert(rows);
+            .insert(allergyRows);
           if (insErr) throw insErr;
         }
       }

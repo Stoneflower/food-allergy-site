@@ -128,13 +128,18 @@ const AllergySearchResults = () => {
 
   // アレルギー情報を取得（選択されたアレルギーのみ）
   const getContaminationInfo = (menuItem) => {
+    console.log(`🔍 getContaminationInfo 呼び出し - 商品: ${menuItem.name}, selectedAllergies:`, selectedAllergies);
+    
     if (!menuItem.product_allergies_matrix || !Array.isArray(menuItem.product_allergies_matrix)) {
+      console.log(`❌ 商品 ${menuItem.name} にproduct_allergies_matrixがありません`);
       return [];
     }
 
     const contaminationAllergies = [];
     const fragranceAllergies = [];
     const matrix = menuItem.product_allergies_matrix[0]; // 最初の要素を使用
+    
+    console.log(`📊 商品 ${menuItem.name} のmatrix:`, matrix);
     
     if (matrix) {
       selectedAllergies.forEach(allergyId => {
@@ -171,7 +176,7 @@ const AllergySearchResults = () => {
       result.push(`${fragranceAllergies.join('、')}香料にふくむ`);
     }
 
-    console.log(`商品 ${menuItem.name} のアレルギー情報:`, result);
+    console.log(`✅ 商品 ${menuItem.name} の最終結果:`, result);
     return result;
   };
 

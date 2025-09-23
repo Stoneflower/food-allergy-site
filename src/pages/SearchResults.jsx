@@ -392,7 +392,7 @@ const SearchResults = () => {
               {/* 商品カテゴリフィルター */}
               {productCategories.length > 0 && (
                 <div className="bg-white rounded-xl shadow-md p-6">
-                  <h3 className="text-lg font-semibold mb-4">商品カテゴリ</h3>
+                  <h3 className="text-lg font-semibold mb-4">商品カテゴリー</h3>
                   <div className="grid grid-cols-3 gap-3">
                     {productCategories.map(category => (
                       <button
@@ -425,6 +425,22 @@ const SearchResults = () => {
                   )}
                 </div>
               )}
+
+              {/* 検索ボタン */}
+              <div className="bg-white rounded-xl shadow-md p-6">
+                <h3 className="text-lg font-semibold mb-4">検索実行</h3>
+                <button
+                  onClick={() => {
+                    // 検索実行のロジック（必要に応じて実装）
+                    console.log('検索実行ボタンがクリックされました');
+                    // 現在のフィルター条件で検索を実行
+                    window.location.reload(); // 簡単な実装としてページリロード
+                  }}
+                  className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 px-4 rounded-lg hover:from-orange-600 hover:to-red-600 transition-colors font-semibold"
+                >
+                  検索実行
+                </button>
+              </div>
 
               {/* Source Statistics */}
               <div className="bg-white rounded-xl shadow-md p-6">

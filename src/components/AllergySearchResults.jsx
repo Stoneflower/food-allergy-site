@@ -132,7 +132,8 @@ const AllergySearchResults = () => {
       return [];
     }
 
-    const allergyInfo = [];
+    const contaminationAllergies = [];
+    const fragranceAllergies = [];
     const matrix = menuItem.product_allergies_matrix[0]; // 最初の要素を使用
     
     if (matrix) {
@@ -140,24 +141,38 @@ const AllergySearchResults = () => {
         const allergyValue = matrix[allergyId];
         console.log(`アレルギー確認 - 商品: ${menuItem.name}, アレルギー: ${allergyId}, 値: ${allergyValue}`);
         
-        if (allergyValue === 'trace') {
-          const allergy = allergyOptions.find(a => a.id === allergyId);
-          if (allergy) {
-            allergyInfo.push(`${allergy.name}コンタミネーション`);
-            console.log(`コンタミネーション発見: ${allergy.name}コンタミネーション`);
+        // allergyValueが配列の場合と単一値の場合に対応
+        const allergyValues = Array.isArray(allergyValue) ? allergyValue : [allergyValue];
+        
+        allergyValues.forEach(value => {
+          if (value === 'trace') {
+            const allergy = allergyOptions.find(a => a.id === allergyId);
+            if (allergy) {
+              contaminationAllergies.push(allergy.name);
+              console.log(`コンタミネーション発見: ${allergy.name}コンタミネーション`);
+            }
+          } else if (value === 'Included') {
+            const allergy = allergyOptions.find(a => a.id === allergyId);
+            if (allergy) {
+              fragranceAllergies.push(allergy.name);
+              console.log(`香料含有発見: ${allergy.name}香料にふくむ`);
+            }
           }
-        } else if (allergyValue === 'Included') {
-          const allergy = allergyOptions.find(a => a.id === allergyId);
-          if (allergy) {
-            allergyInfo.push(`${allergy.name}香料にふくむ`);
-            console.log(`香料含有発見: ${allergy.name}香料にふくむ`);
-          }
-        }
+        });
       });
     }
 
-    console.log(`商品 ${menuItem.name} のアレルギー情報:`, allergyInfo);
-    return allergyInfo;
+    // 結果をまとめて返す
+    const result = [];
+    if (contaminationAllergies.length > 0) {
+      result.push(`${contaminationAllergies.join('、')}コンタミネーション`);
+    }
+    if (fragranceAllergies.length > 0) {
+      result.push(`${fragranceAllergies.join('、')}香料にふくむ`);
+    }
+
+    console.log(`商品 ${menuItem.name} のアレルギー情報:`, result);
+    return result;
   };
 
   // 店舗データをグループ化

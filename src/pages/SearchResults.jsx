@@ -393,7 +393,7 @@ const SearchResults = () => {
               {productCategories.length > 0 && (
                 <div className="bg-white rounded-xl shadow-md p-6">
                   <h3 className="text-lg font-semibold mb-4">商品カテゴリ</h3>
-                  <div className="grid grid-cols-1 gap-3">
+                  <div className="grid grid-cols-3 gap-3">
                     {productCategories.map(category => (
                       <button
                         key={category.id}
@@ -410,7 +410,7 @@ const SearchResults = () => {
                             : 'bg-white border-gray-200 hover:border-blue-300'
                         }`}
                       >
-                        <span className="text-lg mr-2">{category.icon}</span>
+                        <span className="text-lg mr-1">{category.icon}</span>
                         {category.name}
                       </button>
                     ))}

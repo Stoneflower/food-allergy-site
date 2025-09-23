@@ -355,7 +355,19 @@ export const RestaurantProvider = ({ children }) => {
               // presence_typeのマッピング: そのまま保持（Includedは'Included'のまま）
               let mapped = r.presence_type;
               // 'Included'は'Included'のまま保持して、AllergySearchResultsで正しく処理されるようにする
-              generated[r.allergy_item_id] = mapped;
+              
+              // 同じallergy_item_idに対して複数のpresence_typeがある場合の処理
+              if (generated[r.allergy_item_id]) {
+                // 既に値がある場合は、配列として管理する
+                if (Array.isArray(generated[r.allergy_item_id])) {
+                  generated[r.allergy_item_id].push(mapped);
+                } else {
+                  // 既存の値を配列に変換して追加
+                  generated[r.allergy_item_id] = [generated[r.allergy_item_id], mapped];
+                }
+              } else {
+                generated[r.allergy_item_id] = mapped;
+              }
             });
             productMatrix.push({ ...generated, menu_name: product.product_title || product.name });
           }

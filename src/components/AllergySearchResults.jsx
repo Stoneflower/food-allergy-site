@@ -6,7 +6,7 @@ import * as FiIcons from 'react-icons/fi';
 
 const { FiExternalLink, FiShield, FiAlertTriangle, FiChevronUp } = FiIcons;
 
-const AllergySearchResults = () => {
+const AllergySearchResults = ({ items }) => {
   const { 
     getFilteredItems, 
     selectedAllergies, 
@@ -16,7 +16,7 @@ const AllergySearchResults = () => {
     allergyOptions 
   } = useRestaurant();
 
-  const filteredItems = getFilteredItems();
+  const filteredItems = items ?? getFilteredItems();
   const [expandedStores, setExpandedStores] = useState(new Set());
 
   // エリア情報URLを取得する関数

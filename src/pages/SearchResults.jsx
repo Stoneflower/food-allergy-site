@@ -522,7 +522,7 @@ const SearchResults = () => {
 
           {/* Results */}
           <div className="flex-1">
-            <AllergySearchResults />
+            <AllergySearchResults items={sortedItems} />
           </div>
         </div>
 

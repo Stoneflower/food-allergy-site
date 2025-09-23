@@ -10,7 +10,7 @@ const { FiMail, FiLock, FiUser, FiEye, FiEyeOff, FiCheck, FiInfo } = FiIcons;
 const Login = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
-  const [currentStep, setCurrentStep] = useState(1); // 1: 基本情報, 2: アレルギー設定
+  const [currentStep, setCurrentStep] = useState(1); // 登録は1ステップに統一
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -30,6 +30,28 @@ const Login = () => {
   const [submitting, setSubmitting] = useState(false);
   const [authError, setAuthError] = useState('');
   const [infoMessage, setInfoMessage] = useState('');
+
+  const resendConfirmationEmail = async () => {
+    try {
+      setAuthError('');
+      setInfoMessage('');
+      const email = formData.email.trim();
+      if (!email) {
+        setAuthError('メールアドレスを入力してください');
+        return;
+      }
+      const redirectTo = `${import.meta.env.VITE_SITE_URL || window.location.origin}/#/login`;
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email,
+        options: { emailRedirectTo: redirectTo }
+      });
+      if (error) throw error;
+      setInfoMessage('確認メールを再送しました。受信トレイをご確認ください。');
+    } catch (e) {
+      setAuthError(e?.message || '再送に失敗しました');
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -149,41 +171,14 @@ const Login = () => {
             <span className="text-white font-bold text-2xl">🍦</span>
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            {isLogin ? 'ログイン' : (currentStep === 1 ? '無料会員登録' : 'アレルギー設定')}
+            {isLogin ? 'ログイン' : '無料会員登録'}
           </h2>
           <p className="text-gray-600">
-            {isLogin 
-              ? 'アカウントにログインしてください'
-              : currentStep === 1 
-                ? '新しいアカウントを作成してください'
-                : 'あなたのアレルギー情報を設定してください'
-            }
+            {isLogin ? 'アカウントにログインしてください' : '新しいアカウントを作成してください'}
           </p>
         </div>
 
-        {/* Progress Bar for Registration */}
-        {!isLogin && (
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-2">
-              {[1, 2].map((step) => (
-                <div key={step} className="flex items-center">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
-                    currentStep >= step ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-500'
-                  }`}>
-                    {currentStep > step ? <SafeIcon icon={FiCheck} className="w-4 h-4" /> : step}
-                  </div>
-                  {step < 2 && (
-                    <div className={`w-16 h-1 mx-2 ${currentStep > step ? 'bg-orange-500' : 'bg-gray-200'}`} />
-                  )}
-                </div>
-              ))}
-            </div>
-            <div className="flex justify-between text-xs text-gray-600">
-              <span>基本情報</span>
-              <span>アレルギー設定</span>
-            </div>
-          </div>
-        )}
+        {/* 登録フローは1ステップに統一（プログレス非表示） */}
 
         {/* Tab Buttons - Only show for step 1 */}
         {currentStep === 1 && (
@@ -208,8 +203,8 @@ const Login = () => {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Step 1: Basic Information */}
-          {currentStep === 1 && (
+          {/* 基本情報（登録はこのステップのみ） */}
+          {(
             <>
               {/* Name Field (Registration only) */}
               {!isLogin && (
@@ -310,149 +305,32 @@ const Login = () => {
               )}
             </>
           )}
-
-          {/* Step 2: Allergy Settings */}
-          {currentStep === 2 && (
-            <div className="space-y-6">
-              {/* Allergy Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  🚨 あなたのアレルギー成分を選択してください
-                </label>
-                <div className="grid grid-cols-2 gap-2 mb-4">
-                  {allergyOptions.slice(0, 16).map(allergy => (
-                    <button
-                      key={allergy.id}
-                      type="button"
-                      onClick={() => toggleAllergy(allergy.id)}
-                      className={`p-3 rounded-lg border-2 text-xs transition-all ${
-                        allergySettings.selectedAllergies.includes(allergy.id)
-                          ? 'bg-red-500 text-white border-red-500'
-                          : 'bg-white border-gray-200 hover:border-red-300'
-                      }`}
-                    >
-                      <div className="text-center">
-                        <div className="text-lg mb-1">{allergy.icon}</div>
-                        <div className="font-medium">{allergy.name}</div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Severity Level */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  🎯 アレルギーの重度を選択してください
-                </label>
-                <div className="space-y-3">
-                  {severityLevels.map(level => (
-                    <button
-                      key={level.id}
-                      type="button"
-                      onClick={() => handleSeverityChange(level.id)}
-                      className={`w-full p-4 rounded-lg border-2 text-left transition-all ${
-                        allergySettings.severityLevel === level.id
-                          ? 'border-orange-500 bg-orange-50'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <span className="text-3xl">{level.icon}</span>
-                        <div className="flex-1">
-                          <h5 className="font-semibold text-gray-900">{level.name}</h5>
-                          <p className="text-sm text-gray-600">{level.description}</p>
-                        </div>
-                        {allergySettings.severityLevel === level.id && (
-                          <SafeIcon icon={FiCheck} className="w-5 h-5 text-orange-500" />
-                        )}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Advanced Settings */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  ⚙️ 詳細設定
-                </label>
-                <div className="space-y-3">
-                  <label className="flex items-start space-x-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={allergySettings.allowTrace}
-                      onChange={(e) => setAllergySettings(prev => ({ ...prev, allowTrace: e.target.checked }))}
-                      className="w-5 h-5 text-orange-600 rounded focus:ring-orange-500 mt-1"
-                    />
-                    <div>
-                      <span className="font-medium text-gray-900">⚠️ 微量なら摂取可能</span>
-                      <p className="text-sm text-gray-600">
-                        「微量」と表示された食品を「OK」として表示します
-                      </p>
-                    </div>
-                  </label>
-                  
-                  <label className="flex items-start space-x-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={allergySettings.allowHeated}
-                      onChange={(e) => setAllergySettings(prev => ({ ...prev, allowHeated: e.target.checked }))}
-                      className="w-5 h-5 text-orange-600 rounded focus:ring-orange-500 mt-1"
-                    />
-                    <div>
-                      <span className="font-medium text-gray-900">🔥 加熱済みなら摂取可能</span>
-                      <p className="text-sm text-gray-600">
-                        加熱で変化する成分を「OK」として表示します
-                      </p>
-                    </div>
-                  </label>
-                </div>
-              </div>
-
-              {/* Settings Notice */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div className="flex items-start space-x-2">
-                  <SafeIcon icon={FiInfo} className="w-5 h-5 text-blue-600 mt-0.5" />
-                  <div>
-                    <h5 className="font-semibold text-blue-800 mb-2">設定について</h5>
-                    <ul className="text-sm text-blue-700 space-y-1">
-                      <li>• 設定は後から変更できます</li>
-                      <li>• 必ず医師にご相談ください</li>
-                      <li>• 症状の変化があった場合は設定を見直してください</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+          {/* アレルギー設定ステップはログイン後のマイページで実施 */}
 
           {/* Action Buttons */}
           <div className="flex space-x-3 pt-4">
-            {currentStep === 2 && (
-              <button
-                type="button"
-                onClick={() => setCurrentStep(1)}
-                className="flex-1 py-3 px-6 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-              >
-                戻る
-              </button>
-            )}
-            
             <motion.button
               type="submit"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className={`${currentStep === 2 ? 'flex-1' : 'w-full'} py-3 bg-orange-500 text-white font-semibold rounded-lg hover:bg-orange-600 transition-colors`}
+              className={`w-full py-3 bg-orange-500 text-white font-semibold rounded-lg hover:bg-orange-600 transition-colors`}
             >
-              {isLogin 
-                ? 'ログイン' 
-                : currentStep === 1 
-                  ? '次へ進む' 
-                  : '会員登録完了'
-              }
+              {isLogin ? 'ログイン' : '仮登録（メールが届きます）'}
             </motion.button>
           </div>
+
+          {/* Resend confirmation link (registration only) */}
+          {!isLogin && (
+            <div className="mt-3 text-center">
+              <button
+                type="button"
+                onClick={resendConfirmationEmail}
+                className="text-sm text-orange-600 hover:text-orange-800 underline"
+              >
+                確認メールを再送する
+              </button>
+            </div>
+          )}
         </form>
 
         {/* Additional Links - Only show for step 1 */}

@@ -358,7 +358,7 @@ export const RestaurantProvider = ({ children }) => {
           // この商品のproduct_allergies_matrixを取得
           let productMatrix = matrixData
             .filter(matrix => matrix.product_id === product.id)
-            .map(m => ({ ...m, menu_name: (product.product_title || product.name || m.menu_name) }));
+            .map(m => ({ ...m, menu_name: (product.product_title || m.menu_name || product.name) }));
           // 行形式のproduct_allergiesからもmatrix風オブジェクトを生成して追加
           const rowsForProduct = productAllergiesRows.filter(r => r.product_id === product.id);
           if (rowsForProduct.length > 0) {
@@ -381,7 +381,7 @@ export const RestaurantProvider = ({ children }) => {
                 generated[r.allergy_item_id] = mapped;
               }
             });
-            productMatrix.push({ ...generated, menu_name: product.product_title || product.name || generated.menu_name });
+            productMatrix.push({ ...generated, menu_name: product.product_title || generated.menu_name || product.name });
           }
           console.log(`商品 ${product.name} のmatrix:`, productMatrix);
           

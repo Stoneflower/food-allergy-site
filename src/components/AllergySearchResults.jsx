@@ -263,8 +263,8 @@ const AllergySearchResults = ({ items }) => {
           // product_allergies_matrixの全要素を処理
           item.product_allergies_matrix.forEach((matrix, index) => {
             const menuName = (item?.related_product?.product_title)
-              || (item?.related_product?.name)
               || matrix.menu_name
+              || (item?.related_product?.name)
               || `商品${index + 1}`;
             console.log(`商品${index + 1}:`, menuName, 'matrix:', matrix);
             
@@ -283,7 +283,7 @@ const AllergySearchResults = ({ items }) => {
             
             stores[storeName].menu_items.push({
               name: menuName,
-              display_name: (item?.related_product?.product_title) || (item?.related_product?.name) || menuName,
+              display_name: (item?.related_product?.product_title) || menuName || (item?.related_product?.name) || menuName,
               product_allergies_matrix: [matrix], // 個別のmatrixを配列で渡す
               image_urls: [
                 item?.related_product?.source_url,

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+// リスト表示では遷移させないため、Linkを使わずdiv化
 import { motion } from 'framer-motion';
 import SafeIcon from '../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
@@ -60,7 +60,7 @@ const RestaurantCard = ({ restaurant }) => {
         transition={{ duration: 0.2 }}
         className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300 relative"
       >
-        <Link to={`/restaurant/${restaurant.id}`} onClick={handleClick}>
+        <div>
           <div className="relative">
             <img 
               src={restaurant.image} 
@@ -169,7 +169,7 @@ const RestaurantCard = ({ restaurant }) => {
               </div>
             )}
           </div>
-        </Link>
+        </div>
 
         {/* Action Buttons */}
         <div className="absolute bottom-4 right-4 flex space-x-2">

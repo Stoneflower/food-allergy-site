@@ -71,8 +71,18 @@ const Home = () => {
       const vb = (b.related_product?.updated_at || b.updated_at || b.created_at || b.id || 0);
       return String(vb).localeCompare(String(va));
     });
+    // 店舗名・会社名の重複を除外（最初に出たものを採用）
+    const seen = new Set();
+    const unique = [];
+    for (const it of items) {
+      const key = (it.name || '').trim().toLowerCase();
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      unique.push(it);
+      if (unique.length >= 8) break; // 保険: 重複除外後の候補を十分確保
+    }
     // ここで最大4件に絞る（小画面では後で2件まで表示）
-    return items.slice(0, 4);
+    return unique.slice(0, 4);
   };
 
   const displayItems = getLatestDisplayItems();
@@ -80,10 +90,17 @@ const Home = () => {
   const renderCard = (item) => {
     switch (item.category) {
       case 'products':
-        return <ProductCard key={item.id} product={item} />;
+        return <ProductCard key={item.id} product={{
+          ...item,
+          // 画像が無い場合はデフォルト画像にフォールバック
+          image: item.image || 'https://quest-media-storage-bucket.s3.us-east-2.amazonaws.com/placeholder_food.jpg'
+        }} />;
       case 'restaurants':
       default:
-        return <RestaurantCard key={item.id} restaurant={item} />;
+        return <RestaurantCard key={item.id} restaurant={{
+          ...item,
+          image: item.image || 'https://quest-media-storage-bucket.s3.us-east-2.amazonaws.com/placeholder_food.jpg'
+        }} />;
     }
   };
 

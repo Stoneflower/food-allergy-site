@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { FiDownload, FiCheckCircle, FiArrowLeft, FiFileText, FiUpload } from 'react-icons/fi';
 import Papa from 'papaparse';
 import { supabase } from '../lib/supabase';
+import { useRestaurant } from '../context/RestaurantContext';
 
 const CsvExporter = ({ data, onBack }) => {
   const [downloadStatus, setDownloadStatus] = useState('ready');
@@ -18,6 +19,20 @@ const CsvExporter = ({ data, onBack }) => {
   // 追加: 香料と加熱ステータス
   const [fragranceCsv, setFragranceCsv] = useState('none'); // 例: "egg,milk" or "none"
   const [heatStatus, setHeatStatus] = useState('none'); // heated|none|uncertain|unused
+  const [fragranceOpen, setFragranceOpen] = useState(false);
+
+  const { allergyOptions } = useRestaurant();
+  const fragranceSelected = useMemo(() => {
+    const raw = (fragranceCsv || '').trim();
+    if (!raw || raw.toLowerCase() === 'none') return [];
+    return raw.split(',').map(s => s.trim()).filter(Boolean);
+  }, [fragranceCsv]);
+  const toggleFragrance = (id) => {
+    const set = new Set(fragranceSelected);
+    if (set.has(id)) set.delete(id); else set.add(id);
+    const next = Array.from(set);
+    setFragranceCsv(next.length === 0 ? 'none' : next.join(','));
+  };
 
   // 47都道府県リスト
   const prefectures = [
@@ -1287,6 +1302,73 @@ const CsvExporter = ({ data, onBack }) => {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               placeholder="https://example.com/stores"
             />
+          </div>
+
+          {/* 香料（アイコン選択・折りたたみ） */}
+          <div className="bg-white border rounded-lg">
+            <button
+              type="button"
+              className="w-full flex items-center justify-between p-4"
+              onClick={() => setFragranceOpen(v => !v)}
+            >
+              <span className="text-sm font-medium text-gray-900">香料に含まれるアレルギー（任意）</span>
+              <span className="text-xs text-gray-500">
+                {fragranceSelected.length > 0
+                  ? `選択: ${fragranceSelected.map(id => allergyOptions.find(a => a.id === id)?.name).filter(Boolean).join('、')}`
+                  : (fragranceOpen ? '閉じる' : '開く')}
+              </span>
+            </button>
+            {fragranceOpen && (
+              <div className="p-4 pt-0">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {(allergyOptions || []).map(allergy => (
+                    <button
+                      key={`frag-${allergy.id}`}
+                      onClick={() => toggleFragrance(allergy.id)}
+                      className={`p-3 rounded-lg border-2 text-sm transition-all ${
+                        fragranceSelected.includes(allergy.id)
+                          ? 'bg-purple-500 text-white border-purple-500'
+                          : 'bg-white border-gray-200 hover:border-purple-300'
+                      }`}
+                    >
+                      <div className="text-center">
+                        <div className="text-2xl mb-1">{allergy.icon}</div>
+                        <div className="font-medium">{allergy.name}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+                {/* 内部値の確認（非表示でも可） */}
+                <input type="hidden" value={fragranceCsv} readOnly />
+              </div>
+            )}
+          </div>
+
+          {/* 加熱ステータス（4ボタン） */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              加熱ステータス
+            </label>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[
+                { key: 'heated', label: '加熱（heated）' },
+                { key: 'none', label: '非加熱（none）' },
+                { key: 'uncertain', label: '未確定（uncertain）' },
+                { key: 'unused', label: '使用しない（unused）' }
+              ].map(item => (
+                <button
+                  key={item.key}
+                  onClick={() => setHeatStatus(item.key)}
+                  className={`p-3 rounded-lg border-2 text-sm transition-all ${
+                    heatStatus === item.key
+                      ? 'bg-emerald-500 text-white border-emerald-500'
+                      : 'bg-white border-gray-200 hover:border-emerald-300'
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="bg-gray-50 rounded-lg p-4">

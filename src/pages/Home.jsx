@@ -172,6 +172,62 @@ const Home = () => {
         </div>
       </section>
 
+      {/* Membership Benefits */}
+      <section className="py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-12"
+          >
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">会員登録のメリット</h2>
+            <p className="text-gray-600 text-lg">あなたに合わせた詳細設定で、もっと安心・便利に。</p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-gray-50 rounded-xl p-6 border">
+              <div className="flex items-center space-x-3 mb-3">
+                <span className="text-2xl">🧪</span>
+                <h3 className="text-xl font-semibold text-gray-900">コンタミネーション設定</h3>
+              </div>
+              <p className="text-gray-600 text-sm leading-relaxed">
+                混入の可能性（trace）を個別に管理。微量NGなどの判断に役立ちます。
+              </p>
+            </div>
+
+            <div className="bg-gray-50 rounded-xl p-6 border">
+              <div className="flex items-center space-x-3 mb-3">
+                <span className="text-2xl">🌸</span>
+                <h3 className="text-xl font-semibold text-gray-900">香料に含むを個別指定</h3>
+              </div>
+              <p className="text-gray-600 text-sm leading-relaxed">
+                香料由来のアレルゲンをアイコンから簡単選択。未指定なら自動で none として扱います。
+              </p>
+            </div>
+
+            <div className="bg-gray-50 rounded-xl p-6 border">
+              <div className="flex items-center space-x-3 mb-3">
+                <span className="text-2xl">🔥</span>
+                <h3 className="text-xl font-semibold text-gray-900">加熱ステータスの詳細設定</h3>
+              </div>
+              <p className="text-gray-600 text-sm leading-relaxed">
+                heated / none / uncertain / unused を商品単位で設定できます。
+              </p>
+            </div>
+          </div>
+
+          <div className="text-center mt-10">
+            <Link
+              to="/login"
+              className="inline-flex items-center space-x-3 px-8 py-4 rounded-xl font-semibold text-white bg-indigo-600 hover:bg-indigo-700 shadow"
+            >
+              <span>無料で会員登録する</span>
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* How it Works Section */}
       <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

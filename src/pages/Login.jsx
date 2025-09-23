@@ -46,12 +46,20 @@ const Login = () => {
           password: formData.password,
         });
         if (error) throw error;
+        // プロフィールUPSERT（初回ログイン時/以降も上書き可）
+        const { data: userData } = await supabase.auth.getUser();
+        const userId = userData?.user?.id;
+        if (userId) {
+          await supabase
+            .from('profiles')
+            .upsert({ id: userId, name: formData.name || undefined }, { onConflict: 'id' });
+        }
         setIsLoggedIn(true);
       } else {
         // 新規登録（メール確認）
         if (currentStep === 1) {
-          if (!formData.email || !formData.password) {
-            throw new Error('メールとパスワードを入力してください');
+          if (!formData.name || !formData.email || !formData.password) {
+            throw new Error('お名前・メール・パスワードを入力してください');
           }
           if (formData.password.length < 6) {
             throw new Error('パスワードは6文字以上で入力してください');
@@ -67,8 +75,6 @@ const Login = () => {
           });
           if (error) throw error;
           setInfoMessage('確認メールを送信しました。メール内のリンクで有効化してください。');
-          // 必要なら次のステップを開く
-          // setCurrentStep(2);
         } else {
           // 追加設定を保存（任意）
           setUserSettings(allergySettings);
@@ -181,7 +187,7 @@ const Login = () => {
 
         {/* Tab Buttons - Only show for step 1 */}
         {currentStep === 1 && (
-          <div className="flex mb-6 bg-gray-100 rounded-lg p-1">
+          <div className="flex mb-4 bg-gray-100 rounded-lg p-1">
             <button
               onClick={() => setIsLogin(true)}
               className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
@@ -277,6 +283,19 @@ const Login = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     パスワード（確認）
                   </label>
+              {/* Terms & Privacy consent */}
+              {!isLogin && (
+                <div className="pt-2 space-y-2">
+                  <label className="flex items-start space-x-3">
+                    <input type="checkbox" required className="mt-1 w-4 h-4 text-orange-600 rounded focus:ring-orange-500" />
+                    <span className="text-sm text-gray-700">
+                      <a href="#/terms" className="text-orange-600 hover:text-orange-800 underline">利用規約</a> と
+                      <a href="#/privacy" className="text-orange-600 hover:text-orange-800 underline ml-1">プライバシーポリシー</a>
+                      に同意します
+                    </span>
+                  </label>
+                </div>
+              )}
                   <div className="relative">
                     <SafeIcon icon={FiLock} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                     <input

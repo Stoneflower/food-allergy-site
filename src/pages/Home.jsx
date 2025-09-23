@@ -463,49 +463,60 @@ const Home = () => {
               animate={{ opacity: 1 }}
               transition={{ duration: 0.6 }}
             >
-              {/* 4カテゴリをそれぞれ最大: スマホ2件/PC4件で表示 */}
+              {/* 最近、共有された情報（カテゴリごとに最新1件） */}
+              <div className="text-center mb-8">
+                <h2 className="text-3xl font-bold text-gray-900">最近、共有された情報</h2>
+              </div>
+
               {(() => {
                 const all = Array.isArray(allItemsData) ? allItemsData : [];
-                const latestRestaurants = uniqueValidByName(all.filter(i => i.category === 'restaurants')).slice(0, 4);
-                const latestTakeout = uniqueValidByName(all.filter(i => i.category === 'products')).slice(0, 4);
-                const latestSuper = uniqueValidByName(all
+                // 最新順に並べる
+                const sorted = all.slice().sort((a,b) => {
+                  const va = (a.related_product?.updated_at || a.updated_at || a.created_at || a.id || 0);
+                  const vb = (b.related_product?.updated_at || b.updated_at || b.created_at || b.id || 0);
+                  return String(vb).localeCompare(String(va));
+                });
+                // カテゴリごとに最新1件を選ぶ（重複は名前で排除）
+                const seenNames = new Set();
+                const pickOne = (arr) => uniqueValidByName(arr).find(it => {
+                  const k = (it?.name || '').trim().toLowerCase();
+                  if (!k || seenNames.has(k)) return false;
+                  seenNames.add(k);
+                  return true;
+                });
+                const latestRestaurant = pickOne(sorted.filter(i => i.category === 'restaurants'));
+                const latestSuper = pickOne(sorted
                   .filter(i => i.category === 'products' || i.category === 'supermarkets' || i.category === 'online')
                   .filter(i => Array.isArray(i.category_tokens) && i.category_tokens.includes('supermarkets'))
-                ).slice(0, 4);
-                const latestOnline = uniqueValidByName(all
+                );
+                const latestTakeout = pickOne(sorted.filter(i => i.category === 'products'));
+                const latestOnline = pickOne(sorted
                   .filter(i => i.category === 'products' || i.category === 'supermarkets' || i.category === 'online')
                   .filter(i => Array.isArray(i.category_tokens) && i.category_tokens.includes('online'))
-                ).slice(0, 4);
-
-                const Block = ({ title, icon, items }) => (
-                  items && items.length > 0 ? (
-                    <div className="mb-12">
-                      <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center space-x-2">
-                        <span>{icon}</span>
-                        <span>{title}</span>
-                      </h3>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {items.slice(0, 4).map((it, idx) => (
-                          <motion.div
-                            key={`${it.category}-${it.id}`}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.6, delay: idx * 0.1 }}
-                          >
-                            {renderCard(it)}
-                          </motion.div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : null
                 );
 
+                const blocks = [
+                  { key: 'restaurants', title: 'レストラン', icon: '🍽️', item: latestRestaurant, className: '' },
+                  { key: 'products', title: 'テイクアウト', icon: '🥡', item: latestTakeout, className: 'hidden sm:block' },
+                  { key: 'supermarkets', title: 'スーパー', icon: '🏪', item: latestSuper, className: '' },
+                  { key: 'online', title: 'ネットショップ', icon: '🛒', item: latestOnline, className: 'hidden sm:block' },
+                ];
+
                 return (
-                  <div className="space-y-4">
-                    <Block title="おすすめレストラン" icon="🍽️" items={latestRestaurants} />
-                    <Block title="テイクアウト" icon="🥡" items={latestTakeout} />
-                    <Block title="スーパー" icon="🏪" items={latestSuper} />
-                    <Block title="ネットショップ" icon="🛒" items={latestOnline} />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {blocks.map((b, idx) => (
+                      b.item ? (
+                        <motion.div
+                          key={b.key}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.6, delay: idx * 0.1 }}
+                          className={b.className}
+                        >
+                          {renderCard(b.item)}
+                        </motion.div>
+                      ) : null
+                    ))}
                   </div>
                 );
               })()}

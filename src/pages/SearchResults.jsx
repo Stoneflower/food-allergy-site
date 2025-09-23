@@ -114,7 +114,13 @@ const SearchResults = () => {
         }
         
         // 選択されたカテゴリIDに含まれる場合のみ表示
-        const isIncluded = selectedProductCategories.includes(productCategoryId);
+        console.log(`商品 ${item.name} のproduct_category_id: ${productCategoryId} (型: ${typeof productCategoryId})`);
+        console.log(`selectedProductCategories: [${selectedProductCategories.join(', ')}] (型: ${typeof selectedProductCategories[0]})`);
+        
+        // 型を統一して比較（文字列と数値の混在を防ぐ）
+        const isIncluded = selectedProductCategories.some(selectedId => 
+          Number(selectedId) === Number(productCategoryId)
+        );
         console.log(`商品 ${item.name} は選択されたカテゴリに含まれるか:`, isIncluded);
         return isIncluded;
       }
@@ -414,11 +420,16 @@ const SearchResults = () => {
                       <button
                         key={category.id}
                         onClick={() => {
-                          setSelectedProductCategories(prev => 
-                            prev.includes(category.id)
+                          console.log(`商品カテゴリーボタンクリック - カテゴリ: ${category.name} (ID: ${category.id})`);
+                          console.log(`現在の選択状態:`, selectedProductCategories);
+                          
+                          setSelectedProductCategories(prev => {
+                            const newSelection = prev.includes(category.id)
                               ? prev.filter(id => id !== category.id)
-                              : [...prev, category.id]
-                          );
+                              : [...prev, category.id];
+                            console.log(`新しい選択状態:`, newSelection);
+                            return newSelection;
+                          });
                         }}
                         className={`p-3 rounded-lg border-2 text-sm transition-all ${
                           selectedProductCategories.includes(category.id)

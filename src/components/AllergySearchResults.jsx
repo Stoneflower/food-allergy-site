@@ -126,7 +126,7 @@ const AllergySearchResults = () => {
     });
   };
 
-  // アレルギー情報を取得（選択されたアレルギーのみ）
+  // アレルギー情報を取得（商品のすべてのアレルギー情報を表示）
   const getContaminationInfo = (menuItem) => {
     console.log(`🔍 getContaminationInfo 呼び出し - 商品: ${menuItem.name}, selectedAllergies:`, selectedAllergies);
     
@@ -142,7 +142,16 @@ const AllergySearchResults = () => {
     console.log(`📊 商品 ${menuItem.name} のmatrix:`, matrix);
     
     if (matrix) {
-      selectedAllergies.forEach(allergyId => {
+      // すべてのアレルギーIDをチェック（selectedAllergiesに限定しない）
+      const allAllergyIds = Object.keys(matrix);
+      console.log(`🔍 商品 ${menuItem.name} の全アレルギーID:`, allAllergyIds);
+      console.log(`🔍 修正版コード実行中 - selectedAllergiesは使用しません`);
+      
+      // menu_nameを除外してアレルギーIDのみを処理
+      const allergyIdsOnly = allAllergyIds.filter(id => id !== 'menu_name');
+      console.log(`🔍 アレルギーIDのみ:`, allergyIdsOnly);
+      
+      allergyIdsOnly.forEach(allergyId => {
         const allergyValue = matrix[allergyId];
         console.log(`アレルギー確認 - 商品: ${menuItem.name}, アレルギー: ${allergyId}, 値: ${allergyValue}`);
         

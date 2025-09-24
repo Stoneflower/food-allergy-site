@@ -63,6 +63,10 @@
         "title": "香料含有設定",
         "description": "香料に含まれる成分を個別に管理。より詳細なアレルギー対応が可能です。"
       },
+      "heatStatus": {
+        "title": "写真アップ＆アレルギー項目の設定",
+        "description": "商品を写真でアップして、アレルギー項目（直接・香料・コンタミ・加熱）を商品単位で設定できます。"
+      },
       "favorites": {
         "title": "お気に入り機能",
         "description": "安心して利用できる商品や店舗をお気に入りに保存。"
@@ -78,6 +82,52 @@
     "bottomCta": {
       "title": "あなたも情報を共有してみませんか？",
       "button": "あなたも情報を共有してみませんか？"
+    },
+    "stepsSection": {
+      "title": "たった3ステップで情報共有",
+      "description": "商品の成分表示を撮影するだけで、アレルギー情報をみんなと共有できます",
+      "step1": {
+        "title": "1. 撮影",
+        "description": "商品パッケージの成分表示部分をスマホで撮影するだけ"
+      },
+      "step2": {
+        "title": "2. 確認",
+        "description": "AIが成分を解析。アレルギー情報を確認・修正できます"
+      },
+      "step3": {
+        "title": "3. 共有",
+        "description": "情報が共有され、同じアレルギーの方に役立ちます"
+      },
+      "uploadButton": "今すぐ商品を共有する"
+    },
+    "searchSection": {
+      "title": "共有された情報を探す",
+      "subtitle": "みんなが共有した商品やレストランの情報から安心できるものを見つけよう"
+    },
+    "categoryTitles": {
+      "restaurants": "みんなが共有したレストラン情報",
+      "products": "みんなが共有した商品情報",
+      "supermarkets": "アレルギー対応商品が豊富なスーパー",
+      "online": "アレルギー対応商品のオンラインショップ",
+      "recommendations": "あなたが安心して利用できる情報",
+      "latest": "みんなが共有した最新情報"
+    },
+    "noData": {
+      "title": "条件に合う情報が見つかりませんでした",
+      "description": "アレルギー条件やカテゴリーを調整するか、新しい商品情報を共有してみませんか？",
+      "shareButton": "商品情報を共有する"
+    },
+    "viewAll": "すべて見る",
+    "latestShared": "最近、共有された情報",
+    "community": {
+      "title": "みんなで作るアレルギー情報コミュニティ",
+      "sharedProducts": "共有された商品",
+      "activeUsers": "アクティブユーザー",
+      "allergies": "対応アレルギー",
+      "accuracy": "情報の正確性"
+    },
+    "features": {
+      "safeTogether": "みんなで安心"
     }
   },
   "upload": {
@@ -116,6 +166,14 @@
       "contamination": "コンタミネーション",
       "fragrance": "香料含有",
       "heatStatus": "加熱状況"
+    },
+    "messages": {
+      "maxImagesReached": "最大2枚まで選択できます。",
+      "maxImagesRemaining": "最大2枚まで選択できます。残り{{count}}枚まで追加できます。",
+      "imagesSelected": "{{count}}枚の写真が選択されました。",
+      "categoryFetchError": "商品カテゴリ取得エラー:",
+      "categoryFetchSuccess": "商品カテゴリ取得成功:",
+      "categoryFetchException": "商品カテゴリ取得例外エラー:"
     }
   },
   "search": {
@@ -126,7 +184,17 @@
     "allergyFilter": "アレルギーフィルター",
     "categoryFilter": "商品カテゴリー",
     "sourceFilter": "情報源別統計",
-    "searchButton": "検索"
+    "searchButton": "検索",
+    "messages": {
+      "categoryFetchError": "商品カテゴリ取得エラー:",
+      "categoryFetchSuccess": "商品カテゴリ取得成功:",
+      "categoryCount": "商品カテゴリ数:",
+      "categoryFetchException": "商品カテゴリ取得例外エラー:",
+      "categoryFilteringStart": "商品カテゴリフィルタリング開始",
+      "noCategorySelected": "カテゴリが選択されていないため、全アイテムを表示",
+      "categoryNotSet": "はカテゴリ未設定のため表示",
+      "alwaysDisplay": "は常に表示"
+    }
   },
   "login": {
     "title": "ログイン / 会員登録",
@@ -138,7 +206,42 @@
     "name": "お名前",
     "loginButton": "ログイン",
     "registerButton": "会員登録",
-    "agreement": "会員登録することで、利用規約およびプライバシーポリシーに同意したものとみなします。"
+    "agreement": "会員登録することで、利用規約およびプライバシーポリシーに同意したものとみなします。",
+    "pageTitle": {
+      "login": "ログイン",
+      "register": "無料会員登録"
+    },
+    "pageDescription": {
+      "login": "アカウントにログインしてください",
+      "register": "新しいアカウントを作成してください"
+    },
+    "form": {
+      "namePlaceholder": "山田太郎",
+      "emailPlaceholder": "example@email.com",
+      "passwordPlaceholder": "••••••••",
+      "confirmPasswordPlaceholder": "••••••••"
+    },
+    "buttons": {
+      "login": "ログイン",
+      "register": "仮登録（メールが届きます）",
+      "resendEmail": "確認メールを再送する",
+      "forgotPassword": "パスワードを忘れた方はこちら"
+    },
+    "messages": {
+      "emailRequired": "メールアドレスを入力してください",
+      "emailResent": "確認メールを再送しました。受信トレイをご確認ください。",
+      "resendFailed": "再送に失敗しました",
+      "loginSuccess": "ログインしました。マイページへ移動します...",
+      "fieldsRequired": "お名前・メール・パスワードを入力してください",
+      "passwordMinLength": "パスワードは6文字以上で入力してください",
+      "emailSent": "確認メールを送信しました。メール内のリンクで有効化してください。",
+      "errorOccurred": "エラーが発生しました"
+    },
+    "agreementText": "会員登録することで、",
+    "termsLink": "利用規約",
+    "privacyLink": "プライバシーポリシー",
+    "agreementSuffix": "に同意したものとみなします。",
+    "and": "と"
   },
   "contact": {
     "title": "お問合せ",
@@ -146,12 +249,108 @@
     "email": "メールアドレス",
     "message": "メッセージ",
     "submit": "送信",
-    "success": "お問合せを受け付けました。ありがとうございます。"
+    "success": "お問合せを受け付けました。ありがとうございます。",
+    "description": "表示に問題があったり、こういうふうにしてほしいなど、ありましたらお送りください。\nお礼のメールもモチベーションに繋がるので、絶賛受付中です。",
+    "form": {
+      "namePlaceholder": "山田 太郎",
+      "emailPlaceholder": "you@example.com",
+      "messagePlaceholder": "お問い合わせ内容をご記入ください"
+    },
+    "buttons": {
+      "submitting": "送信中...",
+      "submitted": "送信しました。ありがとうございます！",
+      "submit": "送信する"
+    },
+    "messages": {
+      "emailForwardFailed": "メール転送に失敗しました（Resend）:",
+      "submitError": "お問い合わせ送信エラー:",
+      "submitFailed": "送信に失敗しました。時間をおいて再度お試しください。"
+    }
   },
   "terms": {
     "title": "利用規約"
   },
   "privacy": {
     "title": "プライバシーポリシー"
+  },
+  "about": {
+    "title": "CanIEatOo? について",
+    "subtitle": "食べれる？",
+    "description": "「これ食べても大丈夫？」の家族のやり取りから生まれたサイトです。食物アレルギーをお持ちの方が、アレルギーを簡単に判断できて、少しでもよろこんでもらえらたらうれしいです",
+    "mission": {
+      "title": "私たちのミッション",
+      "description": "食物アレルギーをお持ちの方が外食時に感じる不安や疑問を解消し、「これ食べても大丈夫？」という質問に明確にお答えできる環境を提供することが私たちの使命です。",
+      "features": {
+        "questionSolving": {
+          "title": "疑問解決",
+          "description": "「これ食べても大丈夫？」という日常の疑問に、詳細なアレルギー情報で明確にお答えします"
+        },
+        "safety": {
+          "title": "安全保障",
+          "description": "厳格な基準でアレルギー情報を管理し、安心して外食を楽しめる環境を提供します"
+        },
+        "peaceOfMind": {
+          "title": "心の安心",
+          "description": "アレルギーをお持ちの方とそのご家族が、心から安心して食事を楽しめる社会を目指します"
+        }
+      }
+    },
+    "problems": {
+      "title": "こんな経験はありませんか？",
+      "diningAnxiety": {
+        "title": "外食時の不安",
+        "description": "「このメニュー、私のアレルギー成分は入ってる？」"
+      },
+      "lackOfInfo": {
+        "title": "情報不足",
+        "description": "「店員さんに聞いても詳しく分からない...」"
+      },
+      "limitedChoices": {
+        "title": "選択肢の限定",
+        "description": "「結局いつも同じお店ばかり...」"
+      }
+    },
+    "solutions": {
+      "title": "CanIEatOo?の解決策",
+      "detailedInfo": {
+        "title": "詳細なアレルギー情報",
+        "description": "28品目すべてのアレルギー情報を事前に確認できます"
+      },
+      "safeRestaurants": {
+        "title": "安心のレストラン選び",
+        "description": "アレルギー対応に積極的なお店だけを厳選掲載"
+      },
+      "newDiscoveries": {
+        "title": "新しい発見",
+        "description": "今まで知らなかった安全なお店との出会いを提供"
+      }
+    },
+    "features": {
+      "title": "サービスの特徴",
+      "fullSupport": {
+        "title": "28品目完全対応",
+        "description": "法定8品目と推奨20品目、全28品目のアレルギー情報に完全対応しています"
+      },
+      "curatedRestaurants": {
+        "title": "厳選されたレストラン",
+        "description": "アレルギー対応に真摯に取り組むレストランのみを厳選して掲載しています"
+      },
+      "realtimeUpdates": {
+        "title": "リアルタイム情報更新",
+        "description": "レストランと連携し、メニューやアレルギー情報をリアルタイムで更新しています"
+      }
+    },
+    "stats": {
+      "title": "サービス統計",
+      "restaurants": "掲載レストラン数",
+      "users": "登録ユーザー数",
+      "searches": "月間検索数",
+      "allergies": "対応アレルギー品目"
+    },
+    "cta": {
+      "title": "もう「食べても大丈夫？」で悩まない",
+      "description": "無料会員登録で、より詳細なアレルギー情報やお気に入り機能をご利用いただけます",
+      "button": "今すぐ無料登録して安心な食事を始める"
+    }
   }
 }

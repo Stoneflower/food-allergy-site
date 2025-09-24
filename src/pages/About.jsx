@@ -1,12 +1,14 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import SafeIcon from '../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
 
 const { FiShield, FiHeart, FiUsers, FiStar, FiTrendingUp, FiCheckCircle, FiHelpCircle } = FiIcons;
 
 const About = () => {
+  const { t } = useTranslation();
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
@@ -22,17 +24,16 @@ const About = () => {
               <span className="text-6xl">🤔</span>
               <div>
                 <h1 className="text-4xl md:text-6xl font-bold">
-                  CanIEatOo? について
+                  {t('about.title')}
                 </h1>
                 <p className="text-2xl md:text-3xl font-medium text-orange-200 mt-2">
-                  食べれる？
+                  {t('about.subtitle')}
                 </p>
               </div>
               <span className="text-6xl">✅</span>
             </div>
             <p className="text-xl md:text-2xl mb-8 opacity-90 max-w-4xl mx-auto">
-              「これ食べても大丈夫？」の家族のやり取りから生まれたサイトです。食物アレルギーをお持ちの方が、
-              アレルギーを簡単に判断できて、少しでもよろこんでもらえらたらうれしいです
+              {t('about.description')}
             </p>
           </motion.div>
         </div>
@@ -49,12 +50,11 @@ const About = () => {
           >
             <div className="flex items-center justify-center space-x-3 mb-6">
               <span className="text-4xl">💭</span>
-              <h2 className="text-3xl font-bold text-gray-900">私たちのミッション</h2>
+              <h2 className="text-3xl font-bold text-gray-900">{t('about.mission.title')}</h2>
               <span className="text-4xl">💡</span>
             </div>
             <p className="text-lg text-gray-600 max-w-4xl mx-auto">
-              食物アレルギーをお持ちの方が外食時に感じる不安や疑問を解消し、
-              「これ食べても大丈夫？」という質問に明確にお答えできる環境を提供することが私たちの使命です。
+              {t('about.mission.description')}
             </p>
           </motion.div>
 

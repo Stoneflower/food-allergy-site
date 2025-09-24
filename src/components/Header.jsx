@@ -204,7 +204,8 @@ const Header = () => {
             <LanguageSwitcher />
             {/* より目立つ投稿ボタン */}
             <Link
-              to="/upload"
+              to={isAuthed ? "/upload" : "/login"}
+              state={isAuthed ? undefined : { redirectTo: '/upload', message: 'upload_requires_login' }}
               className="relative group"
             >
               <div className="flex items-center space-x-2 bg-gradient-to-r from-yellow-400 to-orange-400 text-orange-900 px-6 py-3 rounded-xl font-bold hover:from-yellow-300 hover:to-orange-300 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105">
@@ -636,7 +637,8 @@ const Header = () => {
                 🏠 ホーム
               </Link>
               <Link
-                to="/upload"
+                to={isAuthed ? "/upload" : "/login"}
+                state={isAuthed ? undefined : { redirectTo: '/upload', message: 'upload_requires_login' }}
                 className="flex items-center space-x-3 px-4 py-3 text-orange-600 hover:bg-orange-50 rounded-lg font-semibold"
                 onClick={() => setIsMenuOpen(false)}
               >

@@ -12,6 +12,8 @@ const TranslationManager = () => {
     addManualTranslation,
     removeManualTranslation,
     clearCache,
+    clearPageCache,
+    clearExpiredCache,
     getManualTranslations,
     isLoading,
     translationStats
@@ -67,6 +69,20 @@ const TranslationManager = () => {
     }
   };
 
+  const handleClearPageCache = (pageName) => {
+    if (window.confirm(`${pageName}ページのキャッシュをクリアしますか？`)) {
+      const clearedCount = clearPageCache(pageName);
+      alert(`${clearedCount}件のキャッシュをクリアしました`);
+      setManualTranslations(getManualTranslations());
+    }
+  };
+
+  const handleClearExpiredCache = () => {
+    const clearedCount = clearExpiredCache();
+    alert(`${clearedCount}件の期限切れキャッシュをクリアしました`);
+    setManualTranslations(getManualTranslations());
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-lg p-6">
       <div className="flex items-center justify-between mb-6">
@@ -96,13 +112,22 @@ const TranslationManager = () => {
               </div>
             </div>
           )}
-          <button
-            onClick={handleClearCache}
-            className="px-3 py-1 bg-orange-500 text-white rounded text-sm hover:bg-orange-600 transition-colors"
-          >
-            <SafeIcon icon={FiRefreshCw} className="w-4 h-4 inline mr-1" />
-            キャッシュクリア
-          </button>
+          <div className="flex space-x-2">
+            <button
+              onClick={handleClearExpiredCache}
+              className="px-3 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600 transition-colors"
+            >
+              <SafeIcon icon={FiRefreshCw} className="w-4 h-4 inline mr-1" />
+              期限切れクリア
+            </button>
+            <button
+              onClick={handleClearCache}
+              className="px-3 py-1 bg-orange-500 text-white rounded text-sm hover:bg-orange-600 transition-colors"
+            >
+              <SafeIcon icon={FiRefreshCw} className="w-4 h-4 inline mr-1" />
+              全キャッシュクリア
+            </button>
+          </div>
         </div>
       </div>
 
@@ -134,6 +159,36 @@ const TranslationManager = () => {
           追加
         </button>
       </div>
+
+      {/* ページ別キャッシュ統計 */}
+      {translationStats.pageStats && Object.keys(translationStats.pageStats).length > 0 && (
+        <div className="mb-6 p-4 bg-blue-50 rounded-lg">
+          <h3 className="text-lg font-semibold mb-3">ページ別キャッシュ統計</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {Object.entries(translationStats.pageStats).map(([pageName, stats]) => (
+              <div key={pageName} className="bg-white p-3 rounded-lg border">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-medium text-gray-900 capitalize">{pageName}</h4>
+                  <button
+                    onClick={() => handleClearPageCache(pageName)}
+                    className="px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
+                  >
+                    クリア
+                  </button>
+                </div>
+                <div className="text-sm text-gray-600 space-y-1">
+                  <div>総数: {stats.count}件</div>
+                  <div className="flex items-center space-x-2">
+                    <span>有効: {stats.valid}件</span>
+                    <span className="text-red-500">期限切れ: {stats.expired}件</span>
+                  </div>
+                  <div className="text-xs text-gray-500">{stats.strategy}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* 手動翻訳一覧 */}
       <div className="space-y-3">

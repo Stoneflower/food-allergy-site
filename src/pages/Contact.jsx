@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
 
 const Contact = () => {
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
@@ -45,15 +47,15 @@ const Contact = () => {
           body: JSON.stringify({ name, email, message }),
         });
       } catch (err) {
-        console.warn('メール転送に失敗しました（Resend）:', err);
+        console.warn(t('contact.messages.emailForwardFailed'), err);
       }
       setDone(true);
       setName('');
       setEmail('');
       setMessage('');
     } catch (err) {
-      console.error('お問い合わせ送信エラー:', err);
-      alert('送信に失敗しました。時間をおいて再度お試しください。');
+      console.error(t('contact.messages.submitError'), err);
+      alert(t('contact.messages.submitFailed'));
     } finally {
       setSubmitting(false);
     }
@@ -62,46 +64,45 @@ const Contact = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-4">お問い合わせ</h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-4">{t('contact.title')}</h1>
         <p className="text-sm text-gray-700 mb-6 whitespace-pre-line">
-          表示に問題があったり、こういうふうにしてほしいなど、ありましたらお送りください。
-          お礼のメールもモチベーションに繋がるので、絶賛受付中です。
+          {t('contact.description')}
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4 bg-white rounded-xl shadow p-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">お名前</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('contact.name')}</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              placeholder="山田 太郎"
+              placeholder={t('contact.form.namePlaceholder')}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">メール</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('contact.email')}</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              placeholder="you@example.com"
+              placeholder={t('contact.form.emailPlaceholder')}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">本文</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('contact.message')}</label>
             <textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               required
               rows={6}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              placeholder="お問い合わせ内容をご記入ください"
+              placeholder={t('contact.form.messagePlaceholder')}
             />
           </div>
 
@@ -111,7 +112,7 @@ const Contact = () => {
               disabled={submitting}
               className={`w-full py-3 text-white font-semibold rounded-lg transition-colors ${submitting ? 'bg-gray-400' : 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600'}`}
             >
-              {submitting ? '送信中...' : (done ? '送信しました。ありがとうございます！' : '送信する')}
+              {submitting ? t('contact.buttons.submitting') : (done ? t('contact.buttons.submitted') : t('contact.buttons.submit'))}
             </button>
           </div>
         </form>

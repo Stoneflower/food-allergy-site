@@ -63,6 +63,10 @@
         "title": "Fragrance Content Settings",
         "description": "Manage fragrance ingredients individually. More detailed allergy management is possible."
       },
+      "heatStatus": {
+        "title": "Upload photos & set allergy items",
+        "description": "Upload product photos and set allergy items per product (direct, fragrance, contamination, heat)."
+      },
       "favorites": {
         "title": "Favorites Feature",
         "description": "Save safe products and stores to your favorites."
@@ -78,6 +82,52 @@
     "bottomCta": {
       "title": "Would you like to share information too?",
       "button": "Would you like to share information too?"
+    },
+    "stepsSection": {
+      "title": "Information sharing in just 3 steps",
+      "description": "Just take a photo of the ingredient list to share allergy information with everyone",
+      "step1": {
+        "title": "1. Photo",
+        "description": "Just take a photo of the ingredient list section with your smartphone"
+      },
+      "step2": {
+        "title": "2. Check",
+        "description": "AI analyzes ingredients. You can check and correct allergy information"
+      },
+      "step3": {
+        "title": "3. Share",
+        "description": "Information is shared and helps others with the same allergies"
+      },
+      "uploadButton": "Share products now"
+    },
+    "searchSection": {
+      "title": "Search shared information",
+      "subtitle": "Find safe options from product and restaurant information shared by everyone"
+    },
+    "categoryTitles": {
+      "restaurants": "Restaurant information shared by everyone",
+      "products": "Product information shared by everyone",
+      "supermarkets": "Supermarkets with rich allergy-friendly products",
+      "online": "Online shops for allergy-friendly products",
+      "recommendations": "Information you can safely use",
+      "latest": "Latest information shared by everyone"
+    },
+    "noData": {
+      "title": "No information matching your criteria was found",
+      "description": "Try adjusting your allergy conditions or categories, or share new product information.",
+      "shareButton": "Share product information"
+    },
+    "viewAll": "View all",
+    "latestShared": "Recently shared information",
+    "community": {
+      "title": "Allergy information community built together",
+      "sharedProducts": "Shared products",
+      "activeUsers": "Active users",
+      "allergies": "Supported allergies",
+      "accuracy": "Information accuracy"
+    },
+    "features": {
+      "safeTogether": "Safe together"
     }
   },
   "upload": {
@@ -116,6 +166,14 @@
       "contamination": "Contamination",
       "fragrance": "Fragrance Content",
       "heatStatus": "Heat Status"
+    },
+    "messages": {
+      "maxImagesReached": "You can select up to 2 images.",
+      "maxImagesRemaining": "You can select up to 2 images. You can add {{count}} more.",
+      "imagesSelected": "{{count}} photos have been selected.",
+      "categoryFetchError": "Product category fetch error:",
+      "categoryFetchSuccess": "Product category fetch success:",
+      "categoryFetchException": "Product category fetch exception error:"
     }
   },
   "search": {
@@ -126,7 +184,17 @@
     "allergyFilter": "Allergy Filter",
     "categoryFilter": "Product Category",
     "sourceFilter": "Source Statistics",
-    "searchButton": "Search"
+    "searchButton": "Search",
+    "messages": {
+      "categoryFetchError": "Product category fetch error:",
+      "categoryFetchSuccess": "Product category fetch success:",
+      "categoryCount": "Product category count:",
+      "categoryFetchException": "Product category fetch exception error:",
+      "categoryFilteringStart": "Product category filtering started",
+      "noCategorySelected": "No category selected, displaying all items",
+      "categoryNotSet": "is displayed because category is not set",
+      "alwaysDisplay": "is always displayed"
+    }
   },
   "login": {
     "title": "Login / Register",
@@ -138,7 +206,42 @@
     "name": "Name",
     "loginButton": "Login",
     "registerButton": "Register",
-    "agreement": "By registering, you agree to the Terms of Service and Privacy Policy."
+    "agreement": "By registering, you agree to the Terms of Service and Privacy Policy.",
+    "pageTitle": {
+      "login": "Login",
+      "register": "Free Registration"
+    },
+    "pageDescription": {
+      "login": "Please log in to your account",
+      "register": "Create a new account"
+    },
+    "form": {
+      "namePlaceholder": "John Doe",
+      "emailPlaceholder": "example@email.com",
+      "passwordPlaceholder": "••••••••",
+      "confirmPasswordPlaceholder": "••••••••"
+    },
+    "buttons": {
+      "login": "Login",
+      "register": "Register (Email will be sent)",
+      "resendEmail": "Resend confirmation email",
+      "forgotPassword": "Forgot your password?"
+    },
+    "messages": {
+      "emailRequired": "Please enter your email address",
+      "emailResent": "Confirmation email has been resent. Please check your inbox.",
+      "resendFailed": "Failed to resend",
+      "loginSuccess": "Logged in successfully. Redirecting to My Page...",
+      "fieldsRequired": "Please enter your name, email, and password",
+      "passwordMinLength": "Password must be at least 6 characters",
+      "emailSent": "Confirmation email has been sent. Please activate via the link in the email.",
+      "errorOccurred": "An error occurred"
+    },
+    "agreementText": "By registering, you agree to the ",
+    "termsLink": "Terms of Service",
+    "privacyLink": "Privacy Policy",
+    "agreementSuffix": ".",
+    "and": " and "
   },
   "contact": {
     "title": "Contact",
@@ -146,12 +249,108 @@
     "email": "Email Address",
     "message": "Message",
     "submit": "Submit",
-    "success": "Your inquiry has been received. Thank you."
+    "success": "Your inquiry has been received. Thank you.",
+    "description": "If you have any display issues or suggestions for improvements, please send them to us.\nThank you emails also boost our motivation, so we're always happy to receive them.",
+    "form": {
+      "namePlaceholder": "John Doe",
+      "emailPlaceholder": "you@example.com",
+      "messagePlaceholder": "Please enter your inquiry details"
+    },
+    "buttons": {
+      "submitting": "Sending...",
+      "submitted": "Sent successfully. Thank you!",
+      "submit": "Send"
+    },
+    "messages": {
+      "emailForwardFailed": "Email forwarding failed (Resend):",
+      "submitError": "Contact submission error:",
+      "submitFailed": "Failed to send. Please try again later."
+    }
   },
   "terms": {
     "title": "Terms of Service"
   },
   "privacy": {
     "title": "Privacy Policy"
+  },
+  "about": {
+    "title": "About CanIEatOo?",
+    "subtitle": "Can I eat it?",
+    "description": "This site was born from family conversations asking 'Is it safe to eat this?' We hope that people with food allergies can easily determine their allergies and feel a little happier.",
+    "mission": {
+      "title": "Our Mission",
+      "description": "Our mission is to eliminate the anxiety and doubts that people with food allergies feel when dining out, and to provide an environment where we can clearly answer the question 'Is it safe to eat this?'",
+      "features": {
+        "questionSolving": {
+          "title": "Question Solving",
+          "description": "We provide clear answers to daily questions like 'Is it safe to eat this?' with detailed allergy information"
+        },
+        "safety": {
+          "title": "Safety Assurance",
+          "description": "We manage allergy information with strict standards and provide an environment where you can enjoy dining out with peace of mind"
+        },
+        "peaceOfMind": {
+          "title": "Peace of Mind",
+          "description": "We aim to create a society where people with allergies and their families can enjoy meals with complete peace of mind"
+        }
+      }
+    },
+    "problems": {
+      "title": "Have you ever experienced this?",
+      "diningAnxiety": {
+        "title": "Dining Anxiety",
+        "description": "\"Does this menu contain my allergens?\""
+      },
+      "lackOfInfo": {
+        "title": "Lack of Information",
+        "description": "\"Even when I ask the staff, I don't get detailed information...\""
+      },
+      "limitedChoices": {
+        "title": "Limited Choices",
+        "description": "\"I end up going to the same restaurants all the time...\""
+      }
+    },
+    "solutions": {
+      "title": "CanIEatOo?'s Solutions",
+      "detailedInfo": {
+        "title": "Detailed Allergy Information",
+        "description": "You can check all 28 allergen categories in advance"
+      },
+      "safeRestaurants": {
+        "title": "Safe Restaurant Selection",
+        "description": "We carefully select and feature only restaurants that are proactive about allergy management"
+      },
+      "newDiscoveries": {
+        "title": "New Discoveries",
+        "description": "We provide opportunities to discover safe restaurants you never knew existed"
+      }
+    },
+    "features": {
+      "title": "Service Features",
+      "fullSupport": {
+        "title": "Complete 28-Item Support",
+        "description": "We fully support all 28 allergen categories: 8 mandatory and 20 recommended items"
+      },
+      "curatedRestaurants": {
+        "title": "Curated Restaurants",
+        "description": "We carefully select and feature only restaurants that sincerely work on allergy management"
+      },
+      "realtimeUpdates": {
+        "title": "Real-time Information Updates",
+        "description": "We work with restaurants to update menus and allergy information in real-time"
+      }
+    },
+    "stats": {
+      "title": "Service Statistics",
+      "restaurants": "Featured Restaurants",
+      "users": "Registered Users",
+      "searches": "Monthly Searches",
+      "allergies": "Supported Allergen Items"
+    },
+    "cta": {
+      "title": "No more worrying about 'Is it safe to eat?'",
+      "description": "With free registration, you can access more detailed allergy information and favorite features",
+      "button": "Start safe dining with free registration now"
+    }
   }
 }

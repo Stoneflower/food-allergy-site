@@ -49,12 +49,36 @@ const MyComponent = () => {
 };
 ```
 
-### **一括翻訳**
+### **ページ別キャッシュ戦略の使用**
+```jsx
+import { useAutoTranslation } from '../hooks/useAutoTranslation';
+
+const HomePage = () => {
+  const { t } = useAutoTranslation();
+  
+  // ページ別キャッシュ戦略を適用
+  const title = await t('home.hero.title', { pageName: 'home' });
+  // Homeページの翻訳は7日間キャッシュされます
+  
+  return <h1>{title}</h1>;
+};
+
+const SearchResultsPage = () => {
+  const { t } = useAutoTranslation();
+  
+  // 検索結果ページはキャッシュなし（即座に変更を反映）
+  const title = await t('search.results.title', { pageName: 'search-results' });
+  
+  return <h1>{title}</h1>;
+};
+```
+
+### **一括翻訳（ページ別キャッシュ戦略対応）**
 ```jsx
 const { translateBatch } = useAutoTranslation();
 
 const keys = ['home.hero.title', 'home.hero.description', 'header.menu.upload'];
-const translations = await translateBatch(keys);
+const translations = await translateBatch(keys, 'home'); // ページ名を指定
 ```
 
 ### **翻訳管理画面**
@@ -63,6 +87,50 @@ import TranslationManager from '../components/TranslationManager';
 
 // 管理画面に追加
 <TranslationManager />
+```
+
+## 📅 **ページ別キャッシュ戦略**
+
+### **設定されたキャッシュ戦略**
+```javascript
+const pageCacheStrategies = {
+  'home': { duration: 7 * 24 * 60 * 60 * 1000, description: '中頻度修正（商品名）: 7日キャッシュ' },
+  'login': { duration: 30 * 24 * 60 * 60 * 1000, description: '低頻度修正（成分表）: 30日キャッシュ' },
+  'upload': { duration: 7 * 24 * 60 * 60 * 1000, description: '中頻度修正（商品名）: 7日キャッシュ' },
+  'search-results': { duration: 0, description: '即時に変更をかけたい: キャッシュなし' },
+  'contact': { duration: 30 * 24 * 60 * 60 * 1000, description: '低頻度修正（成分表）: 30日キャッシュ' },
+  'about': { duration: 7 * 24 * 60 * 60 * 1000, description: '中頻度修正（商品名）: 7日キャッシュ' },
+  'default': { duration: 7 * 24 * 60 * 60 * 1000, description: 'デフォルト: 7日キャッシュ' }
+};
+```
+
+### **キャッシュ戦略の特徴**
+- **🏠 Homeページ**: 7日キャッシュ（商品名など中頻度修正）
+- **🔐 Loginページ**: 30日キャッシュ（低頻度修正）
+- **📤 Uploadページ**: 7日キャッシュ（商品名など中頻度修正）
+- **🔍 SearchResultsページ**: キャッシュなし（即座に変更を反映）
+- **📞 Contactページ**: 30日キャッシュ（低頻度修正）
+- **ℹ️ Aboutページ**: 7日キャッシュ（商品名など中頻度修正）
+
+### **ページ別キャッシュ管理**
+```javascript
+const { clearPageCache, clearExpiredCache } = useAutoTranslation();
+
+// 特定ページのキャッシュをクリア
+clearPageCache('home');
+
+// 期限切れキャッシュを一括クリア
+clearExpiredCache();
+```
+
+### **キャッシュ統計の確認**
+```javascript
+const { translationStats } = useAutoTranslation();
+console.log(translationStats.pageStats);
+// {
+//   'home': { count: 15, valid: 12, expired: 3, strategy: '中頻度修正（商品名）: 7日キャッシュ' },
+//   'search-results': { count: 8, valid: 0, expired: 8, strategy: '即時に変更をかけたい: キャッシュなし' }
+// }
 ```
 
 ## 🎯 **翻訳の優先度システム**

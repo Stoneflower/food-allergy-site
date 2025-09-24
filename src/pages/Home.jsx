@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
+import useAutoTranslation from '../hooks/useAutoTranslation';
 import RestaurantCard from '../components/RestaurantCard';
 import ProductCard from '../components/ProductCard';
 import CategoryFilter from '../components/CategoryFilter';
@@ -9,6 +10,7 @@ import QRScanner from '../components/QRScanner';
 import LocationFinder from '../components/LocationFinder';
 import FavoritesSection from '../components/FavoritesSection';
 import { useRestaurant } from '../context/RestaurantContext';
+import { supabase } from '../lib/supabase';
 import { PREFECTURES } from '../constants/prefectures';
 import SafeIcon from '../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
@@ -17,6 +19,12 @@ const { FiHeart, FiShield, FiStar, FiTrendingUp, FiHelpCircle, FiCamera, FiMapPi
 
 const Home = () => {
   const { t } = useTranslation();
+  const { t: autoT } = useAutoTranslation(); // ページ別キャッシュ戦略対応の翻訳フック
+  const [isAuthed, setIsAuthed] = useState(false);
+  
+  // 使用例: ページ別キャッシュ戦略を適用した翻訳
+  // const translatedText = await autoT('home.hero.title', { pageName: 'home' });
+  // これにより、Homeページの翻訳は7日間キャッシュされます
   const [showQRScanner, setShowQRScanner] = useState(false);
   const {
     getFilteredItems,
@@ -28,6 +36,22 @@ const Home = () => {
     favorites,
     allItemsData
   } = useRestaurant();
+
+  // 認証状態を監視
+  React.useEffect(() => {
+    let mounted = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (!mounted) return;
+      setIsAuthed(!!data?.session);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthed(!!session);
+    });
+    return () => {
+      mounted = false;
+      sub?.subscription?.unsubscribe?.();
+    };
+  }, []);
 
   const filteredItems = getFilteredItems();
   const filteredRestaurants = getFilteredRestaurants();
@@ -121,18 +145,18 @@ const Home = () => {
   const getCategoryTitle = () => {
     switch (selectedCategory) {
       case 'restaurants':
-        return 'みんなが共有したレストラン情報';
+        return t('home.categoryTitles.restaurants');
       case 'products':
-        return 'みんなが共有した商品情報';
+        return t('home.categoryTitles.products');
       case 'supermarkets':
-        return 'アレルギー対応商品が豊富なスーパー';
+        return t('home.categoryTitles.supermarkets');
       case 'online':
-        return 'アレルギー対応商品のオンラインショップ';
+        return t('home.categoryTitles.online');
       case 'all':
       default:
         return selectedAllergies.length > 0 
-          ? 'あなたが安心して利用できる情報' 
-          : 'みんなが共有した最新情報';
+          ? t('home.categoryTitles.recommendations')
+          : t('home.categoryTitles.latest');
     }
   };
 
@@ -185,7 +209,7 @@ const Home = () => {
                   <span className="text-yellow-300 drop-shadow-lg">CanIEatOo?</span>
                 </h1>
                 <p className="text-2xl md:text-3xl font-medium text-orange-200 drop-shadow-md">
-                  みんなで共有
+                  {t('common.appTagline')}
                 </p>
               </div>
               <span className="text-6xl md:text-8xl">🤝</span>
@@ -202,8 +226,8 @@ const Home = () => {
             {/* メインアクションボタン */}
             <div className="flex flex-col sm:flex-row justify-center gap-4 mb-8">
               <Link
-                to="/upload"
-                state={{ fromHome: true }}
+                to={isAuthed ? "/upload" : "/login"}
+                state={isAuthed ? { fromHome: true } : { redirectTo: '/upload', fromHome: true }}
                 className="flex items-center justify-center space-x-3 bg-white/95 backdrop-blur-sm text-orange-600 px-8 py-4 rounded-xl font-bold text-lg hover:bg-white transition-all shadow-lg"
               >
                 <SafeIcon icon={FiCamera} className="w-6 h-6" />
@@ -232,7 +256,7 @@ const Home = () => {
               </div>
               <div className="flex items-center space-x-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2">
                 <SafeIcon icon={FiUsers} className="w-6 h-6" />
-                <span className="text-lg font-semibold">みんなで安心</span>
+                <span className="text-lg font-semibold">{t('home.features.safeTogether')}</span>
               </div>
             </div>
           </motion.div>
@@ -249,10 +273,10 @@ const Home = () => {
             className="text-center mb-12"
           >
             <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              たった3ステップで情報共有
+              {t('home.stepsSection.title')}
             </h2>
             <p className="text-gray-600 text-lg">
-              商品の成分表示を撮影するだけで、アレルギー情報をみんなと共有できます
+              {t('home.stepsSection.description')}
             </p>
           </motion.div>
 
@@ -266,9 +290,9 @@ const Home = () => {
               <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-6">
                 <SafeIcon icon={FiCamera} className="w-10 h-10 text-orange-600" />
               </div>
-              <h3 className="text-xl font-semibold mb-3">1. 撮影</h3>
+              <h3 className="text-xl font-semibold mb-3">{t('home.stepsSection.step1.title')}</h3>
               <p className="text-gray-600">
-                商品パッケージの成分表示部分をスマホで撮影するだけ
+                {t('home.stepsSection.step1.description')}
               </p>
             </motion.div>
 
@@ -281,9 +305,9 @@ const Home = () => {
               <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
                 <SafeIcon icon={FiShield} className="w-10 h-10 text-red-600" />
               </div>
-              <h3 className="text-xl font-semibold mb-3">2. 確認</h3>
+              <h3 className="text-xl font-semibold mb-3">{t('home.stepsSection.step2.title')}</h3>
               <p className="text-gray-600">
-                AIが成分を解析。アレルギー情報を確認・修正できます
+                {t('home.stepsSection.step2.description')}
               </p>
             </motion.div>
 
@@ -296,9 +320,9 @@ const Home = () => {
               <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-6">
                 <SafeIcon icon={FiShare2} className="w-10 h-10 text-yellow-600" />
               </div>
-              <h3 className="text-xl font-semibold mb-3">3. 共有</h3>
+              <h3 className="text-xl font-semibold mb-3">{t('home.stepsSection.step3.title')}</h3>
               <p className="text-gray-600">
-                情報が共有され、同じアレルギーの方に役立ちます
+                {t('home.stepsSection.step3.description')}
               </p>
             </motion.div>
           </div>
@@ -310,7 +334,7 @@ const Home = () => {
               className="inline-flex items-center space-x-3 bg-gradient-to-r from-orange-500 to-red-500 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:from-orange-600 hover:to-red-600 transition-colors shadow-lg"
             >
               <SafeIcon icon={FiCamera} className="w-6 h-6" />
-              <span>今すぐ商品を共有する</span>
+              <span>{t('home.stepsSection.uploadButton')}</span>
             </Link>
           </div>
 
@@ -321,37 +345,40 @@ const Home = () => {
             transition={{ duration: 0.6 }}
             className="text-center mt-16"
           >
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">会員登録のメリット</h2>
-            <p className="text-gray-600 text-lg mb-8">あなたに合わせた詳細設定で、もっと安心・便利に。</p>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">{t('home.membership.title')}</h2>
+            <p className="text-gray-600 text-lg mb-8">{t('home.membership.description')}</p>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+              {/* 1) アップロード＆アレルギー設定（元: heatStatus） */}
+              <div className="bg-gray-50 rounded-xl p-6 border">
+                <div className="flex items-center space-x-3 mb-3">
+                  <span className="text-2xl">📸</span>
+                  <h3 className="text-xl font-semibold text-gray-900">{t('home.membership.heatStatus.title')}</h3>
+                </div>
+                <p className="text-gray-600 text-sm leading-relaxed">
+                  {t('home.membership.heatStatus.description')}
+                </p>
+              </div>
+
+              {/* 2) コンタミネーション設定 */}
               <div className="bg-gray-50 rounded-xl p-6 border">
                 <div className="flex items-center space-x-3 mb-3">
                   <span className="text-2xl">🧪</span>
-                  <h3 className="text-xl font-semibold text-gray-900">コンタミネーション設定</h3>
+                  <h3 className="text-xl font-semibold text-gray-900">{t('home.membership.contamination.title')}</h3>
                 </div>
                 <p className="text-gray-600 text-sm leading-relaxed">
-                  混入の可能性（trace）を個別に管理。微量NGなどの判断に役立ちます。
+                  {t('home.membership.contamination.description')}
                 </p>
               </div>
 
+              {/* 3) 香料指定 */}
               <div className="bg-gray-50 rounded-xl p-6 border">
                 <div className="flex items-center space-x-3 mb-3">
                   <span className="text-2xl">🌸</span>
-                  <h3 className="text-xl font-semibold text-gray-900">香料に含むを個別指定</h3>
+                  <h3 className="text-xl font-semibold text-gray-900">{t('home.membership.fragrance.title')}</h3>
                 </div>
                 <p className="text-gray-600 text-sm leading-relaxed">
-                  香料由来のアレルゲンをアイコンから簡単選択。未指定なら自動で none として扱います。
-                </p>
-              </div>
-
-              <div className="bg-gray-50 rounded-xl p-6 border">
-                <div className="flex items-center space-x-3 mb-3">
-                  <span className="text-2xl">🔥</span>
-                  <h3 className="text-xl font-semibold text-gray-900">加熱ステータスの詳細設定</h3>
-                </div>
-                <p className="text-gray-600 text-sm leading-relaxed">
-                  heated / none / uncertain / unused を商品単位で設定できます。
+                  {t('home.membership.fragrance.description')}
                 </p>
               </div>
             </div>
@@ -362,7 +389,7 @@ const Home = () => {
                 state={{ fromHome: true }}
                 className="inline-flex items-center space-x-3 px-8 py-4 rounded-xl font-semibold text-white bg-indigo-600 hover:bg-indigo-700 shadow"
               >
-                <span>無料で会員登録する</span>
+                <span>{t('home.membership.registerButton')}</span>
               </Link>
             </div>
           </motion.div>
@@ -381,12 +408,12 @@ const Home = () => {
             <div className="flex items-center justify-center space-x-3 mb-6">
               <span className="text-4xl">🔍</span>
               <h2 className="text-3xl font-bold text-gray-900">
-                共有された情報を探す
+                {t('home.searchSection.title')}
               </h2>
               <span className="text-4xl">📱</span>
             </div>
             <p className="text-gray-600">
-              みんなが共有した商品やレストランの情報から安心できるものを見つけよう
+              {t('home.searchSection.subtitle')}
             </p>
           </motion.div>
           <CategoryFilter />
@@ -413,7 +440,7 @@ const Home = () => {
                   to="/search"
                   className="text-orange-500 hover:text-orange-600 font-semibold flex items-center space-x-1"
                 >
-                  <span>すべて見る</span>
+                  <span>{t('home.viewAll')}</span>
                   <SafeIcon icon={FiTrendingUp} className="w-4 h-4" />
                 </Link>
               </div>
@@ -439,17 +466,17 @@ const Home = () => {
                     <SafeIcon icon={FiShield} className="w-12 h-12 text-gray-400" />
                   </div>
                   <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                    条件に合う情報が見つかりませんでした
+                    {t('home.noData.title')}
                   </h3>
                   <p className="text-gray-600 mb-4">
-                    アレルギー条件やカテゴリーを調整するか、新しい商品情報を共有してみませんか？
+                    {t('home.noData.description')}
                   </p>
                   <Link
                     to="/upload"
                     className="inline-flex items-center space-x-2 bg-orange-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-orange-600 transition-colors"
                   >
                     <SafeIcon icon={FiCamera} className="w-5 h-5" />
-                    <span>商品情報を共有する</span>
+                    <span>{t('home.noData.shareButton')}</span>
                   </Link>
                 </div>
               )}
@@ -469,7 +496,7 @@ const Home = () => {
             >
               {/* 最近、共有された情報（カテゴリごとに最新1件） */}
               <div className="text-center mb-8">
-                <h2 className="text-3xl font-bold text-gray-900">最近、共有された情報</h2>
+                <h2 className="text-3xl font-bold text-gray-900">{t('home.latestShared')}</h2>
               </div>
 
               {(() => {
@@ -500,10 +527,10 @@ const Home = () => {
                 );
 
                 const blocks = [
-                  { key: 'restaurants', title: 'レストラン', icon: '🍽️', item: latestRestaurant, className: '' },
-                  { key: 'products', title: 'テイクアウト', icon: '🥡', item: latestTakeout, className: 'hidden sm:block' },
-                  { key: 'supermarkets', title: 'スーパー', icon: '🏪', item: latestSuper, className: '' },
-                  { key: 'online', title: 'ネットショップ', icon: '🛒', item: latestOnline, className: 'hidden sm:block' },
+                  { key: 'restaurants', title: t('home.categoryTitles.restaurants'), icon: '🍽️', item: latestRestaurant, className: '' },
+                  { key: 'products', title: t('home.categoryTitles.products'), icon: '🥡', item: latestTakeout, className: 'hidden sm:block' },
+                  { key: 'supermarkets', title: t('home.categoryTitles.supermarkets'), icon: '🏪', item: latestSuper, className: '' },
+                  { key: 'online', title: t('home.categoryTitles.online'), icon: '🛒', item: latestOnline, className: 'hidden sm:block' },
                 ];
 
                 return (
@@ -539,25 +566,25 @@ const Home = () => {
             className="text-center"
           >
             <h2 className="text-3xl font-bold mb-12">
-              みんなで作るアレルギー情報コミュニティ
+              {t('home.community.title')}
             </h2>
             
             <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
               <div className="text-center">
                 <div className="text-4xl font-bold mb-2">2,500+</div>
-                <div className="text-orange-100">共有された商品</div>
+                <div className="text-orange-100">{t('home.community.sharedProducts')}</div>
               </div>
               <div className="text-center">
                 <div className="text-4xl font-bold mb-2">1,200+</div>
-                <div className="text-orange-100">アクティブユーザー</div>
+                <div className="text-orange-100">{t('home.community.activeUsers')}</div>
               </div>
               <div className="text-center">
                 <div className="text-4xl font-bold mb-2">28品目</div>
-                <div className="text-orange-100">対応アレルギー</div>
+                <div className="text-orange-100">{t('home.community.allergies')}</div>
               </div>
               <div className="text-center">
                 <div className="text-4xl font-bold mb-2">99%</div>
-                <div className="text-orange-100">情報の正確性</div>
+                <div className="text-orange-100">{t('home.community.accuracy')}</div>
               </div>
             </div>
 
@@ -568,7 +595,7 @@ const Home = () => {
                 className="inline-flex items-center space-x-3 bg-white text-orange-600 px-8 py-4 rounded-xl font-bold text-lg hover:bg-gray-100 transition-colors shadow-lg"
               >
                 <SafeIcon icon={FiCamera} className="w-6 h-6" />
-                <span>あなたも情報を共有してみませんか？</span>
+                <span>{t('home.bottomCta.button')}</span>
               </Link>
             </div>
           </motion.div>

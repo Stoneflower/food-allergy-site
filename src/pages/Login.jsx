@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import SafeIcon from '../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
 import { useRestaurant } from '../context/RestaurantContext';
@@ -9,6 +10,7 @@ import { supabase } from '../lib/supabase';
 const { FiMail, FiLock, FiUser, FiEye, FiEyeOff, FiCheck, FiInfo } = FiIcons;
 
 const Login = () => {
+  const { t } = useTranslation();
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [currentStep, setCurrentStep] = useState(1); // 登録は1ステップに統一
@@ -33,6 +35,13 @@ const Login = () => {
   const [submitting, setSubmitting] = useState(false);
   const [authError, setAuthError] = useState('');
   const [infoMessage, setInfoMessage] = useState('');
+  const redirectToAfterLogin = location.state?.redirectTo || null;
+  const prefillInfoMessage = location.state?.message === 'upload_requires_login'
+    ? t('login.messages.loginRequiredForUpload') || '投稿するにはログインが必要です'
+    : '';
+  React.useEffect(() => {
+    if (prefillInfoMessage) setInfoMessage(prefillInfoMessage);
+  }, []);
 
   // ページ遷移時に重要情報バーまでスクロール
   React.useEffect(() => {
@@ -56,7 +65,7 @@ const Login = () => {
       setInfoMessage('');
       const email = formData.email.trim();
       if (!email) {
-        setAuthError('メールアドレスを入力してください');
+        setAuthError(t('login.messages.emailRequired'));
         return;
       }
       const redirectTo = `${import.meta.env.VITE_SITE_URL || window.location.origin}/#/login`;
@@ -66,9 +75,9 @@ const Login = () => {
         options: { emailRedirectTo: redirectTo }
       });
       if (error) throw error;
-      setInfoMessage('確認メールを再送しました。受信トレイをご確認ください。');
+      setInfoMessage(t('login.messages.emailResent'));
     } catch (e) {
-      setAuthError(e?.message || '再送に失敗しました');
+      setAuthError(e?.message || t('login.messages.resendFailed'));
     }
   };
 
@@ -99,16 +108,16 @@ const Login = () => {
             .from('profiles')
             .upsert({ id: userId, name: metaName }, { onConflict: 'id' });
         }
-        setInfoMessage('ログインしました。マイページへ移動します...');
-        navigate('/mypage');
+        setInfoMessage(t('login.messages.loginSuccess'));
+        navigate(redirectToAfterLogin || '/mypage', { replace: true });
       } else {
         // 新規登録（メール確認）
         if (currentStep === 1) {
           if (!formData.name || !formData.email || !formData.password) {
-            throw new Error('お名前・メール・パスワードを入力してください');
+            throw new Error(t('login.messages.fieldsRequired'));
           }
           if (formData.password.length < 6) {
-            throw new Error('パスワードは6文字以上で入力してください');
+            throw new Error(t('login.messages.passwordMinLength'));
           }
           const redirectTo = `${import.meta.env.VITE_SITE_URL || window.location.origin}/#/login`;
           console.log('[Auth] signUp try');
@@ -128,11 +137,11 @@ const Login = () => {
           if (uid) {
             await supabase.from('profiles').upsert({ id: uid, name: formData.name || null }, { onConflict: 'id' });
           }
-          setInfoMessage('確認メールを送信しました。メール内のリンクで有効化してください。');
+          setInfoMessage(t('login.messages.emailSent'));
         }
       }
     } catch (err) {
-      setAuthError(err?.message || 'エラーが発生しました');
+      setAuthError(err?.message || t('login.messages.errorOccurred'));
       console.error('[Auth] submit error', err);
     } finally {
       setSubmitting(false);
@@ -201,10 +210,10 @@ const Login = () => {
             <span className="text-white font-bold text-2xl">🍦</span>
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            {isLogin ? 'ログイン' : '無料会員登録'}
+            {isLogin ? t('login.pageTitle.login') : t('login.pageTitle.register')}
           </h2>
           <p className="text-gray-600">
-            {isLogin ? 'アカウントにログインしてください' : '新しいアカウントを作成してください'}
+            {isLogin ? t('login.pageDescription.login') : t('login.pageDescription.register')}
           </p>
         </div>
 
@@ -219,7 +228,7 @@ const Login = () => {
                 isLogin ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              ログイン
+              {t('login.loginTab')}
             </button>
             <button
               onClick={() => setIsLogin(false)}
@@ -227,7 +236,7 @@ const Login = () => {
                 !isLogin ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              新規登録
+              {t('login.registerTab')}
             </button>
           </div>
         )}
@@ -240,7 +249,7 @@ const Login = () => {
               {!isLogin && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    お名前
+                    {t('login.name')}
                   </label>
                   <div className="relative">
                     <SafeIcon icon={FiUser} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -250,7 +259,7 @@ const Login = () => {
                       value={formData.name}
                       onChange={handleChange}
                       className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                      placeholder="山田太郎"
+                      placeholder={t('login.form.namePlaceholder')}
                       required={!isLogin}
                     />
                   </div>
@@ -260,7 +269,7 @@ const Login = () => {
               {/* Email Field */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  メールアドレス
+                  {t('login.email')}
                 </label>
                 <div className="relative">
                   <SafeIcon icon={FiMail} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -270,7 +279,7 @@ const Login = () => {
                     value={formData.email}
                     onChange={handleChange}
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                    placeholder="example@email.com"
+                    placeholder={t('login.form.emailPlaceholder')}
                     required
                   />
                 </div>
@@ -279,7 +288,7 @@ const Login = () => {
               {/* Password Field */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  パスワード
+                  {t('login.password')}
                 </label>
                 <div className="relative">
                   <SafeIcon icon={FiLock} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -289,7 +298,7 @@ const Login = () => {
                     value={formData.password}
                     onChange={handleChange}
                     className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                    placeholder="••••••••"
+                    placeholder={t('login.form.passwordPlaceholder')}
                     required
                   />
                   <button
@@ -306,7 +315,7 @@ const Login = () => {
               {!isLogin && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    パスワード（確認）
+                    {t('login.confirmPassword')}
                   </label>
                   <div className="relative">
                     <SafeIcon icon={FiLock} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -316,7 +325,7 @@ const Login = () => {
                       value={formData.confirmPassword}
                       onChange={handleChange}
                       className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                      placeholder="••••••••"
+                      placeholder={t('login.form.confirmPasswordPlaceholder')}
                       required={!isLogin}
                     />
                   </div>
@@ -325,9 +334,9 @@ const Login = () => {
                     <label className="flex items-start space-x-3">
                       <input type="checkbox" required className="mt-1 w-4 h-4 text-orange-600 rounded focus:ring-orange-500" />
                       <span className="text-sm text-gray-700">
-                        <a href="#/terms" className="text-orange-600 hover:text-orange-800 underline">利用規約</a> と
-                        <a href="#/privacy" className="text-orange-600 hover:text-orange-800 underline ml-1">プライバシーポリシー</a>
-                        に同意します
+                        <a href="#/terms" className="text-orange-600 hover:text-orange-800 underline">{t('login.termsLink')}</a> {t('login.and')}
+                        <a href="#/privacy" className="text-orange-600 hover:text-orange-800 underline ml-1">{t('login.privacyLink')}</a>
+                        {t('login.agreementSuffix')}
                       </span>
                     </label>
                   </div>
@@ -345,7 +354,7 @@ const Login = () => {
               whileTap={{ scale: 0.98 }}
               className={`w-full py-3 bg-orange-500 text-white font-semibold rounded-lg hover:bg-orange-600 transition-colors`}
             >
-              {isLogin ? 'ログイン' : '仮登録（メールが届きます）'}
+              {isLogin ? t('login.buttons.login') : t('login.buttons.register')}
             </motion.button>
           </div>
 
@@ -357,7 +366,7 @@ const Login = () => {
                 onClick={resendConfirmationEmail}
                 className="text-sm text-orange-600 hover:text-orange-800 underline"
               >
-                確認メールを再送する
+                {t('login.buttons.resendEmail')}
               </button>
             </div>
           )}
@@ -368,16 +377,16 @@ const Login = () => {
           <div className="mt-6 text-center space-y-2">
             {isLogin && (
               <a href="#" className="text-sm text-orange-600 hover:text-orange-800">
-                パスワードを忘れた方はこちら
+                {t('login.buttons.forgotPassword')}
               </a>
             )}
             {!isLogin && (
               <p className="text-xs text-gray-500">
-                会員登録することで、
-                <a href="#" className="text-orange-600 hover:text-orange-800">利用規約</a>
-                および
-                <a href="#" className="text-orange-600 hover:text-orange-800">プライバシーポリシー</a>
-                に同意したものとみなします。
+                {t('login.agreementText')}
+                <a href="#" className="text-orange-600 hover:text-orange-800">{t('login.termsLink')}</a>
+                {t('login.and')}
+                <a href="#" className="text-orange-600 hover:text-orange-800">{t('login.privacyLink')}</a>
+                {t('login.agreementSuffix')}
               </p>
             )}
           </div>

@@ -78,6 +78,10 @@ const ProductCard = ({ product }) => {
 
   const favoriteStatus = isFavorite(product.id, product.category);
 
+  // サムネイル画像が表示されているかどうかを判定
+  const hasThumbnailImage = product.image && 
+    product.image !== 'https://images.unsplash.com/photo-1551218808-94e220e084d2?w=800&q=70&auto=format';
+
   return (
     <>
       <motion.div
@@ -141,12 +145,16 @@ const ProductCard = ({ product }) => {
               <div className="text-right">
                 <div className="text-xl font-bold text-orange-600">{product.price}</div>
               </div>
-              <button
-                onClick={handleSourceClick}
-                className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
-              >
-                <SafeIcon icon={FiInfo} className="w-4 h-4" />
-              </button>
+              {/* サムネイル画像が表示されていない場合のみ情報源ボタンを表示 */}
+              {!hasThumbnailImage && (
+                <button
+                  onClick={handleSourceClick}
+                  className="p-2 text-gray-400 hover:text-blue-600 transition-colors bg-gray-50 hover:bg-blue-50 rounded-lg border border-gray-200 hover:border-blue-300"
+                  title="情報源詳細"
+                >
+                  <SafeIcon icon={FiInfo} className="w-4 h-4" />
+                </button>
+              )}
             </div>
           </div>
 

@@ -17,10 +17,11 @@ export const useAutoTranslation = () => {
     setTranslationStats(translationService.getTranslationStats());
   };
 
-  // 翻訳を取得（手動→自動のフォールバック）
+  // 翻訳を取得（手動→自動のフォールバック、ページ別キャッシュ戦略対応）
   const t = async (key, options = {}) => {
     const currentLanguage = i18n.language;
     const fallbackLanguage = i18n.options.fallbackLng || 'ja';
+    const pageName = options.pageName || 'default';
     
     // デフォルト言語の場合は翻訳不要
     if (currentLanguage === fallbackLanguage) {
@@ -32,7 +33,8 @@ export const useAutoTranslation = () => {
       const translation = await translationService.getTranslation(
         key, 
         currentLanguage, 
-        fallbackLanguage
+        fallbackLanguage,
+        pageName
       );
       updateStats();
       return translation;
@@ -44,8 +46,8 @@ export const useAutoTranslation = () => {
     }
   };
 
-  // 一括翻訳
-  const translateBatch = async (keys) => {
+  // 一括翻訳（ページ別キャッシュ戦略対応）
+  const translateBatch = async (keys, pageName = 'default') => {
     const currentLanguage = i18n.language;
     const fallbackLanguage = i18n.options.fallbackLng || 'ja';
     
@@ -58,7 +60,8 @@ export const useAutoTranslation = () => {
       const translations = await translationService.translateBatch(
         keys, 
         currentLanguage, 
-        fallbackLanguage
+        fallbackLanguage,
+        pageName
       );
       updateStats();
       return translations;
@@ -88,6 +91,20 @@ export const useAutoTranslation = () => {
     updateStats();
   };
 
+  // ページ別キャッシュをクリア
+  const clearPageCache = (pageName) => {
+    const clearedCount = translationService.clearPageCache(pageName);
+    updateStats();
+    return clearedCount;
+  };
+
+  // 期限切れキャッシュをクリア
+  const clearExpiredCache = () => {
+    const clearedCount = translationService.clearExpiredCache();
+    updateStats();
+    return clearedCount;
+  };
+
   // 手動翻訳一覧を取得
   const getManualTranslations = () => {
     return translationService.getManualTranslations();
@@ -103,6 +120,8 @@ export const useAutoTranslation = () => {
     addManualTranslation,
     removeManualTranslation,
     clearCache,
+    clearPageCache,
+    clearExpiredCache,
     getManualTranslations,
     isLoading,
     translationStats

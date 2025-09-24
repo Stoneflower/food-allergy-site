@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import AllergyFilter from '../components/AllergyFilter';
 import CategoryFilter from '../components/CategoryFilter';
 import RestaurantCard from '../components/RestaurantCard';
@@ -16,6 +17,7 @@ import { supabase } from '../lib/supabase';
 const { FiFilter, FiGrid, FiList, FiMapPin, FiStar, FiInfo, FiShield, FiUser, FiFileText, FiPlus, FiCamera } = FiIcons;
 
 const SearchResults = () => {
+  const { t } = useTranslation();
   const [showFilters, setShowFilters] = useState(true);
   const [viewMode, setViewMode] = useState('grid');
   const [sortBy, setSortBy] = useState('rating');
@@ -64,15 +66,15 @@ const SearchResults = () => {
           .order('sort_order');
         
         if (error) {
-          console.error('商品カテゴリ取得エラー:', error);
+          console.error(t('search.messages.categoryFetchError'), error);
           return;
         }
         
         setProductCategories(data || []);
-        console.log('商品カテゴリ取得成功:', data);
-        console.log('商品カテゴリ数:', data?.length || 0);
+        console.log(t('search.messages.categoryFetchSuccess'), data);
+        console.log(t('search.messages.categoryCount'), data?.length || 0);
       } catch (err) {
-        console.error('商品カテゴリ取得例外エラー:', err);
+        console.error(t('search.messages.categoryFetchException'), err);
       }
     };
 
@@ -111,13 +113,13 @@ const SearchResults = () => {
 
   // 商品カテゴリによるフィルタリング
   const categoryFilteredItems = React.useMemo(() => {
-    console.log('🔍 商品カテゴリフィルタリング開始');
+    console.log('🔍', t('search.messages.categoryFilteringStart'));
     console.log('🔍 selectedProductCategories:', selectedProductCategories);
     console.log('🔍 selectedProductCategories.length:', selectedProductCategories.length);
     console.log('🔍 searchFilteredItems:', searchFilteredItems);
     
     if (selectedProductCategories.length === 0) {
-      console.log('🔍 カテゴリが選択されていないため、全アイテムを表示');
+      console.log('🔍', t('search.messages.noCategorySelected'));
       return searchFilteredItems; // カテゴリが選択されていない場合は全て表示
     }
     
@@ -129,7 +131,7 @@ const SearchResults = () => {
         
         // product_category_idがnullまたはundefinedの場合は表示（CSVアップロードで未設定の場合）
         if (productCategoryId === null || productCategoryId === undefined) {
-          console.log(`商品 ${item.name} はカテゴリ未設定のため表示`);
+          console.log(`商品 ${item.name} ${t('search.messages.categoryNotSet')}`);
           return true;
         }
         
@@ -145,7 +147,7 @@ const SearchResults = () => {
         return isIncluded;
       }
       // 商品以外（レストラン等）は常に表示
-      console.log(`商品以外 ${item.name} は常に表示`);
+      console.log(`商品以外 ${item.name} ${t('search.messages.alwaysDisplay')}`);
       return true;
     });
     

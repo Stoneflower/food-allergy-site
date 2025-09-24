@@ -15,6 +15,10 @@ const SupermarketCard = ({ supermarket }) => {
     setShowSourceDetails(!showSourceDetails);
   };
 
+  // サムネイル画像が表示されているかどうかを判定
+  const hasThumbnailImage = supermarket.image && 
+    supermarket.image !== 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=800&q=70&auto=format';
+
   return (
     <motion.div
       whileHover={{ y: -5, shadow: "0 20px 25px -5px rgba(0,0,0,0.1)" }}
@@ -48,24 +52,31 @@ const SupermarketCard = ({ supermarket }) => {
           <h3 className="text-lg font-bold text-gray-900 line-clamp-2 flex-1">
             {supermarket.name}
           </h3>
-          <button
-            onClick={handleSourceClick}
-            className="ml-2 p-1 text-gray-400 hover:text-blue-600 transition-colors"
-          >
-            <SafeIcon icon={FiInfo} className="w-4 h-4" />
-          </button>
+          {/* サムネイル画像が表示されていない場合のみ情報源ボタンを表示 */}
+          {!hasThumbnailImage && (
+            <button
+              onClick={handleSourceClick}
+              className="ml-2 p-2 text-gray-400 hover:text-blue-600 transition-colors bg-gray-50 hover:bg-blue-50 rounded-lg border border-gray-200 hover:border-blue-300"
+              title="情報源詳細"
+            >
+              <SafeIcon icon={FiInfo} className="w-4 h-4" />
+            </button>
+          )}
         </div>
         
-        <div className="flex items-center space-x-4 text-sm text-gray-600 mb-3">
-          <div className="flex items-center space-x-1">
-            <SafeIcon icon={FiMapPin} className="w-4 h-4" />
-            <span>{supermarket.area}</span>
+        {/* サムネイル画像が表示されていない場合のみエリア情報を表示 */}
+        {!hasThumbnailImage && (
+          <div className="flex items-center space-x-4 text-sm text-gray-600 mb-3">
+            <div className="flex items-center space-x-1">
+              <SafeIcon icon={FiMapPin} className="w-4 h-4" />
+              <span>{supermarket.area}</span>
+            </div>
+            <div className="flex items-center space-x-1">
+              <SafeIcon icon={FiClock} className="w-4 h-4" />
+              <span>{supermarket.hours}</span>
+            </div>
           </div>
-          <div className="flex items-center space-x-1">
-            <SafeIcon icon={FiClock} className="w-4 h-4" />
-            <span>{supermarket.hours}</span>
-          </div>
-        </div>
+        )}
         
         <p className="text-sm text-gray-600 mb-3 line-clamp-2">
           {supermarket.description}

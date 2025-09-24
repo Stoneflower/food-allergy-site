@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import SafeIcon from '../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
 import { useRestaurant } from '../context/RestaurantContext';
@@ -12,6 +13,7 @@ import MultiImageUploader from '../components/MultiImageUploader';
 const { FiCamera, FiUpload, FiX, FiCheck, FiAlertCircle, FiEdit3, FiSave, FiImage, FiRefreshCw, FiTrendingUp } = FiIcons;
 
 const Upload = () => {
+  const { t } = useTranslation();
   const [step, setStep] = useState(1); // 1: 撮影/アップロード, 2: 情報確認, 3: 完了
   const [capturedImages, setCapturedImages] = useState([]); // 複数画像を管理
   const [isProcessing, setIsProcessing] = useState(false);
@@ -97,14 +99,14 @@ const Upload = () => {
           .order('sort_order');
         
         if (error) {
-          console.error('商品カテゴリ取得エラー:', error);
+          console.error(t('upload.messages.categoryFetchError'), error);
           return;
         }
         
         setProductCategories(data || []);
-        console.log('商品カテゴリ取得成功:', data);
+        console.log(t('upload.messages.categoryFetchSuccess'), data);
       } catch (err) {
-        console.error('商品カテゴリ取得例外エラー:', err);
+        console.error(t('upload.messages.categoryFetchException'), err);
       }
     };
 
@@ -136,10 +138,10 @@ const Upload = () => {
     if (totalCount > 2) {
       const availableSlots = 2 - currentCount;
       if (availableSlots <= 0) {
-        alert('最大2枚まで選択できます。');
+        alert(t('upload.messages.maxImagesReached'));
         return;
       }
-      alert(`最大2枚まで選択できます。残り${availableSlots}枚まで追加できます。`);
+      alert(t('upload.messages.maxImagesRemaining', { count: availableSlots }));
       files = files.slice(0, availableSlots);
     }
 
@@ -175,7 +177,7 @@ const Upload = () => {
     
     // 複数枚選択されたことをユーザーに通知
     if (files.length > 1) {
-      alert(`${files.length}枚の写真が選択されました。`);
+      alert(t('upload.messages.imagesSelected', { count: files.length }));
     }
   };
 

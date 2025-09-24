@@ -732,6 +732,17 @@ const Upload = () => {
                         return;
                       }
                       setStep(2);
+                      
+                      // 次のページに遷移後、撮影した画像を一番上に表示するようスクロール
+                      setTimeout(() => {
+                        const imageSection = document.querySelector('[data-testid="captured-images"]');
+                        if (imageSection) {
+                          imageSection.scrollIntoView({ 
+                            behavior: 'smooth', 
+                            block: 'start' 
+                          });
+                        }
+                      }, 100);
                     }}
                     className="px-4 sm:px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors whitespace-nowrap"
                   >
@@ -806,7 +817,7 @@ const Upload = () => {
 
             {/* 撮影画像 */}
             {capturedImages.length > 0 && (
-              <div className="bg-white rounded-xl shadow-lg p-6">
+              <div className="bg-white rounded-xl shadow-lg p-6" data-testid="captured-images">
                 <h3 className="text-lg font-semibold mb-4 flex items-center space-x-2">
                   <SafeIcon icon={FiImage} className="w-5 h-5" />
                   <span>撮影した画像 ({capturedImages.length}枚)</span>

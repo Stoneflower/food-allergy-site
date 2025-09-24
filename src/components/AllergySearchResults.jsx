@@ -476,7 +476,7 @@ const AllergySearchResults = ({ items }) => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="search-results">
       
 
       {/* 店舗リスト */}

@@ -43,6 +43,18 @@ const Header = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // 重要情報バーを表示するページのリスト
+  const showImportantNoticePages = [
+    '/upload',
+    '/search', 
+    '/login',
+    '/contact',
+    '/terms',
+    '/privacy'
+  ];
+
+  const shouldShowImportantNotice = showImportantNoticePages.includes(location.pathname);
+
   // 認証状態（Supabaseセッション）
   const [isAuthed, setIsAuthed] = useState(false);
   useEffect(() => {
@@ -73,6 +85,20 @@ const Header = () => {
     navigate('/search');
     setIsMenuOpen(false);
     setShowMobileSearch(false);
+    
+    // 検索結果ページに遷移後、店舗名・会社名が見える位置までスクロール
+    setTimeout(() => {
+      const resultsContainer = document.querySelector('[data-testid="search-results"]') || 
+                               document.querySelector('.space-y-6') ||
+                               document.querySelector('[class*="space-y"]');
+      
+      if (resultsContainer) {
+        resultsContainer.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start' 
+        });
+      }
+    }, 100);
   };
 
   const handleLogout = async () => {
@@ -108,17 +134,19 @@ const Header = () => {
 
   return (
     <>
-      {/* Important Notice Bar */}
-      <div className="bg-red-600 text-white text-sm py-2 border-b border-red-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-center items-center">
-          <div className="flex items-center space-x-2 text-center">
-            <SafeIcon icon={FiAlertTriangle} className="w-4 h-4 text-yellow-300 flex-shrink-0" />
-            <span className="font-medium">
-              （重要）情報は日々変わることがあるため、必ずお店に確認をお願いします
-            </span>
+      {/* Important Notice Bar - 特定のページでのみ表示 */}
+      {shouldShowImportantNotice && (
+        <div className="bg-red-600 text-white text-sm py-2 border-b border-red-700">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-center items-center">
+            <div className="flex items-center space-x-2 text-center">
+              <SafeIcon icon={FiAlertTriangle} className="w-4 h-4 text-yellow-300 flex-shrink-0" />
+              <span className="font-medium">
+                （重要）情報は日々変わることがあるため、必ずお店に確認をお願いします
+              </span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Top Bar */}
       <div className="bg-gradient-to-r from-orange-600 to-red-600 text-white text-sm py-3 relative z-[10001]">
@@ -155,7 +183,7 @@ const Header = () => {
               onClick={() => setShowMobileSearch(!showMobileSearch)}
               className="p-2 rounded-lg bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 transition-colors"
             >
-              <SafeIcon icon={FiSearch} className="w-6 h-6" />
+              <SafeIcon icon={showMobileSearch ? FiX : FiSearch} className="w-6 h-6" />
             </button>
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}

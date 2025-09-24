@@ -546,7 +546,7 @@ const AllergySearchResults = ({ items }) => {
                       }`}
                       onClick={(e) => e.stopPropagation()}
                     >
-                      アレルギー情報元
+                      アレルギー情報元URL
                     </a>
                   )}
                   {!(selectedCategory === 'supermarkets' || selectedCategory === 'online') && (
@@ -561,7 +561,7 @@ const AllergySearchResults = ({ items }) => {
                       }`}
                       onClick={(e) => e.stopPropagation()}
                     >
-                      エリア情報
+                      エリア情報URL
                     </a>
                   )}
                   {headerPreview && headerPreview.length > 0 && (

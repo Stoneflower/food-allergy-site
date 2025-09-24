@@ -16,6 +16,7 @@ import Family from './pages/Family';
 import MyPage from './pages/MyPage';
 import CsvConverter from './pages/CsvConverter';
 import AdminTools from './pages/AdminTools';
+import TranslationManagerPage from './pages/TranslationManagerPage';
 import ImageUploadDemo from './pages/ImageUploadDemo';
 import { RestaurantProvider } from './context/RestaurantContext';
 import Footer from './components/Footer';
@@ -41,6 +42,7 @@ function App() {
             <Route path="/pdf-processor" element={<IntegratedPDFProcessor />} />
             <Route path="/csv-converter" element={<CsvConverter />} />
             <Route path="/admin-tools" element={<AdminTools />} />
+            <Route path="/translation-manager" element={<TranslationManagerPage />} />
             <Route path="/image-upload-demo" element={<ImageUploadDemo />} />
             <Route path="/family" element={<Family />} />
             <Route path="/mypage" element={<MyPage />} />

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FiFileText, FiUpload, FiSettings, FiDatabase } from 'react-icons/fi';
+import { FiFileText, FiUpload, FiSettings, FiDatabase, FiGlobe } from 'react-icons/fi';
 
 const AdminTools = () => {
   const tools = [
@@ -25,6 +25,13 @@ const AdminTools = () => {
       path: '/database-admin',
       icon: FiDatabase,
       color: 'from-orange-500 to-red-500'
+    },
+    {
+      title: '翻訳管理システム',
+      description: 'DeepL API翻訳・手動翻訳・使用量監視',
+      path: '/translation-manager',
+      icon: FiGlobe,
+      color: 'from-purple-500 to-pink-500'
     },
     {
       title: 'システム設定',

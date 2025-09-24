@@ -53,10 +53,10 @@ const SupermarketCard = ({ supermarket }) => {
             {supermarket.name}
           </h3>
           {/* サムネイル画像が表示されていない場合のみ情報源ボタンを表示 */}
-          {!hasThumbnailImage && (
+          {(showSourceDetails || typeof window === 'undefined') && (
             <button
               onClick={handleSourceClick}
-              className={`ml-2 p-2 text-gray-400 hover:text-blue-600 transition-colors bg-gray-50 hover:bg-blue-50 rounded-lg border border-gray-200 hover:border-blue-300 ${!showSourceDetails ? 'hidden md:inline-flex' : ''}`}
+              className={`ml-2 p-2 text-gray-400 hover:text-blue-600 transition-colors bg-gray-50 hover:bg-blue-50 rounded-lg border border-gray-200 hover:border-blue-300 hidden md:inline-flex ${showSourceDetails ? '!inline-flex' : ''}`}
               title="情報源詳細"
             >
               <SafeIcon icon={FiInfo} className="w-4 h-4" />
@@ -65,8 +65,8 @@ const SupermarketCard = ({ supermarket }) => {
         </div>
         
         {/* サムネイル画像が表示されていない場合のみエリア情報を表示 */}
-        {!hasThumbnailImage && (
-          <div className={`flex items-center space-x-4 text-sm text-gray-600 mb-3 ${!showSourceDetails ? 'hidden md:flex' : ''}`}>
+        {(showSourceDetails || typeof window === 'undefined') && (
+          <div className={`flex items-center space-x-4 text-sm text-gray-600 mb-3 hidden md:flex ${showSourceDetails ? '!flex' : ''}`}>
             <div className="flex items-center space-x-1">
               <SafeIcon icon={FiMapPin} className="w-4 h-4" />
               <span>{supermarket.area}</span>

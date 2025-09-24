@@ -146,10 +146,12 @@ const ProductCard = ({ product }) => {
                 <div className="text-xl font-bold text-orange-600">{product.price}</div>
               </div>
               {/* サムネイル画像が表示されていない場合のみ情報源ボタンを表示 */}
-              {!hasThumbnailImage && (
+              {(
+                showSourceDetails || typeof window === 'undefined'
+              ) && (
                 <button
                   onClick={handleSourceClick}
-                  className={`p-2 text-gray-400 hover:text-blue-600 transition-colors bg-gray-50 hover:bg-blue-50 rounded-lg border border-gray-200 hover:border-blue-300 ${!showSourceDetails ? 'hidden md:inline-flex' : ''}`}
+                  className={`p-2 text-gray-400 hover:text-blue-600 transition-colors bg-gray-50 hover:bg-blue-50 rounded-lg border border-gray-200 hover:border-blue-300 hidden md:inline-flex ${showSourceDetails ? '!inline-flex' : ''}`}
                   title="情報源詳細"
                 >
                   <SafeIcon icon={FiInfo} className="w-4 h-4" />

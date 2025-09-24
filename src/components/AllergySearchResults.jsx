@@ -581,6 +581,40 @@ const AllergySearchResults = ({ items }) => {
                       </div>
                     );
                   })}
+                  {/* 商品名リストの一番下にリンクボタン（存在するURLのみ表示） */}
+                  {(() => {
+                    const buttons = [];
+                    const sourceUrl = store?.source?.url; // store_locations.source_url 相当
+                    const areaUrl = store?.store_list_url; // store_locations.store_list_url 相当
+                    if (sourceUrl) {
+                      buttons.push({ label: 'アレルギー情報元URL', href: sourceUrl, style: 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100' });
+                    }
+                    if (areaUrl) {
+                      buttons.push({ label: '店舗の位置情報URL', href: areaUrl, style: 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100' });
+                    }
+                    if (buttons.length === 0) {
+                      const firstItem = (safeProducts[0] || {});
+                      const imgs = Array.isArray(firstItem.image_urls) ? firstItem.image_urls.filter(u => typeof u === 'string' && /^https?:\/\//.test(u)) : [];
+                      if (imgs[0]) buttons.push({ label: '画像１', href: imgs[0], style: 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100' });
+                      if (imgs[1]) buttons.push({ label: '画像２', href: imgs[1], style: 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100' });
+                    }
+                    if (buttons.length === 0) return null;
+                    return (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {buttons.map((b, i) => (
+                          <a
+                            key={i}
+                            href={b.href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`px-3 py-1.5 text-xs rounded border ${b.style}`}
+                          >
+                            {b.label}
+                          </a>
+                        ))}
+                      </div>
+                    );
+                  })()}
                 </div>
               ) : (
                 <div className="text-center py-8 text-gray-500">

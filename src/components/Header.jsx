@@ -89,19 +89,13 @@ const Header = () => {
     setIsMenuOpen(false);
     setShowMobileSearch(false);
     
-    // 検索結果ページに遷移後、店舗名・会社名が見える位置までスクロール
+    // 検索結果ページに遷移後、「重要情報バー」が見える位置までスクロール（PC/スマホ共通）
     setTimeout(() => {
-      const resultsContainer = document.querySelector('[data-testid="search-results"]') || 
-                               document.querySelector('.space-y-6') ||
-                               document.querySelector('[class*="space-y"]');
-      
-      if (resultsContainer) {
-        resultsContainer.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'start' 
-        });
+      const noticeBar = document.querySelector('[data-testid="important-notice-bar"]');
+      if (noticeBar) {
+        noticeBar.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
-    }, 100);
+    }, 120);
   };
 
   const handleLogout = async () => {

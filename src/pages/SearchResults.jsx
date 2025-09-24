@@ -547,19 +547,13 @@ const SearchResults = () => {
                     
                     // ページリロードではなく、状態更新で検索を実行
                     console.log('検索実行完了 - selectedArea更新済み');
-                    // 検索結果が表示されたら、店舗名・会社名が見える位置までスクロール
+                    // PC版でも「重要情報バー」が見える位置までスクロール
                     setTimeout(() => {
-                      const resultsContainer = document.querySelector('[data-testid="search-results"]') || 
-                                               document.querySelector('.space-y-6') ||
-                                               document.querySelector('[class*="space-y"]');
-                      
-                      if (resultsContainer) {
-                        resultsContainer.scrollIntoView({ 
-                          behavior: 'smooth', 
-                          block: 'start' 
-                        });
+                      const noticeBar = document.querySelector('[data-testid="important-notice-bar"]');
+                      if (noticeBar) {
+                        noticeBar.scrollIntoView({ behavior: 'smooth', block: 'start' });
                       }
-                    }, 100);
+                    }, 120);
                   }}
                   className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 px-4 rounded-lg hover:from-orange-600 hover:to-red-600 transition-colors font-semibold"
                 >

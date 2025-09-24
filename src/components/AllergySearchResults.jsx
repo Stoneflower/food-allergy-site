@@ -390,34 +390,34 @@ const AllergySearchResults = ({ items }) => {
                       {expandedStores.has(store.name) ? '▼' : '▶'}
                     </span>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <a
-                      href={store.source?.url || '#'}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={`px-2 py-1 text-xs rounded transition-colors ${
-                        store.source?.url 
-                          ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' 
-                          : 'bg-gray-100 text-gray-500'
-                      }`}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      アレルギー情報元
-                    </a>
-                    <a
-                      href={store.store_list_url || `https://www.google.com/maps/search/${encodeURIComponent(store.name)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={`px-2 py-1 text-xs rounded transition-colors ${
-                        store.store_list_url 
-                          ? 'bg-green-100 text-green-700 hover:bg-green-200' 
-                          : 'bg-gray-100 text-gray-500'
-                      }`}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      エリア情報
-                    </a>
-                  </div>
+                <div className={`items-center space-x-2 ${expandedStores.has(store.name) ? 'flex' : 'hidden md:flex'}`}>
+                  <a
+                    href={store.source?.url || '#'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`px-2 py-1 text-xs rounded transition-colors ${
+                      store.source?.url 
+                        ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' 
+                        : 'bg-gray-100 text-gray-500'
+                    }`}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    アレルギー情報元
+                  </a>
+                  <a
+                    href={store.store_list_url || `https://www.google.com/maps/search/${encodeURIComponent(store.name)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`px-2 py-1 text-xs rounded transition-colors ${
+                      store.store_list_url 
+                        ? 'bg-green-100 text-green-700 hover:bg-green-200' 
+                        : 'bg-gray-100 text-gray-500'
+                    }`}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    エリア情報
+                  </a>
+                </div>
                 </div>
               </div>
 

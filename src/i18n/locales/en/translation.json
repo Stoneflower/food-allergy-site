@@ -21,7 +21,19 @@
       "settings": "Settings",
       "logout": "Logout",
       "uploadTooltip": "Just take a photo of the product package!"
+    },
+    "links": {
+      "contact": "Contact",
+      "about": "About CanIEatOo?",
+      "loginRegister": "Free Sign up / Login"
     }
+  },
+  "header.mobile": {
+    "categoryLabel": "Category",
+    "areaLabel": "Prefecture",
+    "allergyLabel": "Allergens contained",
+    "keywordLabel": "Search by product or restaurant name",
+    "clear": "Clear"
   },
   "footer": {
     "terms": "Terms of Service",

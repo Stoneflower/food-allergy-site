@@ -211,13 +211,13 @@ const Header = () => {
               to="/contact"
               className="hover:text-orange-200 transition-colors font-medium"
             >
-              お問合せ
+              {t('header.links.contact')}
             </Link>
             <Link
               to="/about"
               className="hover:text-orange-200 transition-colors font-medium"
             >
-              CanIEatOo?について
+              {t('header.links.about')}
             </Link>
             {isAuthed ? (
               <>
@@ -225,13 +225,13 @@ const Header = () => {
                   to="/mypage"
                   className="hover:text-orange-200 transition-colors font-medium"
                 >
-                  マイページ
+                  {t('header.menu.myPage')}
                 </Link>
                 <button
                   onClick={handleLogout}
                   className="hover:text-orange-200 transition-colors font-medium"
                 >
-                  ログアウト
+                  {t('header.menu.logout')}
                 </button>
               </>
             ) : (
@@ -239,7 +239,7 @@ const Header = () => {
                 to="/login"
                 className="hover:text-orange-200 transition-colors font-medium"
               >
-                無料会員登録・ログイン
+                {t('header.links.loginRegister')}
               </Link>
             )}
           </div>
@@ -425,7 +425,7 @@ const Header = () => {
                   className="h-12 px-4 bg-gradient-to-r from-orange-500 to-red-500 text-white font-semibold hover:from-orange-600 hover:to-red-600 transition-colors flex items-center space-x-2 whitespace-nowrap"
                 >
                   <SafeIcon icon={FiSearch} className="w-5 h-5" />
-                  <span>検索</span>
+                  <span>{t('header.searchButton')}</span>
                 </button>
               </div>
             </form>
@@ -448,7 +448,7 @@ const Header = () => {
               {/* Mobile Category Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  🏷️ カテゴリー
+                  🏷️ {t('header.mobile.categoryLabel')}
                 </label>
                 {/* 1列・5ボタン（「すべて」を含む） */}
                 <div className="grid grid-cols-1 gap-2">
@@ -475,7 +475,7 @@ const Header = () => {
               {/* Mobile Area Input */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  📍 県名
+                  📍 {t('header.mobile.areaLabel')}
                 </label>
                 <input
                   type="text"
@@ -491,7 +491,7 @@ const Header = () => {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-sm font-medium text-gray-700">
-                    ⚠️ 含まれるアレルギー成分
+                    ⚠️ {t('header.mobile.allergyLabel')}
                   </label>
                   {selectedAllergies.length > 0 && (
                     <button
@@ -499,7 +499,7 @@ const Header = () => {
                       onClick={clearAllergies}
                       className="text-red-600 hover:text-red-800 text-sm font-medium"
                     >
-                      クリア
+                      {t('header.mobile.clear')}
                     </button>
                   )}
                 </div>
@@ -581,7 +581,7 @@ const Header = () => {
               {/* Mobile Keyword Input */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  🔍 商品名、レストラン名で検索
+                  🔍 {t('header.mobile.keywordLabel')}
                 </label>
                 <div className="relative">
                   <SafeIcon icon={FiSearch} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -599,7 +599,7 @@ const Header = () => {
                 type="submit"
                 className="w-full py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white font-semibold rounded-lg hover:from-orange-600 hover:to-red-600 transition-colors"
               >
-                検索
+                {t('header.searchButton')}
               </button>
               {/* ガード: 下に他ページの要素が見えないよう全画面固定＋余白終端 */}
               <div className="pb-6" />

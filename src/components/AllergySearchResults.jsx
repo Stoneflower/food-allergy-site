@@ -606,6 +606,15 @@ const AllergySearchResults = ({ items }) => {
                         }
                         if (p1 && p2) break;
                       }
+                      // related_product で見つからなければ image_urls からもフォールバック
+                      if (!p1 || !p2) {
+                        for (const sp of safeProducts) {
+                          const imgs = Array.isArray(sp?.image_urls) ? sp.image_urls.filter(u => typeof u === 'string' && /^https?:\/\//.test(u)) : [];
+                          if (!p1 && imgs[0]) p1 = imgs[0];
+                          if (!p2 && imgs[1]) p2 = imgs[1];
+                          if (p1 && p2) break;
+                        }
+                      }
                       if (p1) buttons.push({ label: '画像１', href: p1, style: 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100' });
                       if (p2) buttons.push({ label: '画像２', href: p2, style: 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100' });
                     }

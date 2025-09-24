@@ -593,10 +593,21 @@ const AllergySearchResults = ({ items }) => {
                       buttons.push({ label: '店舗の位置情報URL', href: areaUrl, style: 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100' });
                     }
                     if (buttons.length === 0) {
-                      const firstItem = (safeProducts[0] || {});
-                      const imgs = Array.isArray(firstItem.image_urls) ? firstItem.image_urls.filter(u => typeof u === 'string' && /^https?:\/\//.test(u)) : [];
-                      if (imgs[0]) buttons.push({ label: '画像１', href: imgs[0], style: 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100' });
-                      if (imgs[1]) buttons.push({ label: '画像２', href: imgs[1], style: 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100' });
+                      // products.source_url / products.source_url2 に明示的にフォールバック
+                      let p1 = null;
+                      let p2 = null;
+                      for (const sp of safeProducts) {
+                        const rp = sp?.related_product || {};
+                        if (!p1 && typeof rp.source_url === 'string' && /^https?:\/\//.test(rp.source_url)) {
+                          p1 = rp.source_url;
+                        }
+                        if (!p2 && typeof rp.source_url2 === 'string' && /^https?:\/\//.test(rp.source_url2)) {
+                          p2 = rp.source_url2;
+                        }
+                        if (p1 && p2) break;
+                      }
+                      if (p1) buttons.push({ label: '画像１', href: p1, style: 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100' });
+                      if (p2) buttons.push({ label: '画像２', href: p2, style: 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100' });
                     }
                     if (buttons.length === 0) return null;
                     return (

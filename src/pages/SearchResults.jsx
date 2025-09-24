@@ -39,20 +39,26 @@ const SearchResults = () => {
   const { getFilteredItems, selectedAllergies, selectedFragranceForSearch, selectedTraceForSearch, searchKeyword, selectedArea, selectedCategory, setSelectedCategory, setSelectedArea, categories, allergyOptions } = useRestaurant();
   const location = useLocation();
 
-  // ページ遷移時に重要情報バーまでスクロール
+  // 遷移時スクロール制御（PCは重要情報バー／スマホは結果の直上）
   useEffect(() => {
-    // トップページから遷移した場合のみスクロール
-    if (location.state?.fromHome) {
-      setTimeout(() => {
+    const scrollToTarget = location.state?.scrollTo;
+    setTimeout(() => {
+      if (scrollToTarget === 'results') {
+        // スマホ: 会社名・店舗名リストが見える位置まで
+        const resultsContainer = document.querySelector('[data-testid="search-results"]') ||
+                                 document.querySelector('.space-y-6') ||
+                                 document.querySelector('[class*="space-y"]');
+        if (resultsContainer) {
+          resultsContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      } else {
+        // 既定（PC）: 重要情報バー
         const importantNotice = document.querySelector('[data-testid="important-notice-bar"]');
         if (importantNotice) {
-          importantNotice.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'start' 
-          });
+          importantNotice.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
-      }, 100);
-    }
+      }
+    }, 120);
   }, [location]);
 
   // 商品カテゴリを取得
@@ -547,13 +553,23 @@ const SearchResults = () => {
                     
                     // ページリロードではなく、状態更新で検索を実行
                     console.log('検索実行完了 - selectedArea更新済み');
-                    // PC版でも「重要情報バー」が見える位置までスクロール
+                    // 実行後スクロール: デバイス幅で分岐
                     setTimeout(() => {
-                      const noticeBar = document.querySelector('[data-testid="important-notice-bar"]');
-                      if (noticeBar) {
-                        noticeBar.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+                      if (isMobile) {
+                        const resultsContainer = document.querySelector('[data-testid="search-results"]') ||
+                                                 document.querySelector('.space-y-6') ||
+                                                 document.querySelector('[class*="space-y"]');
+                        if (resultsContainer) {
+                          resultsContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                      } else {
+                        const noticeBar = document.querySelector('[data-testid="important-notice-bar"]');
+                        if (noticeBar) {
+                          noticeBar.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
                       }
-                    }, 120);
+                    }, 140);
                   }}
                   className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 px-4 rounded-lg hover:from-orange-600 hover:to-red-600 transition-colors font-semibold"
                 >

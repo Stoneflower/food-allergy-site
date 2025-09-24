@@ -85,17 +85,12 @@ const Header = () => {
   const handleSearch = (e) => {
     e.preventDefault();
     executeSearch(); // 検索実行
-    navigate('/search');
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    navigate('/search', { state: { scrollTo: isMobile ? 'results' : 'notice' } });
     setIsMenuOpen(false);
     setShowMobileSearch(false);
     
-    // 検索結果ページに遷移後、「重要情報バー」が見える位置までスクロール（PC/スマホ共通）
-    setTimeout(() => {
-      const noticeBar = document.querySelector('[data-testid="important-notice-bar"]');
-      if (noticeBar) {
-        noticeBar.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }, 120);
+    // 検索結果ページに遷移後のスクロールは遷移先で処理
   };
 
   const handleLogout = async () => {

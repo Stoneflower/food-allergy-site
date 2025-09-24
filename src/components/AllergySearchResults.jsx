@@ -392,49 +392,43 @@ const AllergySearchResults = ({ items }) => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <h3 className="text-base font-medium text-gray-800">{store.name}</h3>
-                    <span className="text-xs text-gray-500">
-                      ({allProducts.length}件)
-                    </span>
-                    <span className="text-xs text-gray-400">
-                      {expandedStores.has(store.name) ? '▼' : '▶'}
-                    </span>
+                    <span className="text-xs text-gray-500">({allProducts.length}件)</span>
                   </div>
-                {(expandedStores.has(store.name) || !isMobile) && (
-                <div className={`items-center space-x-2 ${expandedStores.has(store.name) ? 'flex' : 'hidden md:flex'}`}>
-                  <a
-                    href={store.source?.url || '#'}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`px-2 py-1 text-xs rounded transition-colors ${
-                      store.source?.url 
-                        ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' 
-                        : 'bg-gray-100 text-gray-500'
-                    }`}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    アレルギー情報元
-                  </a>
-                  <a
-                    href={store.store_list_url || `https://www.google.com/maps/search/${encodeURIComponent(store.name)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`px-2 py-1 text-xs rounded transition-colors ${
-                      store.store_list_url 
-                        ? 'bg-green-100 text-green-700 hover:bg-green-200' 
-                        : 'bg-gray-100 text-gray-500'
-                    }`}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    エリア情報
-                  </a>
-                </div>
-                )}
+                  <div className="text-xs text-gray-500">
+                    {expandedStores.has(store.name) ? '閉じる' : '開く'} {expandedStores.has(store.name) ? '▼' : '▶'}
+                  </div>
                 </div>
               </div>
 
               {/* 商品リスト */}
               {expandedStores.has(store.name) && (
                 <div className="p-2">
+                  {/* 展開時の上部ボタン（アップロード由来の商品のみ非表示） */}
+                  {(() => {
+                    const first = (allProducts[0] || {});
+                    const hasThumbnail = Array.isArray(first.image_urls) && first.image_urls.length > 0;
+                    if (hasThumbnail) return null;
+                    return (
+                      <div className="flex items-center justify-end gap-2 mb-2">
+                        <a
+                          href={store.source?.url || '#'}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={`px-3 py-1.5 text-xs rounded border ${store.source?.url ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100' : 'bg-gray-50 text-gray-400 border-gray-200'}`}
+                        >
+                          アレルギー情報元URL
+                        </a>
+                        <a
+                          href={store.store_list_url || `https://www.google.com/maps/search/${encodeURIComponent(store.name)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={`px-3 py-1.5 text-xs rounded border ${store.store_list_url ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100' : 'bg-gray-50 text-gray-400 border-gray-200'}`}
+                        >
+                          エリア情報URL
+                        </a>
+                      </div>
+                    );
+                  })()}
                   {allProducts.length > 0 ? (
                     <div className="space-y-1">
                     {allProducts.map((product, productIndex) => {

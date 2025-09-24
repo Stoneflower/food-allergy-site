@@ -136,7 +136,7 @@ const Header = () => {
     <>
       {/* Important Notice Bar - 特定のページでのみ表示 */}
       {shouldShowImportantNotice && (
-        <div className="bg-red-600 text-white text-sm py-2 border-b border-red-700">
+        <div className="bg-red-600 text-white text-sm py-2 border-b border-red-700" data-testid="important-notice-bar">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-center items-center">
             <div className="flex items-center space-x-2 text-center">
               <SafeIcon icon={FiAlertTriangle} className="w-4 h-4 text-yellow-300 flex-shrink-0" />

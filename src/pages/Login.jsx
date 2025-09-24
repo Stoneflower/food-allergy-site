@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import SafeIcon from '../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
@@ -28,10 +28,27 @@ const Login = () => {
 
   const { allergyOptions } = useRestaurant();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [submitting, setSubmitting] = useState(false);
   const [authError, setAuthError] = useState('');
   const [infoMessage, setInfoMessage] = useState('');
+
+  // ページ遷移時に重要情報バーまでスクロール
+  React.useEffect(() => {
+    // トップページから遷移した場合のみスクロール
+    if (location.state?.fromHome) {
+      setTimeout(() => {
+        const importantNotice = document.querySelector('[data-testid="important-notice-bar"]');
+        if (importantNotice) {
+          importantNotice.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start' 
+          });
+        }
+      }, 100);
+    }
+  }, [location]);
 
   const resendConfirmationEmail = async () => {
     try {

@@ -1,6 +1,24 @@
 import React from 'react';
+import { useLocation } from 'react-router-dom';
 
 const Privacy = () => {
+  const location = useLocation();
+
+  // ページ遷移時に重要情報バーまでスクロール
+  React.useEffect(() => {
+    // トップページから遷移した場合のみスクロール
+    if (location.state?.fromHome) {
+      setTimeout(() => {
+        const importantNotice = document.querySelector('[data-testid="important-notice-bar"]');
+        if (importantNotice) {
+          importantNotice.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start' 
+          });
+        }
+      }, 100);
+    }
+  }, [location]);
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">

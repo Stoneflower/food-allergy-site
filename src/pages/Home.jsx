@@ -203,6 +203,7 @@ const Home = () => {
             <div className="flex flex-col sm:flex-row justify-center gap-4 mb-8">
               <Link
                 to="/upload"
+                state={{ fromHome: true }}
                 className="flex items-center justify-center space-x-3 bg-white/95 backdrop-blur-sm text-orange-600 px-8 py-4 rounded-xl font-bold text-lg hover:bg-white transition-all shadow-lg"
               >
                 <SafeIcon icon={FiCamera} className="w-6 h-6" />
@@ -211,6 +212,7 @@ const Home = () => {
               
               <Link
                 to="/search"
+                state={{ fromHome: true }}
                 className="flex items-center justify-center space-x-3 bg-orange-500/80 backdrop-blur-sm border-2 border-white/50 px-8 py-4 rounded-xl font-bold text-lg hover:bg-orange-500/90 transition-all"
               >
                 <SafeIcon icon={FiStar} className="w-6 h-6" />
@@ -304,6 +306,7 @@ const Home = () => {
           <div className="text-center mt-12">
             <Link
               to="/upload"
+              state={{ fromHome: true }}
               className="inline-flex items-center space-x-3 bg-gradient-to-r from-orange-500 to-red-500 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:from-orange-600 hover:to-red-600 transition-colors shadow-lg"
             >
               <SafeIcon icon={FiCamera} className="w-6 h-6" />
@@ -356,6 +359,7 @@ const Home = () => {
             <div className="text-center mt-10">
               <Link
                 to="/login"
+                state={{ fromHome: true }}
                 className="inline-flex items-center space-x-3 px-8 py-4 rounded-xl font-semibold text-white bg-indigo-600 hover:bg-indigo-700 shadow"
               >
                 <span>無料で会員登録する</span>
@@ -560,6 +564,7 @@ const Home = () => {
             <div className="mt-12">
               <Link
                 to="/upload"
+                state={{ fromHome: true }}
                 className="inline-flex items-center space-x-3 bg-white text-orange-600 px-8 py-4 rounded-xl font-bold text-lg hover:bg-gray-100 transition-colors shadow-lg"
               >
                 <SafeIcon icon={FiCamera} className="w-6 h-6" />

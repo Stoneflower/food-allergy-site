@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 
 const Contact = () => {
@@ -8,6 +9,23 @@ const Contact = () => {
 
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const location = useLocation();
+
+  // ページ遷移時に重要情報バーまでスクロール
+  React.useEffect(() => {
+    // トップページから遷移した場合のみスクロール
+    if (location.state?.fromHome) {
+      setTimeout(() => {
+        const importantNotice = document.querySelector('[data-testid="important-notice-bar"]');
+        if (importantNotice) {
+          importantNotice.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start' 
+          });
+        }
+      }, 100);
+    }
+  }, [location]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

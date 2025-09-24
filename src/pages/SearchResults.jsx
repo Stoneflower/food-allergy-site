@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import AllergyFilter from '../components/AllergyFilter';
 import CategoryFilter from '../components/CategoryFilter';
@@ -35,6 +35,23 @@ const SearchResults = () => {
   });
 
   const { getFilteredItems, selectedAllergies, selectedFragranceForSearch, selectedTraceForSearch, searchKeyword, selectedArea, selectedCategory, setSelectedCategory, setSelectedArea, categories, allergyOptions } = useRestaurant();
+  const location = useLocation();
+
+  // ページ遷移時に重要情報バーまでスクロール
+  useEffect(() => {
+    // トップページから遷移した場合のみスクロール
+    if (location.state?.fromHome) {
+      setTimeout(() => {
+        const importantNotice = document.querySelector('[data-testid="important-notice-bar"]');
+        if (importantNotice) {
+          importantNotice.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start' 
+          });
+        }
+      }, 100);
+    }
+  }, [location]);
 
   // 商品カテゴリを取得
   useEffect(() => {

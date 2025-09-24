@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useLocation } from 'react-router-dom';
 import SafeIcon from '../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
 import { useRestaurant } from '../context/RestaurantContext';
@@ -46,6 +47,23 @@ const Upload = () => {
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
   const { allergyOptions } = useRestaurant();
+  const location = useLocation();
+
+  // ページ遷移時に重要情報バーまでスクロール
+  useEffect(() => {
+    // トップページから遷移した場合のみスクロール
+    if (location.state?.fromHome) {
+      setTimeout(() => {
+        const importantNotice = document.querySelector('[data-testid="important-notice-bar"]');
+        if (importantNotice) {
+          importantNotice.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start' 
+          });
+        }
+      }, 100);
+    }
+  }, [location]);
   
   // アレルギーIDを文字列から整数に変換する関数
   const convertAllergyIdToInt = async (allergyIdString) => {

@@ -22,22 +22,25 @@ const AllergySearchResults = ({ items }) => {
   const [expandedStores, setExpandedStores] = useState(new Set());
   const storeRefs = React.useRef({});
   const [isMobile, setIsMobile] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(100); // 仮想化: 最初は100件
 
   // エリア情報URLを取得する関数
   const getAreaInfoUrl = (store) => {
-    console.log('getAreaInfoUrl - store:', store);
-    console.log('getAreaInfoUrl - store.store_list_url:', store.store_list_url);
-    console.log('getAreaInfoUrl - store.store_list_urlの型:', typeof store.store_list_url);
-    console.log('getAreaInfoUrl - store.store_list_urlが空かどうか:', !store.store_list_url);
+    if (import.meta?.env?.DEV) {
+      console.log('getAreaInfoUrl - store:', store);
+      console.log('getAreaInfoUrl - store.store_list_url:', store.store_list_url);
+      console.log('getAreaInfoUrl - store.store_list_urlの型:', typeof store.store_list_url);
+      console.log('getAreaInfoUrl - store.store_list_urlが空かどうか:', !store.store_list_url);
+    }
     
     // 直接のstore_list_urlを確認
     if (store.store_list_url && store.store_list_url.trim() !== '') {
-      console.log('getAreaInfoUrl - 直接のstore_list_urlを使用:', store.store_list_url);
+      if (import.meta?.env?.DEV) console.log('getAreaInfoUrl - 直接のstore_list_urlを使用:', store.store_list_url);
       return store.store_list_url;
     }
     
     // フォールバック: Google Maps検索
-    console.log('getAreaInfoUrl - Google Maps検索にフォールバック');
+    if (import.meta?.env?.DEV) console.log('getAreaInfoUrl - Google Maps検索にフォールバック');
     return `https://www.google.com/maps/search/${encodeURIComponent(store.name)}`;
   };
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -55,11 +58,22 @@ const AllergySearchResults = ({ items }) => {
     const handleScroll = () => {
       const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
       setShowScrollTop(scrollTop > 300); // 300px以上スクロールしたら表示
+
+      // 末尾付近で追加読み込み
+      const nearBottom = (window.innerHeight + scrollTop) >= (document.body.offsetHeight - 800);
+      if (nearBottom) {
+        setVisibleCount(prev => Math.min(prev + 100, groupedStores.length));
+      }
     };
 
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // フィルタ結果が変わったら可視件数を初期化
+  useEffect(() => {
+    setVisibleCount(100);
+  }, [filteredItems]);
 
   // トップに戻る関数
   const scrollToTop = () => {
@@ -70,23 +84,27 @@ const AllergySearchResults = ({ items }) => {
   };
   
   // デバッグ用ログ
-  console.log('AllergySearchResults - filteredItems:', filteredItems);
-  console.log('AllergySearchResults - filteredItems products count:', filteredItems.filter(item => item.category === 'products').length);
-  console.log('AllergySearchResults - filteredItems restaurants count:', filteredItems.filter(item => item.category === 'restaurants').length);
-  console.log('AllergySearchResults - selectedAllergies:', selectedAllergies);
-  console.log('AllergySearchResults - allergyOptions:', allergyOptions);
+  if (import.meta?.env?.DEV) {
+    console.log('AllergySearchResults - filteredItems:', filteredItems);
+    console.log('AllergySearchResults - filteredItems products count:', filteredItems.filter(item => item.category === 'products').length);
+    console.log('AllergySearchResults - filteredItems restaurants count:', filteredItems.filter(item => item.category === 'restaurants').length);
+    console.log('AllergySearchResults - selectedAllergies:', selectedAllergies);
+    console.log('AllergySearchResults - allergyOptions:', allergyOptions);
+  }
 
   // 店舗の展開/折りたたみ機能
   const toggleStoreExpansion = (storeName) => {
-    console.log('toggleStoreExpansion called for:', storeName);
-    console.log('current expandedStores:', expandedStores);
+    if (import.meta?.env?.DEV) {
+      console.log('toggleStoreExpansion called for:', storeName);
+      console.log('current expandedStores:', expandedStores);
+    }
     const newExpandedStores = new Set(expandedStores);
     if (newExpandedStores.has(storeName)) {
       newExpandedStores.delete(storeName);
-      console.log('closing store:', storeName);
+      if (import.meta?.env?.DEV) console.log('closing store:', storeName);
     } else {
       newExpandedStores.add(storeName);
-      console.log('opening store:', storeName);
+      if (import.meta?.env?.DEV) console.log('opening store:', storeName);
       // スマホ時は会社名（ヘッダー）へスムーズスクロール
       if (typeof window !== 'undefined' && window.innerWidth < 768) {
         setTimeout(() => {
@@ -97,7 +115,7 @@ const AllergySearchResults = ({ items }) => {
         }, 0);
       }
     }
-    console.log('new expandedStores:', newExpandedStores);
+    if (import.meta?.env?.DEV) console.log('new expandedStores:', newExpandedStores);
     setExpandedStores(newExpandedStores);
   };
 
@@ -109,7 +127,7 @@ const AllergySearchResults = ({ items }) => {
 
     return store.menu_items.filter(menuItem => {
       if (!menuItem.product_allergies_matrix || !Array.isArray(menuItem.product_allergies_matrix) || menuItem.product_allergies_matrix.length === 0) {
-        console.log(`商品 ${menuItem.name} はアレルギー情報がないため表示`);
+        if (import.meta?.env?.DEV) console.log(`商品 ${menuItem.name} はアレルギー情報がないため表示`);
         return true;
       }
 
@@ -122,27 +140,27 @@ const AllergySearchResults = ({ items }) => {
         // このメニューアイテムのアレルギー情報をチェック
         const matrix = menuItem.product_allergies_matrix[0];
         if (!matrix) {
-          console.log(`メニューアイテム ${menuItem.name} のmatrix情報なし - 安全`);
+          if (import.meta?.env?.DEV) console.log(`メニューアイテム ${menuItem.name} のmatrix情報なし - 安全`);
           return false;
         }
         
         const allergyValue = matrix[selectedAllergy];
-        console.log(`アレルギー判定 - メニューアイテム: ${menuItem.name}, アレルギーID: ${selectedAllergy}, 値: ${allergyValue}`);
+        if (import.meta?.env?.DEV) console.log(`アレルギー判定 - メニューアイテム: ${menuItem.name}, アレルギーID: ${selectedAllergy}, 値: ${allergyValue}`);
         
         // アレルギー情報がない場合は安全とみなす
         if (!allergyValue) {
-          console.log(`メニューアイテム ${menuItem.name} のアレルギーID ${selectedAllergy} の情報なし - 安全`);
+          if (import.meta?.env?.DEV) console.log(`メニューアイテム ${menuItem.name} のアレルギーID ${selectedAllergy} の情報なし - 安全`);
           return false; // 含有していない
         }
         
         // 'direct'の場合は含有（除外）
         // 'trace'と'Included'の場合はコンタミネーション/香料含有（表示する）
         const isDirectContained = allergyValue === 'direct';
-        console.log(`アレルギー値: ${allergyValue}, 直接含有: ${isDirectContained}`);
+        if (import.meta?.env?.DEV) console.log(`アレルギー値: ${allergyValue}, 直接含有: ${isDirectContained}`);
         return isDirectContained;
       });
       
-      console.log(`商品 ${menuItem.name} の選択アレルギー含有: ${hasSelectedAllergy}`);
+      if (import.meta?.env?.DEV) console.log(`商品 ${menuItem.name} の選択アレルギー含有: ${hasSelectedAllergy}`);
       if (hasSelectedAllergy) return false;
 
       // 追加: ユーザー設定の非表示（included / trace）が1つでも該当したら商品を非表示
@@ -371,7 +389,7 @@ const AllergySearchResults = ({ items }) => {
         </div>
 
       {/* 店舗リスト */}
-      {groupedStores.map((store, index) => {
+      {groupedStores.slice(0, visibleCount).map((store, index) => {
         // アレルギー選択がない場合は全ての商品を表示
         const allProducts = store.menu_items || [];
         const headerPreview = (allProducts[0]?.image_urls || []).slice(0, 2);

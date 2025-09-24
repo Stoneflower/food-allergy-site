@@ -160,12 +160,18 @@ export const RestaurantProvider = ({ children }) => {
       let storeData = null;
       let productData = null;
       
-      // 店舗情報を取得
+      // 店舗情報を取得（県名サーバー絞り込み＋列最小化＋ページネーション）
       try {
         console.log('store_locationsテーブルにアクセス中...');
-        const { data, error } = await supabase
+        let query = supabase
           .from('store_locations')
-          .select('*');
+          .select('id,product_id,branch_name,address,phone,hours,notes,closed,source_url,store_list_url', { count: 'exact' });
+        if (selectedArea && selectedArea.trim() !== '') {
+          query = query.ilike('address', `%${selectedArea.trim()}%`);
+        }
+        // ページネーション（初期は先頭200件）
+        query = query.range(0, 199);
+        const { data, error } = await query;
         
         if (!error) {
           storeData = data;
@@ -178,12 +184,12 @@ export const RestaurantProvider = ({ children }) => {
         console.error('store_locationsテーブルアクセスエラー:', err);
       }
 
-      // 商品情報を取得（シンプルなクエリ）
+      // 商品情報を取得（列最小化）
       try {
         console.log('productsテーブルにアクセス中...');
         const { data, error } = await supabase
           .from('products')
-          .select('*');
+          .select('id,name,brand,category,description,image_url,source_url,source_url2,product_title,product_category_id,updated_at');
         
         if (!error) {
           productData = data;
@@ -214,9 +220,16 @@ export const RestaurantProvider = ({ children }) => {
       let matrixData = [];
       try {
         console.log('product_allergies_matrixテーブルにアクセス中...');
-        const { data: matrix, error: matrixError } = await supabase
+        const productIdsOnPage = Array.from(new Set((storeData || []).map(s => s.product_id).filter(Boolean)));
+        let mQuery = supabase
           .from('product_allergies_matrix')
           .select('*');
+        if (productIdsOnPage.length > 0) {
+          mQuery = mQuery.in('product_id', productIdsOnPage);
+        } else {
+          mQuery = mQuery.limit(0);
+        }
+        const { data: matrix, error: matrixError } = await mQuery;
         
         if (!matrixError && matrix) {
           matrixData = matrix;
@@ -232,9 +245,16 @@ export const RestaurantProvider = ({ children }) => {
       let productAllergiesRows = [];
       try {
         console.log('product_allergiesテーブルにアクセス中...');
-        const { data: par, error: parErr } = await supabase
+        const productIdsOnPage = Array.from(new Set((storeData || []).map(s => s.product_id).filter(Boolean)));
+        let pQuery = supabase
           .from('product_allergies')
-          .select('*');
+          .select('product_id,allergy_item_id,presence_type,notes');
+        if (productIdsOnPage.length > 0) {
+          pQuery = pQuery.in('product_id', productIdsOnPage);
+        } else {
+          pQuery = pQuery.limit(0);
+        }
+        const { data: par, error: parErr } = await pQuery;
         if (!parErr && par) {
           productAllergiesRows = par;
           console.log('product_allergiesデータ取得成功:', par.length, '件');

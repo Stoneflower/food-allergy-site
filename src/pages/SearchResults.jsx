@@ -567,23 +567,7 @@ const SearchResults = () => {
                 </button>
               </div>
 
-              {/* Source Statistics */}
-              <div className="bg-white rounded-xl shadow-md p-6">
-                <h3 className="text-lg font-semibold mb-4">情報源別統計</h3>
-                <div className="space-y-3">
-                  {sourceStats.map(stat => (
-                    <div key={stat.id} className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <SafeIcon icon={stat.icon} className={`w-4 h-4 ${stat.color}`} />
-                        <span className="text-sm">{stat.name}</span>
-                      </div>
-                      <span className="text-sm font-semibold text-gray-600">
-                        {stat.count}件
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              {/* 情報源別統計 - 削除依頼により非表示 */}
             </motion.div>
           )}
 

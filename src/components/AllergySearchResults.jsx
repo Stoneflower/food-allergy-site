@@ -21,6 +21,7 @@ const AllergySearchResults = ({ items }) => {
   const filteredItems = items ?? getFilteredItems();
   const [expandedStores, setExpandedStores] = useState(new Set());
   const storeRefs = React.useRef({});
+  const [isMobile, setIsMobile] = useState(false);
 
   // エリア情報URLを取得する関数
   const getAreaInfoUrl = (store) => {
@@ -42,6 +43,14 @@ const AllergySearchResults = ({ items }) => {
   const [showScrollTop, setShowScrollTop] = useState(false);
   
   // スクロール位置の監視
+  useEffect(() => {
+    // 画面幅に応じてモバイル判定を更新
+    const updateIsMobile = () => setIsMobile(typeof window !== 'undefined' && window.innerWidth < 768);
+    updateIsMobile();
+    window.addEventListener('resize', updateIsMobile);
+    return () => window.removeEventListener('resize', updateIsMobile);
+  }, []);
+
   useEffect(() => {
     const handleScroll = () => {
       const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
@@ -390,6 +399,7 @@ const AllergySearchResults = ({ items }) => {
                       {expandedStores.has(store.name) ? '▼' : '▶'}
                     </span>
                   </div>
+                {(expandedStores.has(store.name) || !isMobile) && (
                 <div className={`items-center space-x-2 ${expandedStores.has(store.name) ? 'flex' : 'hidden md:flex'}`}>
                   <a
                     href={store.source?.url || '#'}
@@ -418,6 +428,7 @@ const AllergySearchResults = ({ items }) => {
                     エリア情報
                   </a>
                 </div>
+                )}
                 </div>
               </div>
 

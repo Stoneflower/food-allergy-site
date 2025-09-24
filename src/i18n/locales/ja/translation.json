@@ -1,0 +1,157 @@
+{
+  "common": {
+    "appName": "CanIEatOo?",
+    "appTagline": "みんなで共有",
+    "welcome": "食べられるものをみんなで簡単共有"
+  },
+  "header": {
+    "importantNotice": "（重要）情報は日々変わることがあるため、必ずお店に確認をお願いします",
+    "searchPlaceholder": "商品名、レストラン名で検索",
+    "categoryLabel": "カテゴリー",
+    "areaLabel": "県名",
+    "areaPlaceholder": "兵庫県、大阪府、東京都など",
+    "allergyLabel": "含まれるアレルギー成分",
+    "allergySelect": "アレルギーを選択",
+    "searchButton": "検索",
+    "clear": "クリア",
+    "menu": {
+      "upload": "商品を投稿する",
+      "search": "商品を検索する",
+      "myPage": "マイページ",
+      "settings": "設定",
+      "logout": "ログアウト",
+      "uploadTooltip": "商品パッケージを撮影するだけ！"
+    }
+  },
+  "footer": {
+    "terms": "利用規約",
+    "privacy": "プライバシーポリシー",
+    "contact": "お問合せ"
+  },
+  "home": {
+    "hero": {
+      "title": "食べられるものをみんなで簡単共有",
+      "description": "商品の成分表示を撮影するだけ！<br />アレルギー情報をかんたんに共有して、<br />みんなで安心できる食生活を築きましょう",
+      "takePhotoButton": "商品を撮影して共有",
+      "viewInfoButton": "共有された情報を見る",
+      "features": {
+        "photography": "撮影するだけ",
+        "sharing": "かんたん共有"
+      }
+    },
+    "steps": {
+      "title": "たった3ステップで情報共有",
+      "description": "商品の成分表示を撮影するだけで、アレルギー情報をみんなと共有できます",
+      "step1": "撮影",
+      "step2": "確認",
+      "step3": "共有",
+      "step1Description": "成分表示を撮影",
+      "step2Description": "アレルギー情報を確認",
+      "step3Description": "みんなと共有"
+    },
+    "uploadSection": {
+      "button": "今すぐ商品を共有する"
+    },
+    "membership": {
+      "title": "会員登録のメリット",
+      "description": "あなたに合わせた詳細設定で、もっと安心・便利に。",
+      "contamination": {
+        "title": "コンタミネーション設定",
+        "description": "混入の可能性（trace）を個別に管理。微量NGなどの判断に役立ちます。"
+      },
+      "fragrance": {
+        "title": "香料含有設定",
+        "description": "香料に含まれる成分を個別に管理。より詳細なアレルギー対応が可能です。"
+      },
+      "favorites": {
+        "title": "お気に入り機能",
+        "description": "安心して利用できる商品や店舗をお気に入りに保存。"
+      },
+      "registerButton": "無料で会員登録する"
+    },
+    "latestInfo": {
+      "title": "みんなが共有した最新情報",
+      "viewAll": "すべて見る",
+      "noData": "条件に合う情報が見つかりませんでした",
+      "noDataDescription": "アレルギー条件やカテゴリーを調整するか、新しい商品情報を共有してみませんか？"
+    },
+    "bottomCta": {
+      "title": "あなたも情報を共有してみませんか？",
+      "button": "あなたも情報を共有してみませんか？"
+    }
+  },
+  "upload": {
+    "progress": {
+      "step1": "情報取得",
+      "step2": "情報確認", 
+      "step3": "投稿完了"
+    },
+    "capture": {
+      "title": "商品の成分表示を撮影してください",
+      "maxPhotos": "最大2枚まで撮影可能",
+      "tips": {
+        "title": "きれいに撮影するコツ",
+        "tip1": "原材料名の部分を中心に撮影してください",
+        "tip2": "明るい場所で撮影し、影が入らないようにしてください",
+        "tip3": "文字がはっきり見えるよう、ピントを合わせてください",
+        "tip4": "パッケージ全体ではなく、成分表示部分を大きく撮影してください",
+        "tip5": "最大2枚まで選択できます（参考用として表示されます）"
+      },
+      "selectedImages": "選択された画像",
+      "changeImages": "画像を変更する",
+      "proceedToInfo": "情報入力に進む",
+      "captureSecond": "2枚目を撮影する"
+    },
+    "edit": {
+      "capturedImages": "撮影した画像",
+      "productInfo": "商品情報",
+      "productName": "商品名",
+      "productNamePlaceholder": "商品名を入力",
+      "brand": "ブランド・メーカー",
+      "brandPlaceholder": "ブランド名を入力",
+      "category": "商品カテゴリ",
+      "usageScene": "利用シーン",
+      "allergies": "アレルギー情報",
+      "directAllergens": "直接含有",
+      "contamination": "コンタミネーション",
+      "fragrance": "香料含有",
+      "heatStatus": "加熱状況"
+    }
+  },
+  "search": {
+    "title": "アレルギー対応店舗を検索",
+    "areaRequired": "都道府県名を入力して、アレルギー対応店舗を検索できます",
+    "noResults": "店舗が見つかりませんでした",
+    "noResultsDescription": "検索条件を変更して再度お試しください",
+    "allergyFilter": "アレルギーフィルター",
+    "categoryFilter": "商品カテゴリー",
+    "sourceFilter": "情報源別統計",
+    "searchButton": "検索"
+  },
+  "login": {
+    "title": "ログイン / 会員登録",
+    "loginTab": "ログイン",
+    "registerTab": "会員登録",
+    "email": "メールアドレス",
+    "password": "パスワード",
+    "confirmPassword": "パスワード確認",
+    "name": "お名前",
+    "loginButton": "ログイン",
+    "registerButton": "会員登録",
+    "agreement": "会員登録することで、利用規約およびプライバシーポリシーに同意したものとみなします。"
+  },
+  "contact": {
+    "title": "お問合せ",
+    "name": "お名前",
+    "email": "メールアドレス",
+    "message": "メッセージ",
+    "submit": "送信",
+    "success": "お問合せを受け付けました。ありがとうございます。"
+  },
+  "terms": {
+    "title": "利用規約"
+  },
+  "privacy": {
+    "title": "プライバシーポリシー"
+  }
+}

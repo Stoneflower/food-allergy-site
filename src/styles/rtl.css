@@ -1,0 +1,185 @@
+/* RTL (Right-to-Left) Language Support */
+
+/* RTL 対応のためのCSS Logical Properties */
+[dir="rtl"] {
+  /* テキスト方向を右から左に */
+  direction: rtl;
+  text-align: right;
+}
+
+/* ヘッダーのレイアウト調整 */
+[dir="rtl"] .header-logo {
+  margin-inline-start: 1.5rem;
+  margin-inline-end: 0;
+}
+
+[dir="rtl"] .header-actions {
+  flex-direction: row-reverse;
+}
+
+/* ボタンやアイコンの位置調整 */
+[dir="rtl"] .flex {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .space-x-2 > :not([hidden]) ~ :not([hidden]) {
+  margin-inline-start: 0.5rem;
+  margin-inline-end: 0;
+}
+
+[dir="rtl"] .space-x-3 > :not([hidden]) ~ :not([hidden]) {
+  margin-inline-start: 0.75rem;
+  margin-inline-end: 0;
+}
+
+[dir="rtl"] .space-x-4 > :not([hidden]) ~ :not([hidden]) {
+  margin-inline-start: 1rem;
+  margin-inline-end: 0;
+}
+
+[dir="rtl"] .space-x-6 > :not([hidden]) ~ :not([hidden]) {
+  margin-inline-start: 1.5rem;
+  margin-inline-end: 0;
+}
+
+/* マージンとパディングの調整 */
+[dir="rtl"] .ml-2 {
+  margin-inline-start: 0.5rem;
+  margin-inline-end: 0;
+}
+
+[dir="rtl"] .ml-4 {
+  margin-inline-start: 1rem;
+  margin-inline-end: 0;
+}
+
+[dir="rtl"] .mr-2 {
+  margin-inline-start: 0;
+  margin-inline-end: 0.5rem;
+}
+
+[dir="rtl"] .mr-4 {
+  margin-inline-start: 0;
+  margin-inline-end: 1rem;
+}
+
+[dir="rtl"] .pl-3 {
+  padding-inline-start: 0.75rem;
+  padding-inline-end: 0;
+}
+
+[dir="rtl"] .pr-3 {
+  padding-inline-start: 0;
+  padding-inline-end: 0.75rem;
+}
+
+/* テキスト配置の調整 */
+[dir="rtl"] .text-left {
+  text-align: right;
+}
+
+[dir="rtl"] .text-right {
+  text-align: left;
+}
+
+/* アイコンの左右反転（必要に応じて） */
+[dir="rtl"] .icon-flip {
+  transform: scaleX(-1);
+}
+
+/* ドロップダウンメニューの位置調整 */
+[dir="rtl"] .dropdown-menu {
+  left: auto;
+  right: 0;
+}
+
+[dir="rtl"] .dropdown-menu-right {
+  right: auto;
+  left: 0;
+}
+
+/* カードレイアウトの調整 */
+[dir="rtl"] .card-content {
+  text-align: right;
+}
+
+[dir="rtl"] .card-actions {
+  justify-content: flex-start;
+}
+
+/* フォーム要素の調整 */
+[dir="rtl"] input,
+[dir="rtl"] textarea,
+[dir="rtl"] select {
+  text-align: right;
+}
+
+[dir="rtl"] .form-label {
+  text-align: right;
+}
+
+/* ナビゲーションの調整 */
+[dir="rtl"] .nav-item {
+  margin-inline-start: 1rem;
+  margin-inline-end: 0;
+}
+
+[dir="rtl"] .nav-item:first-child {
+  margin-inline-start: 0;
+}
+
+/* グリッドレイアウトの調整 */
+[dir="rtl"] .grid {
+  direction: rtl;
+}
+
+/* フレックスボックスの調整 */
+[dir="rtl"] .flex-row {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .justify-start {
+  justify-content: flex-end;
+}
+
+[dir="rtl"] .justify-end {
+  justify-content: flex-start;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  [dir="rtl"] .mobile-menu {
+    text-align: right;
+  }
+  
+  [dir="rtl"] .mobile-actions {
+    flex-direction: row-reverse;
+  }
+}
+
+/* アニメーションの調整 */
+[dir="rtl"] .slide-in-right {
+  animation: slideInLeft 0.3s ease-out;
+}
+
+[dir="rtl"] .slide-in-left {
+  animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}

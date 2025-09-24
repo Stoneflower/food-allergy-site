@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import SafeIcon from '../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
 import { useRestaurant } from '../context/RestaurantContext';
 import { supabase } from '../lib/supabase';
+import LanguageSwitcher from './LanguageSwitcher';
 
 const { FiSearch, FiMenu, FiX, FiMapPin, FiUser, FiChevronDown, FiCamera, FiPlus, FiAlertTriangle, FiHeart } = FiIcons;
 
 const Header = () => {
+  const { t } = useTranslation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showAllergyDropdown, setShowAllergyDropdown] = useState(false);
   
@@ -141,7 +144,7 @@ const Header = () => {
             <div className="flex items-center space-x-2 text-center">
               <SafeIcon icon={FiAlertTriangle} className="w-4 h-4 text-yellow-300 flex-shrink-0" />
               <span className="font-medium">
-                （重要）情報は日々変わることがあるため、必ずお店に確認をお願いします
+                {t('header.importantNotice')}
               </span>
             </div>
           </div>
@@ -163,16 +166,18 @@ const Header = () => {
                   <span className="text-lg font-bold text-white">CanIEatOo?</span>
                   <span className="text-orange-200 text-sm font-bold">✓</span>
                 </div>
-                <span className="text-orange-200 text-xs font-medium">みんなで共有</span>
+                <span className="text-orange-200 text-xs font-medium">{t('common.appTagline')}</span>
               </div>
             </Link>
             
             {/* PC版のみ表示するテキスト */}
-            <span className="font-medium hidden md:block">食べられるものをみんなで簡単共有</span>
+            <span className="font-medium hidden md:block">{t('common.welcome')}</span>
           </div>
 
           {/* Mobile - アクションボタンのみ */}
           <div className="md:hidden flex items-center space-x-2">
+            {/* Language Switcher */}
+            <LanguageSwitcher />
             <Link
               to="/upload"
               className="p-2 rounded-lg bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 transition-colors"
@@ -195,6 +200,8 @@ const Header = () => {
           
           {/* PC版の右側メニュー - 「商品を投稿」をより目立つように */}
           <div className="hidden md:flex items-center space-x-4">
+            {/* Language Switcher */}
+            <LanguageSwitcher />
             {/* より目立つ投稿ボタン */}
             <Link
               to="/upload"
@@ -202,11 +209,11 @@ const Header = () => {
             >
               <div className="flex items-center space-x-2 bg-gradient-to-r from-yellow-400 to-orange-400 text-orange-900 px-6 py-3 rounded-xl font-bold hover:from-yellow-300 hover:to-orange-300 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105">
                 <SafeIcon icon={FiCamera} className="w-5 h-5" />
-                <span>商品を撮影して共有</span>
+                <span>{t('header.menu.upload')}</span>
               </div>
               {/* ホバー時のツールチップ */}
               <div className="absolute -bottom-12 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-3 py-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-50">
-                商品パッケージを撮影するだけ！
+                {t('header.menu.uploadTooltip')}
                 <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45"></div>
               </div>
             </Link>

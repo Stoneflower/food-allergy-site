@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import RestaurantCard from '../components/RestaurantCard';
 import ProductCard from '../components/ProductCard';
 import CategoryFilter from '../components/CategoryFilter';
@@ -15,6 +16,7 @@ import * as FiIcons from 'react-icons/fi';
 const { FiHeart, FiShield, FiStar, FiTrendingUp, FiHelpCircle, FiCamera, FiMapPin, FiUsers, FiShare2 } = FiIcons;
 
 const Home = () => {
+  const { t } = useTranslation();
   const [showQRScanner, setShowQRScanner] = useState(false);
   const {
     getFilteredItems,
@@ -190,13 +192,11 @@ const Home = () => {
             </div>
             
             <h2 className="text-2xl md:text-4xl font-bold mb-6 text-white drop-shadow-lg">
-              食べられるものをみんなで簡単共有
+              {t('home.hero.title')}
             </h2>
             
-            <p className="text-xl md:text-2xl mb-8 opacity-95 max-w-4xl mx-auto drop-shadow-md text-white">
-              商品の成分表示を撮影するだけ！<br />
-              アレルギー情報をかんたんに共有して、<br />
-              みんなで安心できる食生活を築きましょう
+            <p className="text-xl md:text-2xl mb-8 opacity-95 max-w-4xl mx-auto drop-shadow-md text-white" 
+               dangerouslySetInnerHTML={{ __html: t('home.hero.description') }}>
             </p>
 
             {/* メインアクションボタン */}
@@ -207,7 +207,7 @@ const Home = () => {
                 className="flex items-center justify-center space-x-3 bg-white/95 backdrop-blur-sm text-orange-600 px-8 py-4 rounded-xl font-bold text-lg hover:bg-white transition-all shadow-lg"
               >
                 <SafeIcon icon={FiCamera} className="w-6 h-6" />
-                <span>商品を撮影して共有</span>
+                <span>{t('home.hero.takePhotoButton')}</span>
               </Link>
               
               <Link
@@ -216,7 +216,7 @@ const Home = () => {
                 className="flex items-center justify-center space-x-3 bg-orange-500/80 backdrop-blur-sm border-2 border-white/50 px-8 py-4 rounded-xl font-bold text-lg hover:bg-orange-500/90 transition-all"
               >
                 <SafeIcon icon={FiStar} className="w-6 h-6" />
-                <span>共有された情報を見る</span>
+                <span>{t('home.hero.viewInfoButton')}</span>
               </Link>
             </div>
 
@@ -224,11 +224,11 @@ const Home = () => {
             <div className="flex flex-wrap justify-center gap-6 text-center">
               <div className="flex items-center space-x-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2">
                 <SafeIcon icon={FiCamera} className="w-6 h-6" />
-                <span className="text-lg font-semibold">撮影するだけ</span>
+                <span className="text-lg font-semibold">{t('home.hero.features.photography')}</span>
               </div>
               <div className="flex items-center space-x-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2">
                 <SafeIcon icon={FiShare2} className="w-6 h-6" />
-                <span className="text-lg font-semibold">かんたん共有</span>
+                <span className="text-lg font-semibold">{t('home.hero.features.sharing')}</span>
               </div>
               <div className="flex items-center space-x-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2">
                 <SafeIcon icon={FiUsers} className="w-6 h-6" />

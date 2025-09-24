@@ -1,0 +1,157 @@
+{
+  "common": {
+    "appName": "CanIEatOo?",
+    "appTagline": "Share Together",
+    "welcome": "Easy sharing of safe foods for everyone"
+  },
+  "header": {
+    "importantNotice": "(Important) Information may change daily, so please check with the store",
+    "searchPlaceholder": "Search by product name, restaurant name",
+    "categoryLabel": "Category",
+    "areaLabel": "Prefecture",
+    "areaPlaceholder": "Hyogo, Osaka, Tokyo, etc.",
+    "allergyLabel": "Allergens contained",
+    "allergySelect": "Select allergens",
+    "searchButton": "Search",
+    "clear": "Clear",
+    "menu": {
+      "upload": "Upload Products",
+      "search": "Search Products",
+      "myPage": "My Page",
+      "settings": "Settings",
+      "logout": "Logout",
+      "uploadTooltip": "Just take a photo of the product package!"
+    }
+  },
+  "footer": {
+    "terms": "Terms of Service",
+    "privacy": "Privacy Policy",
+    "contact": "Contact"
+  },
+  "home": {
+    "hero": {
+      "title": "Easy sharing of safe foods for everyone",
+      "description": "Just take a photo of the ingredient list!<br />Easily share allergy information<br />and build a safe food life together",
+      "takePhotoButton": "Take photos and share products",
+      "viewInfoButton": "View shared information",
+      "features": {
+        "photography": "Just take photos",
+        "sharing": "Easy sharing"
+      }
+    },
+    "steps": {
+      "title": "Information sharing in just 3 steps",
+      "description": "Just take a photo of the ingredient list to share allergy information with everyone",
+      "step1": "Photo",
+      "step2": "Check",
+      "step3": "Share",
+      "step1Description": "Take photo of ingredients",
+      "step2Description": "Check allergy information",
+      "step3Description": "Share with everyone"
+    },
+    "uploadSection": {
+      "button": "Share products now"
+    },
+    "membership": {
+      "title": "Benefits of Membership",
+      "description": "More peace of mind and convenience with detailed settings tailored to you.",
+      "contamination": {
+        "title": "Contamination Settings",
+        "description": "Manage contamination possibilities (trace) individually. Helpful for determining trace amounts."
+      },
+      "fragrance": {
+        "title": "Fragrance Content Settings",
+        "description": "Manage fragrance ingredients individually. More detailed allergy management is possible."
+      },
+      "favorites": {
+        "title": "Favorites Feature",
+        "description": "Save safe products and stores to your favorites."
+      },
+      "registerButton": "Register for free"
+    },
+    "latestInfo": {
+      "title": "Latest information shared by everyone",
+      "viewAll": "View all",
+      "noData": "No information matching your criteria was found",
+      "noDataDescription": "Try adjusting your allergy conditions or categories, or share new product information."
+    },
+    "bottomCta": {
+      "title": "Would you like to share information too?",
+      "button": "Would you like to share information too?"
+    }
+  },
+  "upload": {
+    "progress": {
+      "step1": "Get Information",
+      "step2": "Check Information",
+      "step3": "Upload Complete"
+    },
+    "capture": {
+      "title": "Please take a photo of the product's ingredient list",
+      "maxPhotos": "Up to 2 photos can be taken",
+      "tips": {
+        "title": "Tips for taking clear photos",
+        "tip1": "Focus on the ingredient list section",
+        "tip2": "Take photos in a bright place without shadows",
+        "tip3": "Make sure the text is clearly visible and in focus",
+        "tip4": "Take a large photo of the ingredient section, not the entire package",
+        "tip5": "Up to 2 photos can be selected (displayed as reference)"
+      },
+      "selectedImages": "Selected images",
+      "changeImages": "Change images",
+      "proceedToInfo": "Proceed to information entry",
+      "captureSecond": "Take second photo"
+    },
+    "edit": {
+      "capturedImages": "Captured images",
+      "productInfo": "Product Information",
+      "productName": "Product Name",
+      "productNamePlaceholder": "Enter product name",
+      "brand": "Brand / Manufacturer",
+      "brandPlaceholder": "Enter brand name",
+      "category": "Product Category",
+      "usageScene": "Usage Scene",
+      "allergies": "Allergy Information",
+      "directAllergens": "Direct Content",
+      "contamination": "Contamination",
+      "fragrance": "Fragrance Content",
+      "heatStatus": "Heat Status"
+    }
+  },
+  "search": {
+    "title": "Search for allergy-friendly stores",
+    "areaRequired": "Enter a prefecture name to search for allergy-friendly stores",
+    "noResults": "No stores found",
+    "noResultsDescription": "Please try changing your search conditions",
+    "allergyFilter": "Allergy Filter",
+    "categoryFilter": "Product Category",
+    "sourceFilter": "Source Statistics",
+    "searchButton": "Search"
+  },
+  "login": {
+    "title": "Login / Register",
+    "loginTab": "Login",
+    "registerTab": "Register",
+    "email": "Email Address",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "name": "Name",
+    "loginButton": "Login",
+    "registerButton": "Register",
+    "agreement": "By registering, you agree to the Terms of Service and Privacy Policy."
+  },
+  "contact": {
+    "title": "Contact",
+    "name": "Name",
+    "email": "Email Address",
+    "message": "Message",
+    "submit": "Submit",
+    "success": "Your inquiry has been received. Thank you."
+  },
+  "terms": {
+    "title": "Terms of Service"
+  },
+  "privacy": {
+    "title": "Privacy Policy"
+  }
+}

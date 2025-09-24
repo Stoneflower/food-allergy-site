@@ -529,50 +529,9 @@ const AllergySearchResults = ({ items }) => {
                 <div className="flex items-center space-x-2">
                   <h3 className="text-base font-medium text-gray-800">{store.name}</h3>
                   <span className="text-xs text-gray-500">({safeProductsForHeader.length}件)</span>
-                  <span className="text-xs text-gray-400">
-                    {expandedStores.has(store.name) ? '▼' : '▶'}
-                  </span>
                 </div>
-                <div className="flex items-center space-x-2">
-                  {!(selectedCategory === 'supermarkets' || selectedCategory === 'online') && (
-                    <a
-                      href={store.source?.url || '#'}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={`px-2 py-1 text-xs rounded transition-colors ${
-                        store.source?.url 
-                          ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' 
-                          : 'bg-gray-100 text-gray-500'
-                      }`}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      アレルギー情報元URL
-                    </a>
-                  )}
-                  {!(selectedCategory === 'supermarkets' || selectedCategory === 'online') && (
-                    <a
-                      href={getAreaInfoUrl(store)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={`px-2 py-1 text-xs rounded transition-colors ${
-                        getAreaInfoUrl(store) !== '#' 
-                          ? 'bg-green-100 text-green-700 hover:bg-green-200' 
-                          : 'bg-gray-100 text-gray-500'
-                      }`}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      エリア情報URL
-                    </a>
-                  )}
-                  {headerPreview && headerPreview.length > 0 && (
-                    <div className="flex items-center space-x-1 ml-2">
-                      {headerPreview.map((url, i) => (
-                        <a key={i} href={url} target="_blank" rel="noopener noreferrer" onClick={(e)=>e.stopPropagation()}>
-                          <img src={url} alt={`画像${i+1}`} className="w-10 h-10 object-cover rounded" />
-                        </a>
-                      ))}
-                    </div>
-                  )}
+                <div className="text-xs text-gray-500">
+                  {expandedStores.has(store.name) ? '閉じる' : '開く'} {expandedStores.has(store.name) ? '▼' : '▶'}
                 </div>
               </div>
             </div>

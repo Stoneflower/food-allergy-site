@@ -1,11 +1,7 @@
 /* RTL (Right-to-Left) Language Support */
 
-/* RTL 対応のためのCSS Logical Properties */
-[dir="rtl"] {
-  /* テキスト方向を右から左に */
-  direction: rtl;
-  text-align: right;
-}
+/* 現在は日本語と英語のみ対応のため、RTL対応は未使用 */
+/* 将来的にRTL言語を追加する場合の準備 */
 
 /* ヘッダーのレイアウト調整 */
 [dir="rtl"] .header-logo {

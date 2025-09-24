@@ -32,12 +32,9 @@ i18n
       escapeValue: false // Reactは既にXSSを防いでいるため
     },
 
-    // RTL言語のサポート
+    // 対応言語
     lng: 'ja',
-    supportedLngs: ['ja', 'en', 'ar', 'he'],
-    
-    // RTL言語の定義
-    rtlLanguages: ['ar', 'he'],
+    supportedLngs: ['ja', 'en'],
     
     // 言語切り替え時の処理
     react: {

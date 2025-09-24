@@ -104,17 +104,7 @@ class TranslationService {
   convertToDeeplLangCode(langCode) {
     const langMap = {
       'ja': 'JA',
-      'en': 'EN',
-      'zh': 'ZH',
-      'ko': 'KO',
-      'es': 'ES',
-      'fr': 'FR',
-      'de': 'DE',
-      'it': 'IT',
-      'pt': 'PT',
-      'ru': 'RU',
-      'ar': 'AR',
-      'he': 'HE'
+      'en': 'EN'
     };
     return langMap[langCode] || 'EN';
   }

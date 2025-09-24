@@ -158,13 +158,13 @@ const Header = () => {
           <div className="flex items-center space-x-6">
             {/* Logo - PC版とスマホ版共通 */}
             <Link to="/" className="flex items-center space-x-3 p-2 -m-2 rounded-lg hover:bg-white/10 transition-colors">
-              <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center shadow-lg">
+              {/* アイコンはPC版のみ表示 */}
+              <div className="hidden md:block w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center shadow-lg">
                 <span className="text-white font-bold text-lg">🍦</span>
               </div>
               <div className="flex flex-col">
                 <div className="flex items-baseline space-x-1">
                   <span className="text-lg font-bold text-white">CanIEatOo?</span>
-                  <span className="text-orange-200 text-sm font-bold">✓</span>
                 </div>
                 <span className="text-orange-200 text-xs font-medium">{t('common.appTagline')}</span>
               </div>

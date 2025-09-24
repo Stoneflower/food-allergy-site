@@ -10,9 +10,7 @@ const LanguageSwitcher = () => {
 
   const languages = [
     { code: 'ja', name: '日本語', flag: '🇯🇵' },
-    { code: 'en', name: 'English', flag: '🇺🇸' },
-    { code: 'ar', name: 'العربية', flag: '🇸🇦' },
-    { code: 'he', name: 'עברית', flag: '🇮🇱' }
+    { code: 'en', name: 'English', flag: '🇺🇸' }
   ];
 
   const currentLanguage = languages.find(lang => lang.code === i18n.language) || languages[0];
@@ -20,19 +18,11 @@ const LanguageSwitcher = () => {
   const handleLanguageChange = (langCode) => {
     i18n.changeLanguage(langCode);
     
-    // RTL言語の場合はHTMLのdir属性を変更
+    // 日本語と英語は両方ともLTR
     const html = document.documentElement;
-    const rtlLanguages = ['ar', 'he'];
-    
-    if (rtlLanguages.includes(langCode)) {
-      html.setAttribute('dir', 'rtl');
-      html.setAttribute('lang', langCode);
-      html.classList.add('rtl');
-    } else {
-      html.setAttribute('dir', 'ltr');
-      html.setAttribute('lang', langCode);
-      html.classList.remove('rtl');
-    }
+    html.setAttribute('dir', 'ltr');
+    html.setAttribute('lang', langCode);
+    html.classList.remove('rtl');
   };
 
   return (

@@ -458,7 +458,7 @@ export const RestaurantProvider = ({ children }) => {
                   lastUpdated: new Date().toISOString().split('T')[0],
                   confidence: 85,
                   verified: true,
-                  url: store.source_url || product.source_url || '' // アレルギー情報元のリンク先
+                  url: store.source_url || '' // store_locations.source_url のみを反映（products.source_urlはここでは使わない）
                 }
               };
               
@@ -503,7 +503,7 @@ export const RestaurantProvider = ({ children }) => {
                 lastUpdated: new Date().toISOString().split('T')[0],
                 confidence: 85,
                 verified: true,
-                url: product.source_url || ''
+                url: '' // store_locations.source_url が無い場合は空。画像リンクはUI側で products.source_url/2 を表示
               }
             };
             

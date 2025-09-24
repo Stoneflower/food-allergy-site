@@ -149,7 +149,7 @@ const ProductCard = ({ product }) => {
               {!hasThumbnailImage && (
                 <button
                   onClick={handleSourceClick}
-                  className="p-2 text-gray-400 hover:text-blue-600 transition-colors bg-gray-50 hover:bg-blue-50 rounded-lg border border-gray-200 hover:border-blue-300"
+                  className={`p-2 text-gray-400 hover:text-blue-600 transition-colors bg-gray-50 hover:bg-blue-50 rounded-lg border border-gray-200 hover:border-blue-300 ${!showSourceDetails ? 'hidden md:inline-flex' : ''}`}
                   title="情報源詳細"
                 >
                   <SafeIcon icon={FiInfo} className="w-4 h-4" />

@@ -587,10 +587,10 @@ const AllergySearchResults = ({ items }) => {
                     const sourceUrl = store?.source?.url; // store_locations.source_url 相当
                     const areaUrl = store?.store_list_url; // store_locations.store_list_url 相当
                     if (sourceUrl) {
-                      buttons.push({ label: 'アレルギー情報元URL', href: sourceUrl, style: 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100' });
+                      buttons.push({ label: '情報元URL', href: sourceUrl, style: 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100' });
                     }
                     if (areaUrl) {
-                      buttons.push({ label: '店舗の位置情報URL', href: areaUrl, style: 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100' });
+                      buttons.push({ label: '店舗の位置情報', href: areaUrl, style: 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100' });
                     }
                     if (buttons.length === 0) {
                       // products.source_url / products.source_url2 に明示的にフォールバック

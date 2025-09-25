@@ -1,11 +1,11 @@
 import { supabase } from './supabase';
 
-class SearchService {
+class OptimizedSearchService {
   constructor() {
     this.supabase = supabase;
   }
 
-  // 最適化された全文検索（インデックス活用）
+  // 最適化された全文検索
   async fullTextSearch(searchTerm, filters = {}) {
     console.log('🔍 最適化全文検索開始:', { searchTerm, filters });
     
@@ -52,13 +52,13 @@ class SearchService {
     } catch (error) {
       console.error('Typesense検索エラー:', error);
       
-      // フォールバック: 最適化されたSupabaseクエリ（インデックス活用）
+      // フォールバック: 最適化されたSupabaseクエリ
       console.log('🔍 フォールバック: 最適化Supabaseクエリ実行');
       return this.optimizedFallbackSearch(searchTerm, filters);
     }
   }
 
-  // 最適化されたフォールバック検索（インデックス活用）
+  // 最適化されたフォールバック検索
   async optimizedFallbackSearch(searchTerm, filters = {}) {
     console.log('🔍 最適化フォールバック検索開始:', { searchTerm, filters });
     
@@ -118,39 +118,7 @@ class SearchService {
     return { data, error };
   }
 
-  // ハイブリッド検索（Typesense検索のみ）
-  async hybridSearch(searchTerm, filters = {}) {
-    console.log('🔍 ハイブリッド検索開始（最適化版）:', { searchTerm, filters });
-    
-    // Typesense検索を優先
-    return this.fullTextSearch(searchTerm, filters);
-  }
-
-  // アレルギー検索
-  async allergySearch(allergies, filters = {}) {
-    console.log('🔍 アレルギー検索開始（最適化版）:', { allergies, filters });
-    
-    const searchFilters = {
-      ...filters,
-      allergies: allergies
-    };
-    
-    return this.fullTextSearch('', searchFilters);
-  }
-
-  // エリア検索
-  async areaSearch(area, filters = {}) {
-    console.log('🔍 エリア検索開始（最適化版）:', { area, filters });
-    
-    const searchFilters = {
-      ...filters,
-      area: area
-    };
-    
-    return this.fullTextSearch('', searchFilters);
-  }
-
-  // 類似商品検索（将来実装）
+  // 類似商品検索
   async findSimilarProducts(productId, limit = 5) {
     console.log('🔍 類似商品検索開始:', { productId, limit });
     
@@ -189,6 +157,38 @@ class SearchService {
     }
   }
 
+  // ハイブリッド検索
+  async hybridSearch(searchTerm, filters = {}) {
+    console.log('🔍 ハイブリッド検索開始:', { searchTerm, filters });
+    
+    // Typesense検索を優先
+    return this.fullTextSearch(searchTerm, filters);
+  }
+
+  // アレルギー検索
+  async allergySearch(allergies, filters = {}) {
+    console.log('🔍 アレルギー検索開始:', { allergies, filters });
+    
+    const searchFilters = {
+      ...filters,
+      allergies: allergies
+    };
+    
+    return this.fullTextSearch('', searchFilters);
+  }
+
+  // エリア検索
+  async areaSearch(area, filters = {}) {
+    console.log('🔍 エリア検索開始:', { area, filters });
+    
+    const searchFilters = {
+      ...filters,
+      area: area
+    };
+    
+    return this.fullTextSearch('', searchFilters);
+  }
+
   // パフォーマンスログ記録
   async logPerformance(searchType, searchTerm, filters, executionTime, resultCount) {
     try {
@@ -222,4 +222,4 @@ class SearchService {
   }
 }
 
-export default new SearchService();
+export default new OptimizedSearchService();

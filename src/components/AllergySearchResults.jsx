@@ -12,15 +12,10 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
   console.log('🔍 AllergySearchResults - getFilteredItems():', filteredItems?.length || 0, '件');
   console.log('🔍 AllergySearchResults - filteredItems:', filteredItems);
 
-  // アレルギー適合性チェック（詳細表示用: directも含めて表示）
+  // アレルギー適合性チェック（会社カード表示条件: direct以外のみ表示）
   const checkAllergyCompatibility = (item, selectedAllergies) => {
-    // 商品名の優先順位: menu_items.name > product_title > name
-    const menuItems = item.menu_items || [];
-    const primaryMenuName = menuItems.length > 0 ? menuItems[0].name : null;
-    const displayName = primaryMenuName || item.product_title || item.name || '商品名不明';
-    
     console.log('🔍 アレルギー適合性チェック開始:', {
-      itemName: displayName,
+      itemName: item.name,
       selectedAllergies
     });
 
@@ -30,35 +25,42 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
       return true;
     }
 
-    // Typesenseから取得したデータにアレルギー情報があるかチェック
+    // アレルギー情報があるかチェック
     if (!item.product_allergies || !Array.isArray(item.product_allergies)) {
-      console.log('⚠️ アレルギー情報なし - 警告表示するが商品は表示');
+      console.log('⚠️ アレルギー情報なし - 表示');
       return true;
     }
 
-    // アレルギー情報をチェック（directも含めて表示）
-    let hasSelectedAllergy = false;
+    // 選択アレルギーに対してdirect以外（none/trace/fragrance）があるかチェック
+    let hasDirectOnly = true; // directのみかどうか
+    let hasNonDirect = false; // direct以外があるかどうか
     
     item.product_allergies.forEach(allergy => {
       if (selectedAllergies.includes(allergy.allergy_item_id)) {
-        hasSelectedAllergy = true;
         if (allergy.presence_type === 'direct') {
-          console.log('🔍 アレルギー含有 - 商品を表示（direct）:', allergy.allergy_item_id);
-        } else if (allergy.presence_type === 'trace') {
-          console.log('🔍 アレルギーコンタミネーション - 商品を表示:', allergy.allergy_item_id);
-        } else if (allergy.presence_type === 'none') {
-          console.log('🔍 アレルギー含有しない - 商品を表示:', allergy.allergy_item_id);
+          console.log('🔍 アレルギー含有 - direct:', allergy.allergy_item_id);
+          // directは除外対象だが、他のアレルギーでnon-directがあれば表示
+        } else if (allergy.presence_type === 'trace' || allergy.presence_type === 'fragrance' || allergy.presence_type === 'none') {
+          console.log('🔍 アレルギー含有 - non-direct:', allergy.allergy_item_id, allergy.presence_type);
+          hasNonDirect = true;
+          hasDirectOnly = false;
         }
       }
     });
-    
-    // 選択アレルギーに関連する商品はすべて表示（direct/trace/none問わず）
-    if (hasSelectedAllergy) {
-      console.log('🔍 選択アレルギー関連商品 - 表示');
+
+    // direct以外（none/trace/fragrance）が1件でもあれば表示
+    if (hasNonDirect) {
+      console.log('🔍 選択アレルギーでnon-direct商品あり - 表示');
       return true;
     }
 
-    console.log('🔍 アレルギー適合 - 商品を表示');
+    // directのみの場合は除外
+    if (hasDirectOnly) {
+      console.log('🔍 選択アレルギーでdirectのみ - 除外');
+      return false;
+    }
+
+    console.log('🔍 選択アレルギー関連商品なし - 表示');
     return true;
   };
 
@@ -68,11 +70,13 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
     let hasDirect = false;
     let hasTrace = false;
     let hasFragrance = false;
+    let hasNone = false;
 
     const selectedSet = new Set(selectedAllergies || []);
 
     allergies.forEach(a => {
       if (!selectedSet.has(a.allergy_item_id)) return;
+      
       if (a.presence_type === 'direct') {
         // 香料例外：notesに香料が入る場合は香料扱い
         if (a.notes && a.notes.includes('香料')) {
@@ -82,11 +86,16 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
         }
       } else if (a.presence_type === 'trace') {
         hasTrace = true;
+      } else if (a.presence_type === 'fragrance') {
+        hasFragrance = true;
+      } else if (a.presence_type === 'none') {
+        hasNone = true;
       }
     });
 
-    const isSafe = !hasDirect && !hasTrace && !hasFragrance;
-    return { isSafe, hasTrace, hasFragrance };
+    // none/trace/fragranceのいずれかがあれば安全（direct以外）
+    const isSafe = hasNone || hasTrace || hasFragrance;
+    return { isSafe, hasTrace, hasFragrance, hasNone };
   };
 
   // アレルギー情報を取得（Typesenseデータ用）
@@ -201,9 +210,11 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
     filteredItems.forEach((item, index) => {
       console.log(`groupedStores - processing item ${index}:`, item);
       
-      // 会社名・店舗名を決定（products.name を会社名として使用）
-      const companyName = item.name || `会社${index + 1}`;
+      // 会社名・店舗名を決定（item.name を会社名として使用）
+      const companyName = item.name || item.brand || item.product_title || `会社${index + 1}`;
       console.log('groupedStores - companyName:', companyName);
+      // デバッグ: AllergySearchResults.jsxで受け取った最終item
+      console.log('📄 item全体の構造:', item);
       
       // 会社が存在しない場合は作成
       if (!stores[companyName]) {
@@ -220,17 +231,21 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
       if (isAllergyCompatible) {
         console.log('=== 会社:', companyName, '===');
         console.log('商品情報:', { 
-          name: item.name, 
-          product_title: item.product_title,
-          hasAllergies: !!item.product_allergies?.length
+          name: item?.name, 
+          product_name: item?.product_name,
+          product_title: item?.product_title,
+          hasAllergies: !!item?.product_allergies?.length
         });
         
-        // 商品名の優先順位: menu_items.name > product_title > name
-        const menuItems = item.menu_items || [];
-        const primaryMenuName = menuItems.length > 0 ? menuItems[0].name : null;
-        const productName = primaryMenuName || item.product_title || item.name || '商品名不明';
-        console.log(`🔍 商品名デバッグ - menu_items:`, menuItems);
-        console.log(`🔍 商品名デバッグ - primaryMenuName:`, primaryMenuName);
+        // 商品名の優先順位: product_name > menu_items.name > product_title > name
+        const productName = (item && item.product_name)
+          || (() => {
+            const menuItems = (item && item.menu_items) || [];
+            const primaryMenuName = menuItems.length > 0 ? menuItems[0]?.name : null;
+            return primaryMenuName || item?.product_title || item?.name || '商品名なし';
+          })();
+        console.log(`🔍 商品名デバッグ - item.product_name:`, item.product_name);
+        console.log(`🔍 商品名デバッグ - item.menu_items:`, item.menu_items);
         console.log(`🔍 商品名デバッグ - item.product_title:`, item.product_title);
         console.log(`🔍 商品名デバッグ - item.name:`, item.name);
         console.log(`🔍 商品名デバッグ - 最終的なproductName:`, productName);
@@ -241,7 +256,7 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
         // safe/trace/fragrance分類
         const cls = classifyAllergyStatus(item, selectedAllergies);
 
-        // 会社カードの展開商品は「directのみ」を除外（none/trace/香料 or 安全）
+        // 会社カードが表示される場合、direct以外の商品のみ表示（none/trace/fragrance）
         if (cls.isSafe || cls.hasTrace || cls.hasFragrance) {
           stores[companyName].products.push({
             name: productName,
@@ -258,11 +273,7 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
         }
         console.log('groupedStores - added product with allergies:', productName, 'to company:', companyName);
         } else {
-        // 商品名の優先順位: menu_items.name > product_title > name
-        const menuItems = item.menu_items || [];
-        const primaryMenuName = menuItems.length > 0 ? menuItems[0].name : null;
-        const displayName = primaryMenuName || item.product_title || item.name || '商品名不明';
-        console.log(`❌ アレルギー不適合商品除外: ${displayName}`);
+        console.log(`❌ アレルギー不適合商品除外: ${item.name}`);
       }
     });
     

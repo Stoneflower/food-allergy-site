@@ -234,6 +234,12 @@ export const RestaurantProvider = ({ children }) => {
 
       console.log('✅ 商品データ取得成功:', productsData?.length || 0, '件');
       
+      // デバッグ: Supabase から取得した最初のデータ構造
+      if (productsData && productsData.length > 0) {
+        console.log('📦 最初の商品データ構造:', productsData[0]);
+        console.log('📦 rawDataFromSupabase:', productsData[0]);
+      }
+      
       // データを変換（searchServiceの形式に合わせる）
       const data = productsData?.map(product => ({
         ...product,
@@ -379,6 +385,11 @@ export const RestaurantProvider = ({ children }) => {
     const transformedData = [];
     
     try {
+      // デバッグ: transformAndMergeData で変換前のアイテム構造
+      if (searchData && searchData.length > 0) {
+        console.log('🔍 transformAndMergeData - 最初のアイテム構造:', searchData[0]);
+      }
+      
       searchData.forEach(item => {
         // 商品名の優先順位: menu_items.name > product_title > name
         const menuItems = item.menu_items || [];
@@ -387,7 +398,8 @@ export const RestaurantProvider = ({ children }) => {
         
         const transformedItem = {
           id: item.id,
-          name: displayName,
+          name: item.name, // 会社名・店舗名（products.name）
+          product_name: displayName, // 商品名（menu_items.name優先）
           image: item.source_url || item.source_url2 || item.image_url || 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400',
           rating: 4.0,
           reviewCount: 0,

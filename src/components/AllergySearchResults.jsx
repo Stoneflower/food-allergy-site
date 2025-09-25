@@ -38,6 +38,7 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
     const selectedSet = new Set(selectedAllergies || []);
 
     // product_allergies_matrixテーブルの情報を優先チェック
+    console.log('🔍 classifyAllergyStatus - matrix存在チェック:', !!matrix, matrix ? Object.keys(matrix) : 'なし');
     if (matrix && Object.keys(matrix).length > 0) {
       console.log('🔍 classifyAllergyStatus - matrix使用:', matrix);
       selectedAllergies.forEach(allergy => {
@@ -259,8 +260,10 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
               item?.image_url
             ].filter(Boolean)
           });
+          console.log('groupedStores - added product with allergies:', productName, 'to company:', companyName);
+        } else {
+          console.log(`❌ direct商品除外: ${productName} (isSafe=${cls.isSafe}, hasTrace=${cls.hasTrace}, hasFragrance=${cls.hasFragrance})`);
         }
-        console.log('groupedStores - added product with allergies:', productName, 'to company:', companyName);
         } else {
         console.log(`❌ アレルギー不適合商品除外: ${item.name}`);
       }

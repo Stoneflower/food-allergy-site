@@ -41,10 +41,6 @@ class SearchService {
       // 基本的なLIKE検索を使用
       query = query.or(`name.ilike.%${searchTerm}%,product_title.ilike.%${searchTerm}%`);
       console.log('🔍 LIKE検索条件追加:', searchTerm);
-    } else {
-      // 検索語がない場合は、アレルギー情報がある商品を優先表示
-      query = query.in('id', [7]); // アレルギー情報がある商品ID（product_allergies_matrixの例）
-      console.log('🔍 アレルギー情報がある商品を優先表示');
     }
 
     // アレルギー成分フィルタリング（一時的に無効化）

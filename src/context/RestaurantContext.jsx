@@ -91,6 +91,7 @@ export const RestaurantProvider = ({ children }) => {
   const [allItems, setAllItems] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [eligibleProductIds, setEligibleProductIds] = useState(new Set());
 
   // アレルギー項目の状態
   const [allergyOptions, setAllergyOptions] = useState(defaultAllergyOptions);
@@ -299,6 +300,30 @@ export const RestaurantProvider = ({ children }) => {
       });
       
       setAllItems(transformedData);
+
+      // 選択アレルギーに基づく会社カード表示対象IDの取得
+      try {
+        if (selectedAllergies && selectedAllergies.length > 0) {
+          const { data: eligibleRows, error: eligErr } = await supabase
+            .from('vw_company_card_eligible')
+            .select('product_id')
+            .in('allergy', selectedAllergies);
+          if (eligErr) {
+            console.warn('会社カード表示ビュー取得エラー:', eligErr);
+            setEligibleProductIds(new Set());
+          } else {
+            const ids = new Set((eligibleRows || []).map(r => r.product_id));
+            setEligibleProductIds(ids);
+          }
+        } else {
+          // アレルギー未選択時は全件対象
+          const ids = new Set((transformedData || []).map(p => p.id));
+          setEligibleProductIds(ids);
+        }
+      } catch (e) {
+        console.warn('会社カード表示対象ID計算エラー:', e);
+        setEligibleProductIds(new Set());
+      }
       
     } catch (err) {
       console.error('データ取得エラー:', err);
@@ -307,6 +332,35 @@ export const RestaurantProvider = ({ children }) => {
       setIsLoading(false);
     }
   };
+
+  // 選択アレルギーが変わったら、対象IDのみ再取得（軽量）
+  useEffect(() => {
+    const refreshEligible = async () => {
+      try {
+        if (selectedAllergies && selectedAllergies.length > 0) {
+          const { data: eligibleRows, error: eligErr } = await supabase
+            .from('vw_company_card_eligible')
+            .select('product_id')
+            .in('allergy', selectedAllergies);
+          if (eligErr) {
+            console.warn('会社カード表示ビュー取得エラー:', eligErr);
+            setEligibleProductIds(new Set());
+          } else {
+            const ids = new Set((eligibleRows || []).map(r => r.product_id));
+            setEligibleProductIds(ids);
+          }
+        } else {
+          const ids = new Set((allItems || []).map(p => p.id));
+          setEligibleProductIds(ids);
+        }
+      } catch (e) {
+        console.warn('会社カード表示対象ID再計算エラー:', e);
+        setEligibleProductIds(new Set());
+      }
+    };
+    refreshEligible();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedAllergies]);
 
   // データ変換処理
   const transformAndMergeData = (searchData) => {
@@ -470,6 +524,10 @@ export const RestaurantProvider = ({ children }) => {
   // フィルタリング機能
   const getFilteredItems = () => {
     let items = allItemsData;
+    // 会社カード表示条件: 選択アレルギーで direct以外（none/trace/香料）が1件でもある会社のみ
+    if (eligibleProductIds && eligibleProductIds.size > 0) {
+      items = items.filter(item => eligibleProductIds.has(item.id));
+    }
     
     console.log('🔍 getFilteredItems開始 - allItemsData:', allItemsData.length);
     console.log('🔍 フィルター条件:', { selectedCategory, searchKeyword, selectedArea, selectedAllergies: selectedAllergies.length });

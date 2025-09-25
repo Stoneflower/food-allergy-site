@@ -137,8 +137,8 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
                 fragranceAllergies.push(allergyInfo.name);
                 console.log(`香料含有発見: ${allergyInfo.name}香料に含む`);
               } else {
-                contaminationAllergies.push(allergyInfo.name);
-                console.log(`含有発見: ${allergyInfo.name}含有`);
+                // directは黄色ラベルに含めない（表示から除外）
+                console.log(`含有発見（表示除外）: ${allergyInfo.name}含有`);
               }
             } else if (presenceType === 'none') {
               console.log(`含有しない確認: ${allergyInfo.name}含有しない`);
@@ -324,49 +324,65 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
                     </div>
                   )}
 
-                      {/* 画像・リンク（各商品フッター） */}
-                      <div className="mt-2">
-                        {(() => {
-                          const locations = product?.related_product?.store_locations || [];
-                          const storeUrls = locations.flatMap(sl => [sl.source_url, sl.store_list_url]).filter(Boolean);
-                          const images = (product.image_urls || []).slice(0, 2);
-                          const urls = [...images, ...storeUrls].filter(Boolean);
-                    return (
-                            <>
-                              <div className="flex items-center gap-2 overflow-x-auto">
-                                {urls.slice(0, 2).map((u, idx) => (
-                                  <img key={idx} src={u} alt="evidence" className="h-12 w-12 object-cover rounded border" />
-                                ))}
                           </div>
-                              <div className="mt-2 space-x-3 text-xs">
-                                {urls.length > 0 && (
-                                  <a href={urls[0]} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">
-                                    {images.length > 0 ? '商品画像（証拠）' : 'アレルギー情報元'}
-                                  </a>
-                                )}
-                                {urls.length > 1 && (
-                                  <a href={urls[1]} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">店舗エリアURL</a>
-                                )}
-                                {urls.length === 0 && (
-                                  <span className="text-gray-400">画像・リンクなし</span>
-                                )}
-                        </div>
-                            </>
-                          );
-                        })()}
-                      </div>
-                    </div>
                   ))}
                   {(!store.products || store.products.length === 0) && (
                     <div className="text-xs text-gray-400">該当なし（directのみの可能性）</div>
                   )}
                 </div>
 
-                {/* 画像・リンク（フッター） */}
-                {/* 削除：各商品下に移動 */}
-                {/* <div className="mt-2 border-t pt-2"> */}
-                {/*   ... */}
-                {/* </div> */}
+                {/* 画像・リンク（メニュー欄の最後） */}
+                <div className="mt-3 border-t pt-3">
+                  {(() => {
+                    // 全商品から画像・リンクを収集
+                    const allImages = [];
+                    const allStoreUrls = [];
+                    
+                    store.products.forEach(product => {
+                      // products.source_url / source_url2 を商品画像として収集
+                      if (product.image_urls && product.image_urls.length > 0) {
+                        allImages.push(...product.image_urls);
+                      }
+                      
+                      // store_locations から URL を収集
+                      const locations = product?.related_product?.store_locations || [];
+                      locations.forEach(sl => {
+                        if (sl.source_url) allStoreUrls.push(sl.source_url);
+                        if (sl.store_list_url) allStoreUrls.push(sl.store_list_url);
+                      });
+                    });
+                    
+                    // 重複除去
+                    const uniqueImages = Array.from(new Set(allImages));
+                    const uniqueStoreUrls = Array.from(new Set(allStoreUrls));
+                    
+                    // 表示用URL配列（商品画像優先、なければstore_locations）
+                    const displayUrls = uniqueImages.length > 0 ? uniqueImages : uniqueStoreUrls;
+                    
+                    return (
+                      <>
+                        <div className="flex items-center gap-2 overflow-x-auto">
+                          {displayUrls.slice(0, 2).map((url, idx) => (
+                            <img key={idx} src={url} alt="evidence" className="h-12 w-12 object-cover rounded border" />
+                          ))}
+                          </div>
+                        <div className="mt-2 space-x-3 text-xs">
+                          {displayUrls.length > 0 && (
+                            <a href={displayUrls[0]} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">
+                              {uniqueImages.length > 0 ? '商品画像' : 'アレルギー情報元'}
+                            </a>
+                          )}
+                          {displayUrls.length > 1 && (
+                            <a href={displayUrls[1]} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">店舗エリアURL</a>
+                          )}
+                          {displayUrls.length === 0 && (
+                            <span className="text-gray-400">画像・リンクなし</span>
+                          )}
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
                 </div>
                 )}
                 </div>

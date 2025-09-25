@@ -450,11 +450,11 @@ export const RestaurantProvider = ({ children }) => {
           // レストランチェーンは全国展開が多いため、エリアフィルターを緩和
           const isRestaurantChain = item.category === 'レストラン' || item.category === 'restaurants';
           
-          // 柔軟なマッチング：レストランはエリアフィルターを緩和
+          // 柔軟なマッチング：レストランはエリアフィルターを大幅に緩和
           const flexibleMatch = areaMatch || isAreaAll || 
             (item.area && item.area.toLowerCase().includes(selectedArea.toLowerCase())) ||
             (selectedArea && item.area && selectedArea.toLowerCase().includes(item.area.toLowerCase())) ||
-            (isRestaurantChain && !isPrefectureNameItem); // レストランチェーンはエリア制限を緩和
+            isRestaurantChain; // レストランチェーンはエリア制限を完全に緩和
           
           console.log('🔍 エリアマッチ詳細（緩和版）:', {
             itemName: item.name,
@@ -465,10 +465,11 @@ export const RestaurantProvider = ({ children }) => {
             isAreaAll,
             isRestaurantChain,
             flexibleMatch,
-            result: flexibleMatch && !isPrefectureNameItem
+            result: flexibleMatch && (!isPrefectureNameItem || isRestaurantChain)
           });
           
-          return flexibleMatch && !isPrefectureNameItem;
+          // レストランチェーンの場合は都道府県名チェックをスキップ
+          return flexibleMatch && (!isPrefectureNameItem || isRestaurantChain);
         });
       } else {
         console.log('🔍 通常のエリアフィルター適用');

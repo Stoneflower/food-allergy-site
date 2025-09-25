@@ -198,7 +198,7 @@ export const RestaurantProvider = ({ children }) => {
         limit: 200
       });
       
-      // 直接Supabaseから商品データを取得（store_locationsも含める）
+      // 直接Supabaseから商品データを取得（menu_items, store_locationsも含める）
       const { data: productsData, error: productsError } = await supabase
         .from('products')
         .select(`
@@ -210,6 +210,11 @@ export const RestaurantProvider = ({ children }) => {
             presence_type,
             amount_level,
             notes
+          ),
+          menu_items (
+            id,
+            name,
+            product_id
           ),
           store_locations (
             id,
@@ -375,9 +380,14 @@ export const RestaurantProvider = ({ children }) => {
     
     try {
       searchData.forEach(item => {
+        // 商品名の優先順位: menu_items.name > product_title > name
+        const menuItems = item.menu_items || [];
+        const primaryMenuName = menuItems.length > 0 ? menuItems[0].name : null;
+        const displayName = primaryMenuName || item.product_title || item.name || '商品名不明';
+        
         const transformedItem = {
           id: item.id,
-          name: item.name || '商品名不明',
+          name: displayName,
           image: item.source_url || item.source_url2 || item.image_url || 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400',
           rating: 4.0,
           reviewCount: 0,
@@ -390,15 +400,16 @@ export const RestaurantProvider = ({ children }) => {
           allergyInfo: createDefaultAllergyInfo(),
           allergyFree: [],
           product_allergies: (() => {
-            console.log(`🔍 transformAndMergeData - ${item.name} の product_allergies 処理開始:`, item.product_allergies);
+            console.log(`🔍 transformAndMergeData - ${displayName} の product_allergies 処理開始:`, item.product_allergies);
             const result = processAllergies(item.product_allergies) || [];
-            console.log(`🔍 transformAndMergeData - ${item.name} の product_allergies 処理結果:`, result);
+            console.log(`🔍 transformAndMergeData - ${displayName} の product_allergies 処理結果:`, result);
             return result;
           })(),
           related_product: item,
           description: item.description || item.product_title || item.name || '',
           store_list_url: item.store_locations?.[0]?.store_list_url || null,
           store_locations: item.store_locations || [],
+          menu_items: menuItems,
           source: {
             type: 'official',
             contributor: '商品公式',

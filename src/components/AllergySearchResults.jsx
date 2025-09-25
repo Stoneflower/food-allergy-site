@@ -14,8 +14,13 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
 
   // アレルギー適合性チェック（詳細表示用: directも含めて表示）
   const checkAllergyCompatibility = (item, selectedAllergies) => {
+    // 商品名の優先順位: menu_items.name > product_title > name
+    const menuItems = item.menu_items || [];
+    const primaryMenuName = menuItems.length > 0 ? menuItems[0].name : null;
+    const displayName = primaryMenuName || item.product_title || item.name || '商品名不明';
+    
     console.log('🔍 アレルギー適合性チェック開始:', {
-      itemName: item.name || item.product_title,
+      itemName: displayName,
       selectedAllergies
     });
 
@@ -72,7 +77,7 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
         // 香料例外：notesに香料が入る場合は香料扱い
         if (a.notes && a.notes.includes('香料')) {
           hasFragrance = true;
-        } else {
+    } else {
           hasDirect = true;
         }
       } else if (a.presence_type === 'trace') {
@@ -86,15 +91,20 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
 
   // アレルギー情報を取得（Typesenseデータ用）
   const getContaminationInfo = (item) => {
-    console.log(`🔍 getContaminationInfo 呼び出し - 商品: ${item.name || item.product_title}`);
+    // 商品名の優先順位: menu_items.name > product_title > name
+    const menuItems = item.menu_items || [];
+    const primaryMenuName = menuItems.length > 0 ? menuItems[0].name : null;
+    const displayName = primaryMenuName || item.product_title || item.name || '商品名不明';
+    
+    console.log(`🔍 getContaminationInfo 呼び出し - 商品: ${displayName}`);
     console.log(`🔍 getContaminationInfo - 商品の全プロパティ:`, Object.keys(item));
     console.log(`🔍 getContaminationInfo - product_allergies の値:`, item.product_allergies);
     console.log(`🔍 getContaminationInfo - product_allergies の型:`, typeof item.product_allergies);
     console.log(`🔍 getContaminationInfo - product_allergies は配列か:`, Array.isArray(item.product_allergies));
     
     if (!item.product_allergies || !Array.isArray(item.product_allergies)) {
-      console.log(`❌ 商品 ${item.name || item.product_title} にproduct_allergiesがありません`);
-      console.log(`❌ 商品 ${item.name || item.product_title} の全プロパティ:`, Object.keys(item));
+      console.log(`❌ 商品 ${displayName} にproduct_allergiesがありません`);
+      console.log(`❌ 商品 ${displayName} の全プロパティ:`, Object.keys(item));
       return [];
     }
 
@@ -143,7 +153,7 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
       
       const allergyId = allergy.allergy_item_id;
       const presenceType = allergy.presence_type;
-      console.log(`アレルギー確認 - 商品: ${item.name || item.product_title}, アレルギー: ${allergyId}, 含有タイプ: ${presenceType}`);
+      console.log(`アレルギー確認 - 商品: ${displayName}, アレルギー: ${allergyId}, 含有タイプ: ${presenceType}`);
       
       if (presenceType === 'direct' || presenceType === 'trace' || presenceType === 'none') {
         const allergyInfo = allergyOptions.find(a => a.id === allergyId);
@@ -178,7 +188,7 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
       result.push(`${fragranceAllergies.join('、')}香料に含む`);
     }
 
-    console.log(`✅ 商品 ${item.name || item.product_title} の最終結果:`, result);
+    console.log(`✅ 商品 ${displayName} の最終結果:`, result);
     return result;
   };
 
@@ -215,8 +225,12 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
           hasAllergies: !!item.product_allergies?.length
         });
         
-        // 商品名の優先順位: product_title > name
-        const menuName = item.product_title || item.name || '商品名不明';
+        // 商品名の優先順位: menu_items.name > product_title > name
+        const menuItems = item.menu_items || [];
+        const primaryMenuName = menuItems.length > 0 ? menuItems[0].name : null;
+        const menuName = primaryMenuName || item.product_title || item.name || '商品名不明';
+        console.log(`🔍 商品名デバッグ - menu_items:`, menuItems);
+        console.log(`🔍 商品名デバッグ - primaryMenuName:`, primaryMenuName);
         console.log(`🔍 商品名デバッグ - item.product_title:`, item.product_title);
         console.log(`🔍 商品名デバッグ - item.name:`, item.name);
         console.log(`🔍 商品名デバッグ - 最終的なmenuName:`, menuName);
@@ -226,8 +240,8 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
 
         // safe/trace/fragrance分類
         const cls = classifyAllergyStatus(item, selectedAllergies);
-
-        stores[storeName].menu_items.push({
+            
+            stores[storeName].menu_items.push({
               name: menuName,
           display_name: menuName,
           product_allergies: item.product_allergies || [],
@@ -241,7 +255,11 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
             });
         console.log('groupedStores - added product with allergies:', menuName, 'to store:', storeName);
         } else {
-        console.log(`❌ アレルギー不適合商品除外: ${item.name || item.product_title}`);
+        // 商品名の優先順位: menu_items.name > product_title > name
+        const menuItems = item.menu_items || [];
+        const primaryMenuName = menuItems.length > 0 ? menuItems[0].name : null;
+        const displayName = primaryMenuName || item.product_title || item.name || '商品名不明';
+        console.log(`❌ アレルギー不適合商品除外: ${displayName}`);
       }
     });
     
@@ -300,15 +318,16 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
         const isOpen = !!expanded[store.name];
 
         return (
-          <div key={index} className="bg-white rounded-lg shadow p-4">
+          <div 
+            key={index} 
+            className="bg-white rounded-lg shadow p-4 cursor-pointer hover:shadow-md transition-shadow"
+            onClick={() => toggleStore(store.name)}
+          >
             <div className="flex items-center justify-between">
               <h3 className="text-base font-semibold text-gray-800 truncate">{store.name}</h3>
-              <button
-                className="text-sm text-blue-600 hover:underline"
-                onClick={() => toggleStore(store.name)}
-              >
+              <span className="text-sm text-gray-500">
                 {isOpen ? '閉じる' : '開く'}
-              </button>
+              </span>
             </div>
 
             {isOpen && (
@@ -323,9 +342,9 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
                           {menuItem.contamination_info.map((info, infoIndex) => (
                             <span key={infoIndex} className="inline-block text-xs text-yellow-700">
                               {info}
-                            </span>
+                  </span>
                           ))}
-                        </div>
+                </div>
                       )}
                     </div>
                   ))}
@@ -340,7 +359,7 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
                     {allUrls.slice(0, 2).map((u, i) => (
                       <img key={i} src={u} alt="evidence" className="h-12 w-12 object-cover rounded border" />
                     ))}
-                  </div>
+                          </div>
                   <div className="mt-2 space-x-3 text-xs">
                     {allUrls.length > 0 && (
                       <a href={allUrls[0]} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">
@@ -353,11 +372,11 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
                     {allUrls.length === 0 && (
                       <span className="text-gray-400">画像・リンクなし</span>
                     )}
-                  </div>
+                      </div>
                 </div>
-              </div>
-            )}
-          </div>
+                </div>
+                )}
+                </div>
         );
       })}
     </div>

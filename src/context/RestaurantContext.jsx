@@ -1,6 +1,52 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import searchService from '../lib/searchService';
+
+// product_allergies_matrixを配列形式に変換する関数
+const convertAllergyMatrixToArray = (allergyMatrix) => {
+  if (!allergyMatrix || typeof allergyMatrix !== 'object') {
+    return [];
+  }
+
+  const allergyArray = [];
+  const allergyItems = [
+    'egg', 'milk', 'wheat', 'buckwheat', 'peanut', 'shrimp', 'crab', 
+    'walnut', 'almond', 'abalone', 'squid', 'salmon_roe', 'orange', 
+    'cashew', 'kiwi', 'beef', 'gelatin', 'sesame', 'salmon', 'mackerel', 
+    'soybean', 'chicken', 'banana', 'pork', 'matsutake', 'peach', 
+    'yam', 'apple', 'macadamia'
+  ];
+
+  allergyItems.forEach(allergyId => {
+    const presenceType = allergyMatrix[allergyId];
+    if (presenceType) {
+      if (presenceType === 'direct') {
+        allergyArray.push({
+          allergy_item_id: allergyId,
+          presence_type: 'direct',
+          amount_level: 'unknown',
+          notes: '含有'
+        });
+      } else if (presenceType === 'trace') {
+        allergyArray.push({
+          allergy_item_id: allergyId,
+          presence_type: 'trace',
+          amount_level: 'trace',
+          notes: 'コンタミネーション（微量混入）'
+        });
+      } else if (presenceType === 'none') {
+        allergyArray.push({
+          allergy_item_id: allergyId,
+          presence_type: 'none',
+          amount_level: 'none',
+          notes: '含有しない'
+        });
+      }
+    }
+  });
+
+  return allergyArray;
+};
 import { PREFECTURES, isPrefectureName, isAreaMatch } from '../constants/prefectures';
 
 const RestaurantContext = createContext();
@@ -183,7 +229,7 @@ export const RestaurantProvider = ({ children }) => {
         .from('products')
         .select(`
           *,
-          product_allergies (
+          product_allergies_matrix (
             *,
             allergy_items (name, icon, category)
           )
@@ -203,6 +249,12 @@ export const RestaurantProvider = ({ children }) => {
         // categoryは元のデータベースの値を保持
         area: '全国' // デフォルト値
       })) || [];
+      
+      // アレルギー情報のデバッグログ
+      console.log('🔍 アレルギー情報デバッグ:');
+      data.forEach((item, index) => {
+        console.log(`🔍 アイテム${index + 1}: ${item.name} - product_allergies_matrix:`, item.product_allergies_matrix);
+      });
       
       const error = null;
 
@@ -275,7 +327,7 @@ export const RestaurantProvider = ({ children }) => {
           brand: item.brand || '',
           allergyInfo: createDefaultAllergyInfo(),
           allergyFree: [],
-          product_allergies_matrix: item.product_allergies || [],
+          product_allergies_matrix: convertAllergyMatrixToArray(item.product_allergies_matrix) || [],
           related_product: item,
           description: item.description || item.product_title || item.name || '',
           store_list_url: item.store_locations?.[0]?.store_list_url || null,

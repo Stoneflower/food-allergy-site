@@ -25,7 +25,7 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
     }
 
     // Typesenseから取得したデータにアレルギー情報があるかチェック
-    if (!item.product_allergies || !Array.isArray(item.product_allergies)) {
+    if (!item.product_allergies_matrix || !Array.isArray(item.product_allergies_matrix)) {
       console.log('⚠️ アレルギー情報なし - 警告表示するが商品は表示');
       return true;
     }
@@ -33,13 +33,15 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
     // アレルギー情報をチェック
     let hasSelectedAllergy = false;
     
-    item.product_allergies.forEach(allergy => {
+    item.product_allergies_matrix.forEach(allergy => {
       if (selectedAllergies.includes(allergy.allergy_item_id)) {
         if (allergy.presence_type === 'direct') {
           hasSelectedAllergy = true;
           console.log('🔍 アレルギー含有 - 商品を除外:', allergy.allergy_item_id);
         } else if (allergy.presence_type === 'trace') {
           console.log('🔍 アレルギーコンタミネーション - 商品を表示:', allergy.allergy_item_id);
+        } else if (allergy.presence_type === 'none') {
+          console.log('🔍 アレルギー含有しない - 商品を表示:', allergy.allergy_item_id);
         }
       }
     });
@@ -56,32 +58,36 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
   const getContaminationInfo = (item) => {
     console.log(`🔍 getContaminationInfo 呼び出し - 商品: ${item.name || item.product_title}`);
     
-    if (!item.product_allergies || !Array.isArray(item.product_allergies)) {
-      console.log(`❌ 商品 ${item.name || item.product_title} にproduct_allergiesがありません`);
+    if (!item.product_allergies_matrix || !Array.isArray(item.product_allergies_matrix)) {
+      console.log(`❌ 商品 ${item.name || item.product_title} にproduct_allergies_matrixがありません`);
       return [];
     }
 
     const contaminationAllergies = [];
     const fragranceAllergies = [];
     
-    item.product_allergies.forEach(allergy => {
+    item.product_allergies_matrix.forEach(allergy => {
       const allergyId = allergy.allergy_item_id;
       const presenceType = allergy.presence_type;
       console.log(`アレルギー確認 - 商品: ${item.name || item.product_title}, アレルギー: ${allergyId}, 含有タイプ: ${presenceType}`);
       
-      if (presenceType === 'direct' || presenceType === 'contains') {
+      if (presenceType === 'direct' || presenceType === 'trace' || presenceType === 'none') {
         const allergyInfo = allergyOptions.find(a => a.id === allergyId);
         
         if (allergyInfo) {
-          if (allergy.amount_level === 'trace') {
+          if (presenceType === 'trace') {
             contaminationAllergies.push(allergyInfo.name);
             console.log(`コンタミネーション発見: ${allergyInfo.name}コンタミネーション`);
-          } else if (allergy.notes && allergy.notes.includes('香料')) {
-            fragranceAllergies.push(allergyInfo.name);
-            console.log(`香料含有発見: ${allergyInfo.name}香料に含む`);
-          } else {
-            contaminationAllergies.push(allergyInfo.name);
-            console.log(`含有発見: ${allergyInfo.name}含有`);
+          } else if (presenceType === 'direct') {
+            if (allergy.notes && allergy.notes.includes('香料')) {
+              fragranceAllergies.push(allergyInfo.name);
+              console.log(`香料含有発見: ${allergyInfo.name}香料に含む`);
+            } else {
+              contaminationAllergies.push(allergyInfo.name);
+              console.log(`含有発見: ${allergyInfo.name}含有`);
+            }
+          } else if (presenceType === 'none') {
+            console.log(`含有しない確認: ${allergyInfo.name}含有しない`);
           }
         }
       }
@@ -130,7 +136,7 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
         console.log('商品情報:', { 
           name: item.name, 
           product_title: item.product_title,
-          hasAllergies: !!item.product_allergies?.length
+          hasAllergies: !!item.product_allergies_matrix?.length
         });
         
         // 商品名の優先順位: product_title > name
@@ -143,7 +149,7 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
         stores[storeName].menu_items.push({
           name: menuName,
           display_name: menuName,
-          product_allergies: item.product_allergies || [],
+          product_allergies: item.product_allergies_matrix || [],
           contamination_info: contaminationInfo,
           image_urls: [
             item?.source_url,

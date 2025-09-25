@@ -47,7 +47,7 @@ const ImageUpload = ({
     if (e.target.files && e.target.files.length > 0) {
       handleFiles(Array.from(e.target.files));
     }
-    try { e.target.value = ''; } catch (_) {}
+    try { e.target.value = ''; } catch (_) { /* no-op: reselect same file */ }
   };
 
   const handleFiles = async (files) => {

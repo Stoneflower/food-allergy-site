@@ -396,25 +396,31 @@ export const RestaurantProvider = ({ children }) => {
   useEffect(() => {
     const refreshEligible = async () => {
       try {
-        if (selectedAllergies && selectedAllergies.length > 0) {
-          console.log('🔍 vw_company_card_eligible 取得開始:', selectedAllergies);
-          const { data: eligibleRows, error: eligErr } = await supabase
-            .from('vw_company_card_eligible')
-            .select('product_id')
-            .in('allergy', selectedAllergies);
-          if (eligErr) {
-            console.warn('会社カード表示ビュー取得エラー:', eligErr);
-            setEligibleProductIds(new Set());
-          } else {
-            console.log('🔍 vw_company_card_eligible 取得結果:', eligibleRows);
-            const ids = new Set((eligibleRows || []).map(r => r.product_id));
-            console.log('🔍 対象product_id:', Array.from(ids));
-            setEligibleProductIds(ids);
-          }
-        } else {
-          const ids = new Set((allItems || []).map(p => p.id));
-          setEligibleProductIds(ids);
-        }
+        // 一時的にvw_company_card_eligibleフィルタリングを無効化
+        console.log('🔍 vw_company_card_eligibleフィルタリング一時無効化 - 全product_idを対象');
+        const ids = new Set((allItems || []).map(p => p.id));
+        console.log('🔍 全product_id:', Array.from(ids));
+        setEligibleProductIds(ids);
+        
+        // if (selectedAllergies && selectedAllergies.length > 0) {
+        //   console.log('🔍 vw_company_card_eligible 取得開始:', selectedAllergies);
+        //   const { data: eligibleRows, error: eligErr } = await supabase
+        //     .from('vw_company_card_eligible')
+        //     .select('product_id')
+        //     .in('allergy', selectedAllergies);
+        //   if (eligErr) {
+        //     console.warn('会社カード表示ビュー取得エラー:', eligErr);
+        //     setEligibleProductIds(new Set());
+        //   } else {
+        //     console.log('🔍 vw_company_card_eligible 取得結果:', eligibleRows);
+        //     const ids = new Set((eligibleRows || []).map(r => r.product_id));
+        //     console.log('🔍 対象product_id:', Array.from(ids));
+        //     setEligibleProductIds(ids);
+        //   }
+        // } else {
+        //   const ids = new Set((allItems || []).map(p => p.id));
+        //   setEligibleProductIds(ids);
+        // }
       } catch (e) {
         console.warn('会社カード表示対象ID再計算エラー:', e);
         setEligibleProductIds(new Set());
@@ -437,6 +443,12 @@ export const RestaurantProvider = ({ children }) => {
       searchData.forEach(item => {
         const menuItems = item.menu_items || [];
         console.log(`🔍 transformAndMergeData - ${item.name} のmenu_items数:`, menuItems.length);
+        console.log(`🔍 transformAndMergeData - ${item.name} の元データ:`, { 
+          id: item.id, 
+          name: item.name, 
+          category: item.category, 
+          brand: item.brand 
+        });
         
         // menu_itemsが存在する場合は、各menu_itemを個別のアイテムとして展開
         if (menuItems.length > 0) {
@@ -453,7 +465,11 @@ export const RestaurantProvider = ({ children }) => {
               price: '¥500～¥1,500',
               area: item.store_locations?.[0]?.address || 'すべて',
               cuisine: '商品',
-              category: normalizeCategory(item.category),
+              category: (() => {
+                const normalized = normalizeCategory(item.category);
+                console.log(`🔍 transformAndMergeData - ${menuItem.name} のカテゴリ正規化:`, { original: item.category, normalized });
+                return normalized;
+              })(),
               category_tokens: getCategoryTokens(item.category),
               brand: item.brand || '',
               allergyInfo: createDefaultAllergyInfo(),
@@ -529,10 +545,10 @@ export const RestaurantProvider = ({ children }) => {
       console.log('データ変換完了:', transformedData.length, '件');
       return transformedData;
       
-    } catch (err) {
+      } catch (err) {
       console.error('データ変換エラー:', err);
       return [];
-    }
+      }
   };
 
   // アレルギー項目の取得と設定
@@ -547,7 +563,7 @@ export const RestaurantProvider = ({ children }) => {
         console.error('allergy_itemsテーブルエラー:', allergyError);
         throw allergyError;
       }
-
+      
       if (allergyData && allergyData.length > 0) {
         const mandatory = allergyData.filter(item => item.category === 'mandatory');
         const recommended = allergyData.filter(item => item.category === 'recommended');
@@ -588,8 +604,8 @@ export const RestaurantProvider = ({ children }) => {
   const testSupabaseConnection = async () => {
     try {
       console.log('Supabase接続テスト開始...');
-      const { data, error } = await supabase
-        .from('allergy_items')
+        const { data, error } = await supabase
+          .from('allergy_items')
         .select('id')
         .limit(1);
       

@@ -200,7 +200,7 @@ export const RestaurantProvider = ({ children }) => {
       // データを変換（searchServiceの形式に合わせる）
       const data = productsData?.map(product => ({
         ...product,
-        category: 'products',
+        // categoryは元のデータベースの値を保持
         area: '全国' // デフォルト値
       })) || [];
       
@@ -225,6 +225,13 @@ export const RestaurantProvider = ({ children }) => {
       // データの変換処理
       console.log('🔍 変換前のデータ:', data?.length || 0, '件');
       console.log('🔍 変換前のデータサンプル:', data?.[0]);
+      
+      // データベースの実際のカテゴリを詳しく確認
+      console.log('🔍 データベースの実際のカテゴリ一覧:');
+      data?.forEach((item, index) => {
+        console.log(`🔍 アイテム${index + 1}: ${item.name} - カテゴリ: "${item.category}"`);
+      });
+      
       const transformedData = transformAndMergeData(data || []);
       console.log('🔍 変換後のデータ:', transformedData.length, '件');
       console.log('🔍 変換後のデータサンプル:', transformedData[0]);

@@ -1,9 +1,9 @@
+/* RTL Language Support */
+@import './styles/rtl.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* RTL Language Support */
-@import './styles/rtl.css';
 
 * {
   margin: 0;

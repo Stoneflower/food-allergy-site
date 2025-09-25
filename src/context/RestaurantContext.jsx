@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { searchService } from '../lib/searchService';
+import searchService from '../lib/searchService';
 import { PREFECTURES, isPrefectureName, isAreaMatch } from '../constants/prefectures';
 
 const RestaurantContext = createContext();

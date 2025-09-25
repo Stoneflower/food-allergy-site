@@ -436,7 +436,7 @@ export const RestaurantProvider = ({ children }) => {
       console.log('🔍 都道府県名チェック:', isPrefectureNameInput);
       
       if (isPrefectureNameInput) {
-        console.log('🔍 都道府県名フィルター適用');
+        console.log('🔍 都道府県名フィルター適用（緩和版）');
         items = items.filter(item => {
           const isPrefectureNameItem = PREFECTURES.some(pref => 
             item.name === pref || item.area === pref
@@ -444,16 +444,31 @@ export const RestaurantProvider = ({ children }) => {
           
           const areaMatch = isAreaMatch(item.area, selectedArea);
           
-          console.log('🔍 エリアマッチ詳細:', {
+          // エリアフィルターを大幅に緩和
+          const isAreaAll = item.area === 'すべて' || item.area === '全国' || !item.area;
+          
+          // レストランチェーンは全国展開が多いため、エリアフィルターを緩和
+          const isRestaurantChain = item.category === 'レストラン' || item.category === 'restaurants';
+          
+          // 柔軟なマッチング：レストランはエリアフィルターを緩和
+          const flexibleMatch = areaMatch || isAreaAll || 
+            (item.area && item.area.toLowerCase().includes(selectedArea.toLowerCase())) ||
+            (selectedArea && item.area && selectedArea.toLowerCase().includes(item.area.toLowerCase())) ||
+            (isRestaurantChain && !isPrefectureNameItem); // レストランチェーンはエリア制限を緩和
+          
+          console.log('🔍 エリアマッチ詳細（緩和版）:', {
             itemName: item.name,
             itemArea: item.area,
             selectedArea,
             isPrefectureNameItem,
             areaMatch,
-            result: areaMatch && !isPrefectureNameItem
+            isAreaAll,
+            isRestaurantChain,
+            flexibleMatch,
+            result: flexibleMatch && !isPrefectureNameItem
           });
           
-          return areaMatch && !isPrefectureNameItem;
+          return flexibleMatch && !isPrefectureNameItem;
         });
       } else {
         console.log('🔍 通常のエリアフィルター適用');

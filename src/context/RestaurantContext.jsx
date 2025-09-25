@@ -194,6 +194,16 @@ export const RestaurantProvider = ({ children }) => {
       const transformedData = transformAndMergeData(data || []);
       console.log('🔍 変換後のデータ:', transformedData.length, '件');
       console.log('🔍 変換後のデータサンプル:', transformedData[0]);
+      
+      // カテゴリの詳細ログ
+      transformedData.forEach((item, index) => {
+        console.log(`🔍 アイテム${index + 1}:`, {
+          name: item.name,
+          category: item.category,
+          category_tokens: item.category_tokens
+        });
+      });
+      
       setAllItems(transformedData);
       
     } catch (err) {
@@ -365,13 +375,26 @@ export const RestaurantProvider = ({ children }) => {
     console.log('🔍 getFilteredItems開始 - allItemsData:', allItemsData.length);
     console.log('🔍 フィルター条件:', { selectedCategory, searchKeyword, selectedArea, selectedAllergies: selectedAllergies.length });
 
-    if (selectedCategory !== 'すべて') {
+    if (selectedCategory !== 'すべて' && selectedCategory !== 'all') {
       console.log('🔍 カテゴリフィルター適用:', selectedCategory);
+      
+      // 英語カテゴリを日本語に変換
+      const categoryMap = {
+        'restaurants': 'レストラン',
+        'supermarkets': 'スーパー', 
+        'online': 'ネットショップ',
+        'products': '商品',
+        'takeout': 'テイクアウト'
+      };
+      
+      const normalizedSelectedCategory = categoryMap[selectedCategory] || selectedCategory;
+      console.log('🔍 正規化されたカテゴリ:', normalizedSelectedCategory);
+      
       items = items.filter(item => {
-        const matches = item.category === selectedCategory || 
-                       (Array.isArray(item.category_tokens) && item.category_tokens.includes(selectedCategory));
+        const matches = item.category === normalizedSelectedCategory || 
+                       (Array.isArray(item.category_tokens) && item.category_tokens.includes(normalizedSelectedCategory));
         if (matches) {
-          console.log('🔍 マッチしたアイテム:', item.name, 'カテゴリ:', item.category);
+          console.log('🔍 マッチしたアイテム:', item.name, 'カテゴリ:', item.category, 'トークン:', item.category_tokens);
         }
         return matches;
       });

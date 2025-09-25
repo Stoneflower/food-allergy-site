@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FiFileText, FiUpload, FiSettings, FiDatabase, FiGlobe, FiTestTube } from 'react-icons/fi';
+import { FiFileText, FiUpload, FiSettings, FiDatabase, FiGlobe, FiActivity } from 'react-icons/fi';
 import TestAllergyDataManager from '../components/TestAllergyDataManager';
 
 const AdminTools = () => {
@@ -45,7 +45,7 @@ const AdminTools = () => {
       title: 'テスト用アレルギー情報',
       description: 'テスト用アレルギー情報の追加・確認',
       path: '/test-allergy-data',
-      icon: FiTestTube,
+      icon: FiActivity,
       color: 'from-red-500 to-pink-500'
     }
   ];

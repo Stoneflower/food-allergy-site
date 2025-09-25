@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FiArrowLeft, FiTestTube } from 'react-icons/fi';
+import { FiArrowLeft, FiActivity } from 'react-icons/fi';
 import TestAllergyDataManager from '../components/TestAllergyDataManager';
 import SupabaseQueryTester from '../components/SupabaseQueryTester';
 
@@ -21,7 +21,7 @@ const TestAllergyDataPage = () => {
           
           <div className="flex items-center mb-4">
             <div className="w-12 h-12 rounded-lg bg-gradient-to-r from-red-500 to-pink-500 flex items-center justify-center mr-4">
-              <FiTestTube className="w-6 h-6 text-white" />
+              <FiActivity className="w-6 h-6 text-white" />
             </div>
             <div>
               <h1 className="text-3xl font-bold text-gray-900">

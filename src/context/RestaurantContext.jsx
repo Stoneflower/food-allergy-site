@@ -212,21 +212,18 @@ export const RestaurantProvider = ({ children }) => {
             notes
           ),
           product_allergies_matrix (
+            id,
             product_id,
-            milk,
+            menu_name,
             egg,
+            milk,
             wheat,
             buckwheat,
             peanut,
             shrimp,
             crab,
             walnut,
-            soy,
-            beef,
-            pork,
-            chicken,
-            salmon,
-            mackerel,
+            almond,
             abalone,
             squid,
             salmon_roe,
@@ -246,7 +243,8 @@ export const RestaurantProvider = ({ children }) => {
             peach,
             yam,
             apple,
-            macadamia
+            macadamia,
+            menu_item_id
           ),
           menu_items (
             id,

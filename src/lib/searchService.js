@@ -41,6 +41,7 @@ class SearchService {
       area: filters.area,
       category: filters.category
     });
+    console.log('🔍 フィルター条件詳細（展開）:', filters);
 
     // アレルギーフィルターは一旦無効化（問題の切り分け）
     // if (filters.allergies?.length > 0) {
@@ -54,11 +55,11 @@ class SearchService {
     //   console.log('🔍 エリアフィルター追加:', filters.area);
     // }
 
-    // カテゴリフィルターのみ適用
-    if (filters.category && filters.category !== 'all') {
-      query = query.eq('category', filters.category);
-      console.log('🔍 カテゴリフィルター追加:', filters.category);
-    }
+    // カテゴリフィルターも一時的に無効化（問題の切り分け）
+    // if (filters.category && filters.category !== 'all') {
+    //   query = query.eq('category', filters.category);
+    //   console.log('🔍 カテゴリフィルター追加:', filters.category);
+    // }
 
     const { data, error } = await query
       .order('updated_at', { ascending: false })

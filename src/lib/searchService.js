@@ -17,6 +17,13 @@ class SearchService {
           *,
           allergy_items(*)
         ),
+        product_allergies_matrix(
+          menu_name,
+          allergy_item_id,
+          presence_type,
+          amount_level,
+          notes
+        ),
         store_locations(
           id,
           branch_name,
@@ -114,6 +121,13 @@ class SearchService {
         product_allergies(
           *,
           allergy_items(*)
+        ),
+        product_allergies_matrix(
+          menu_name,
+          allergy_item_id,
+          presence_type,
+          amount_level,
+          notes
         ),
         store_locations(
           id,
@@ -226,6 +240,13 @@ class SearchService {
         product_allergies(
           *,
           allergy_items(*)
+        ),
+        product_allergies_matrix(
+          menu_name,
+          allergy_item_id,
+          presence_type,
+          amount_level,
+          notes
         ),
         store_locations!inner(
           id,

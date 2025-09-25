@@ -12,7 +12,7 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
   console.log('🔍 AllergySearchResults - getFilteredItems():', filteredItems?.length || 0, '件');
   console.log('🔍 AllergySearchResults - filteredItems:', filteredItems);
 
-  // アレルギー適合性チェック（会社カード表示用: directで除外）
+  // アレルギー適合性チェック（詳細表示用: directも含めて表示）
   const checkAllergyCompatibility = (item, selectedAllergies) => {
     console.log('🔍 アレルギー適合性チェック開始:', {
       itemName: item.name || item.product_title,
@@ -31,14 +31,14 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
       return true;
     }
 
-    // アレルギー情報をチェック
+    // アレルギー情報をチェック（directも含めて表示）
     let hasSelectedAllergy = false;
     
     item.product_allergies.forEach(allergy => {
       if (selectedAllergies.includes(allergy.allergy_item_id)) {
+        hasSelectedAllergy = true;
         if (allergy.presence_type === 'direct') {
-          hasSelectedAllergy = true;
-          console.log('🔍 アレルギー含有 - 商品を除外:', allergy.allergy_item_id);
+          console.log('🔍 アレルギー含有 - 商品を表示（direct）:', allergy.allergy_item_id);
         } else if (allergy.presence_type === 'trace') {
           console.log('🔍 アレルギーコンタミネーション - 商品を表示:', allergy.allergy_item_id);
         } else if (allergy.presence_type === 'none') {
@@ -47,8 +47,10 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
       }
     });
     
+    // 選択アレルギーに関連する商品はすべて表示（direct/trace/none問わず）
     if (hasSelectedAllergy) {
-      return false;
+      console.log('🔍 選択アレルギー関連商品 - 表示');
+      return true;
     }
 
     console.log('🔍 アレルギー適合 - 商品を表示');
@@ -274,10 +276,27 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
     <div className="space-y-4">
       {stores.map((store, index) => {
         const firstItem = store.menu_items?.[0];
-        // 画像/リンク 優先: products.source_url/source_url2 → fallback store_list_url（変換済み）
+        // 画像/リンク 優先: products.source_url/source_url2 → fallback store_locations
         const imageUrls = Array.from(new Set((store.menu_items || []).flatMap(m => m.image_urls || []))).slice(0, 2);
         const evidenceUrl = firstItem?.image_urls?.[0];
         const storeListUrl = firstItem?.store_list_url || firstItem?.related_product?.store_list_url;
+        
+        // store_locationsからも画像・リンクを取得
+        const storeLocations = firstItem?.related_product?.store_locations || [];
+        const storeSourceUrls = storeLocations.flatMap(sl => [sl.source_url, sl.store_list_url]).filter(Boolean);
+        const allUrls = [...imageUrls, ...storeSourceUrls].filter(Boolean);
+        
+        // デバッグ: データ構造確認
+        console.log('🔍 画像・リンク表示デバッグ:', {
+          storeName: store.name,
+          firstItem: firstItem,
+          imageUrls: imageUrls,
+          storeListUrl: storeListUrl,
+          storeLocations: storeLocations,
+          storeSourceUrls: storeSourceUrls,
+          allUrls: allUrls,
+          relatedProduct: firstItem?.related_product
+        });
         const isOpen = !!expanded[store.name];
 
         return (
@@ -318,16 +337,21 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
                 {/* 画像・リンク（フッター） */}
                 <div className="mt-2 border-t pt-2">
                   <div className="flex items-center gap-2 overflow-x-auto">
-                    {imageUrls.map((u, i) => (
+                    {allUrls.slice(0, 2).map((u, i) => (
                       <img key={i} src={u} alt="evidence" className="h-12 w-12 object-cover rounded border" />
                     ))}
                   </div>
                   <div className="mt-2 space-x-3 text-xs">
-                    {imageUrls.length > 0 && (
-                      <a href={imageUrls[0]} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">商品画像（証拠）</a>
+                    {allUrls.length > 0 && (
+                      <a href={allUrls[0]} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">
+                        {imageUrls.length > 0 ? '商品画像（証拠）' : 'アレルギー情報元'}
+                      </a>
                     )}
-                    {!imageUrls.length && storeListUrl && (
-                      <a href={storeListUrl} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">店舗エリアURL</a>
+                    {allUrls.length > 1 && (
+                      <a href={allUrls[1]} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">店舗エリアURL</a>
+                    )}
+                    {allUrls.length === 0 && (
+                      <span className="text-gray-400">画像・リンクなし</span>
                     )}
                   </div>
                 </div>

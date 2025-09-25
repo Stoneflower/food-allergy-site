@@ -198,7 +198,7 @@ export const RestaurantProvider = ({ children }) => {
         limit: 200
       });
       
-      // 直接Supabaseから商品データを取得（SimpleProductDisplayと同じ方法）
+      // 直接Supabaseから商品データを取得（store_locationsも含める）
       const { data: productsData, error: productsError } = await supabase
         .from('products')
         .select(`
@@ -210,6 +210,13 @@ export const RestaurantProvider = ({ children }) => {
             presence_type,
             amount_level,
             notes
+          ),
+          store_locations (
+            id,
+            branch_name,
+            address,
+            source_url,
+            store_list_url
           )
         `)
         .limit(200);
@@ -391,6 +398,7 @@ export const RestaurantProvider = ({ children }) => {
           related_product: item,
           description: item.description || item.product_title || item.name || '',
           store_list_url: item.store_locations?.[0]?.store_list_url || null,
+          store_locations: item.store_locations || [],
           source: {
             type: 'official',
             contributor: '商品公式',

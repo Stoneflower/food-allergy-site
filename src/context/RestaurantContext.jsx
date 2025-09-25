@@ -6,54 +6,72 @@ import searchService from '../lib/searchService';
 const convertAllergyMatrixToArray = (allergyMatrix) => {
   console.log('🔍 convertAllergyMatrixToArray 呼び出し:', allergyMatrix);
   console.log('🔍 convertAllergyMatrixToArray type:', typeof allergyMatrix);
+  console.log('🔍 convertAllergyMatrixToArray isArray:', Array.isArray(allergyMatrix));
   
-  if (!allergyMatrix || typeof allergyMatrix !== 'object') {
+  if (!allergyMatrix) {
     console.log('🔍 convertAllergyMatrixToArray: 無効なデータ、空配列を返す');
     return [];
   }
 
-  const allergyArray = [];
-  const allergyItems = [
-    'egg', 'milk', 'wheat', 'buckwheat', 'peanut', 'shrimp', 'crab', 
-    'walnut', 'almond', 'abalone', 'squid', 'salmon_roe', 'orange', 
-    'cashew', 'kiwi', 'beef', 'gelatin', 'sesame', 'salmon', 'mackerel', 
-    'soybean', 'chicken', 'banana', 'pork', 'matsutake', 'peach', 
-    'yam', 'apple', 'macadamia'
-  ];
-
-  allergyItems.forEach(allergyId => {
-    const presenceType = allergyMatrix[allergyId];
-    if (presenceType) {
-      if (presenceType === 'direct') {
-        allergyArray.push({
-          allergy_item_id: allergyId,
-          presence_type: 'direct',
-          amount_level: 'unknown',
-          notes: '含有'
-        });
-        console.log(`🔍 含有発見: ${allergyId} = ${presenceType}`);
-      } else if (presenceType === 'trace') {
-        allergyArray.push({
-          allergy_item_id: allergyId,
-          presence_type: 'trace',
-          amount_level: 'trace',
-          notes: 'コンタミネーション（微量混入）'
-        });
-        console.log(`🔍 コンタミネーション発見: ${allergyId} = ${presenceType}`);
-      } else if (presenceType === 'none') {
-        allergyArray.push({
-          allergy_item_id: allergyId,
-          presence_type: 'none',
-          amount_level: 'none',
-          notes: '含有しない'
-        });
-        console.log(`🔍 含有しない確認: ${allergyId} = ${presenceType}`);
-      }
+  // 配列の場合はそのまま返す
+  if (Array.isArray(allergyMatrix)) {
+    console.log('🔍 convertAllergyMatrixToArray: 配列として取得、そのまま返す');
+    console.log('🔍 convertAllergyMatrixToArray 配列の長さ:', allergyMatrix.length);
+    if (allergyMatrix.length > 0) {
+      console.log('🔍 convertAllergyMatrixToArray 配列の最初の要素:', allergyMatrix[0]);
     }
-  });
+    return allergyMatrix;
+  }
 
-  console.log('🔍 convertAllergyMatrixToArray 結果:', allergyArray);
-  return allergyArray;
+  // オブジェクトの場合は変換処理
+  if (typeof allergyMatrix === 'object') {
+    console.log('🔍 convertAllergyMatrixToArray: オブジェクトとして取得、変換処理実行');
+    const allergyArray = [];
+    const allergyItems = [
+      'egg', 'milk', 'wheat', 'buckwheat', 'peanut', 'shrimp', 'crab', 
+      'walnut', 'almond', 'abalone', 'squid', 'salmon_roe', 'orange', 
+      'cashew', 'kiwi', 'beef', 'gelatin', 'sesame', 'salmon', 'mackerel', 
+      'soybean', 'chicken', 'banana', 'pork', 'matsutake', 'peach', 
+      'yam', 'apple', 'macadamia'
+    ];
+
+    allergyItems.forEach(allergyId => {
+      const presenceType = allergyMatrix[allergyId];
+      if (presenceType) {
+        if (presenceType === 'direct') {
+          allergyArray.push({
+            allergy_item_id: allergyId,
+            presence_type: 'direct',
+            amount_level: 'unknown',
+            notes: '含有'
+          });
+          console.log(`🔍 含有発見: ${allergyId} = ${presenceType}`);
+        } else if (presenceType === 'trace') {
+          allergyArray.push({
+            allergy_item_id: allergyId,
+            presence_type: 'trace',
+            amount_level: 'trace',
+            notes: 'コンタミネーション（微量混入）'
+          });
+          console.log(`🔍 コンタミネーション発見: ${allergyId} = ${presenceType}`);
+        } else if (presenceType === 'none') {
+          allergyArray.push({
+            allergy_item_id: allergyId,
+            presence_type: 'none',
+            amount_level: 'none',
+            notes: '含有しない'
+          });
+          console.log(`🔍 含有しない確認: ${allergyId} = ${presenceType}`);
+        }
+      }
+    });
+
+    console.log('🔍 convertAllergyMatrixToArray 結果:', allergyArray);
+    return allergyArray;
+  }
+
+  console.log('🔍 convertAllergyMatrixToArray: 予期しないデータ型、空配列を返す');
+  return [];
 };
 import { PREFECTURES, isPrefectureName, isAreaMatch } from '../constants/prefectures';
 

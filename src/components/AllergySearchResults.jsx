@@ -241,18 +241,21 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
         // safe/trace/fragrance分類
         const cls = classifyAllergyStatus(item, selectedAllergies);
 
-        stores[companyName].products.push({
-          name: productName,
-          display_name: productName,
-          product_allergies: item.product_allergies || [],
-          contamination_info: contaminationInfo,
-          classify: cls,
+        // 会社カードの展開商品は「directのみ」を除外（none/trace/香料 or 安全）
+        if (cls.isSafe || cls.hasTrace || cls.hasFragrance) {
+          stores[companyName].products.push({
+            name: productName,
+            display_name: productName,
+            product_allergies: item.product_allergies || [],
+            contamination_info: contaminationInfo,
+            classify: cls,
             image_urls: [
-            item?.source_url,
-            item?.source_url2,
-            item?.image_url
+              item?.source_url,
+              item?.source_url2,
+              item?.image_url
             ].filter(Boolean)
           });
+        }
         console.log('groupedStores - added product with allergies:', productName, 'to company:', companyName);
         } else {
         // 商品名の優先順位: menu_items.name > product_title > name

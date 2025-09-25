@@ -19,6 +19,13 @@ const AllergySearchResults = ({ items }) => {
   } = useRestaurant();
 
   const filteredItems = items ?? getFilteredItems();
+  
+  // デバッグ用: propsの確認
+  console.log('🔍 AllergySearchResults - items props:', items?.length || 0, '件');
+  console.log('🔍 AllergySearchResults - items propsサンプル:', items?.[0]);
+  console.log('🔍 AllergySearchResults - getFilteredItems():', getFilteredItems()?.length || 0, '件');
+  console.log('🔍 AllergySearchResults - filteredItems:', filteredItems?.length || 0, '件');
+  
   const [expandedStores, setExpandedStores] = useState(new Set());
   const storeRefs = React.useRef({});
   const [isMobile, setIsMobile] = useState(false);

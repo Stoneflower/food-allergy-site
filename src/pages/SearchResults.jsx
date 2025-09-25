@@ -584,6 +584,9 @@ const SearchResults = () => {
           {/* Results */}
           <div className="flex-1">
             <AllergySearchResults items={sortedItems} />
+            {/* デバッグ用: データが正しく渡されているか確認 */}
+            {console.log('🔍 SearchResults - sortedItems:', sortedItems.length, '件')}
+            {console.log('🔍 SearchResults - sortedItemsサンプル:', sortedItems[0])}
           </div>
         </div>
 

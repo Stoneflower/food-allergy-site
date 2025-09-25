@@ -2,11 +2,12 @@ import React from 'react';
 import { useRestaurant } from '../context/RestaurantContext';
 
 const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSearch, selectedTraceForSearch, allergyOptions }) => {
-  const { getFilteredItems } = useRestaurant();
-  
   console.log('🔍 AllergySearchResults - items props:', items?.length || 0, '件');
   console.log('🔍 AllergySearchResults - items propsサンプル:', items?.[0]);
+  console.log('🔍 AllergySearchResults - selectedAllergies props:', selectedAllergies);
+  console.log('🔍 AllergySearchResults - selectedAllergies length:', selectedAllergies?.length || 0);
 
+  const { getFilteredItems } = useRestaurant();
   const filteredItems = getFilteredItems();
   console.log('🔍 AllergySearchResults - getFilteredItems():', filteredItems?.length || 0, '件');
   console.log('🔍 AllergySearchResults - filteredItems:', filteredItems);

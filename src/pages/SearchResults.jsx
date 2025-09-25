@@ -583,7 +583,13 @@ const SearchResults = () => {
 
           {/* Results */}
           <div className="flex-1">
-            <AllergySearchResults items={sortedItems} />
+            <AllergySearchResults 
+              items={sortedItems} 
+              selectedAllergies={selectedAllergies}
+              selectedFragranceForSearch={selectedFragranceForSearch}
+              selectedTraceForSearch={selectedTraceForSearch}
+              allergyOptions={allergyOptions}
+            />
             {/* デバッグ用: データが正しく渡されているか確認 */}
             {console.log('🔍 SearchResults - sortedItems:', sortedItems.length, '件')}
             {console.log('🔍 SearchResults - sortedItemsサンプル:', sortedItems[0])}

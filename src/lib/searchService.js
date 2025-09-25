@@ -22,17 +22,11 @@ class SearchService {
       .select(`
         *,
         product_allergies(
-          id,
-          allergy_item_id,
-          presence_type,
-          amount_level,
-          notes,
+          *,
           allergy_items(
-            id,
             name,
-            name_en,
-            category,
-            icon
+            icon,
+            category
           )
         ),
         store_locations(

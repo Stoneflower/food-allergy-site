@@ -98,29 +98,45 @@ export const RestaurantProvider = ({ children }) => {
 
   // 利用シーン（products.category 文字列）→ 内部カテゴリIDへの正規化
   const normalizeCategory = (categoryText) => {
-    if (!categoryText || typeof categoryText !== 'string') return 'products';
-    const tokens = categoryText.split(/[/、,\s]+/).filter(Boolean);
-    const text = categoryText;
+    if (!categoryText || typeof categoryText !== 'string') return '商品';
     
-    if (tokens.some(t => t.includes('スーパー')) || text.includes('スーパー')) return 'supermarkets';
-    if (tokens.some(t => t.includes('ネットショップ')) || text.includes('ネットショップ')) return 'online';
-    if (tokens.some(t => t.includes('テイクアウト')) || text.includes('テイクアウト')) return 'products';
-    if (tokens.some(t => t.includes('レストラン')) || text.includes('レストラン')) return 'restaurants';
+    // データベースのカテゴリを日本語にマッピング
+    const categoryMap = {
+      'restaurants': 'レストラン',
+      'supermarkets': 'スーパー', 
+      'online': 'ネットショップ',
+      'products': '商品',
+      'takeout': 'テイクアウト'
+    };
     
-    return 'products';
+    // 既に日本語の場合はそのまま返す
+    if (['レストラン', 'スーパー', 'ネットショップ', '商品', 'テイクアウト'].includes(categoryText)) {
+      return categoryText;
+    }
+    
+    // 英語の場合は日本語に変換
+    return categoryMap[categoryText] || '商品';
   };
 
-  // カテゴリトークンの生成
+  // カテゴリトークンの生成（日本語統一）
   const getCategoryTokens = (categoryText) => {
-    if (!categoryText || typeof categoryText !== 'string') return ['products'];
-    const result = new Set();
-    const tokens = categoryText.split(/[/、,\s]+/).filter(Boolean);
+    if (!categoryText || typeof categoryText !== 'string') return ['商品'];
     
-    result.add('products');
-    if (tokens.some(t => t.includes('スーパー')) || categoryText.includes('スーパー')) result.add('supermarkets');
-    if (tokens.some(t => t.includes('ネットショップ')) || categoryText.includes('ネットショップ')) result.add('online');
-    if (tokens.some(t => t.includes('テイクアウト')) || categoryText.includes('テイクアウト')) result.add('products');
-    if (tokens.some(t => t.includes('レストラン')) || categoryText.includes('レストラン')) result.add('restaurants');
+    const result = new Set();
+    result.add('商品'); // デフォルト
+    
+    // カテゴリマッピング
+    const categoryMap = {
+      'restaurants': 'レストラン',
+      'supermarkets': 'スーパー', 
+      'online': 'ネットショップ',
+      'products': '商品',
+      'takeout': 'テイクアウト'
+    };
+    
+    // 英語→日本語変換
+    const normalizedCategory = normalizeCategory(categoryText);
+    result.add(normalizedCategory);
     
     return Array.from(result);
   };
@@ -173,7 +189,11 @@ export const RestaurantProvider = ({ children }) => {
       console.log('検索結果:', data?.length || 0, '件', '実行時間:', executionTime.toFixed(2), 'ms');
 
       // データの変換処理
+      console.log('🔍 変換前のデータ:', data?.length || 0, '件');
+      console.log('🔍 変換前のデータサンプル:', data?.[0]);
       const transformedData = transformAndMergeData(data || []);
+      console.log('🔍 変換後のデータ:', transformedData.length, '件');
+      console.log('🔍 変換後のデータサンプル:', transformedData[0]);
       setAllItems(transformedData);
       
     } catch (err) {
@@ -342,14 +362,20 @@ export const RestaurantProvider = ({ children }) => {
   const getFilteredItems = () => {
     let items = allItemsData;
     
-    console.log('getFilteredItems - allItemsData:', allItemsData.length);
+    console.log('🔍 getFilteredItems開始 - allItemsData:', allItemsData.length);
+    console.log('🔍 フィルター条件:', { selectedCategory, searchKeyword, selectedArea, selectedAllergies: selectedAllergies.length });
 
-    if (selectedCategory !== 'all') {
+    if (selectedCategory !== 'すべて') {
+      console.log('🔍 カテゴリフィルター適用:', selectedCategory);
       items = items.filter(item => {
-        if (item.category === selectedCategory) return true;
-        if (Array.isArray(item.category_tokens) && item.category_tokens.includes(selectedCategory)) return true;
-        return false;
+        const matches = item.category === selectedCategory || 
+                       (Array.isArray(item.category_tokens) && item.category_tokens.includes(selectedCategory));
+        if (matches) {
+          console.log('🔍 マッチしたアイテム:', item.name, 'カテゴリ:', item.category);
+        }
+        return matches;
       });
+      console.log('🔍 カテゴリフィルター後:', items.length, '件');
     }
 
     if (searchKeyword) {
@@ -387,7 +413,8 @@ export const RestaurantProvider = ({ children }) => {
       }
     }
 
-    console.log('getFilteredItems - final result:', items.length);
+    console.log('🔍 getFilteredItems完了 - final result:', items.length);
+    console.log('🔍 フィルタリング後のアイテムサンプル:', items[0]);
     return items;
   };
 

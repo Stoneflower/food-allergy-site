@@ -77,6 +77,27 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
           values: Object.values(item.product_allergies_matrix[i])
         });
       }
+      
+      // 実際のプロパティ名を確認
+      const firstElement = item.product_allergies_matrix[0];
+      console.log(`🔍 getContaminationInfo - 実際のプロパティ名:`, Object.keys(firstElement));
+      console.log(`🔍 getContaminationInfo - 実際の値:`, Object.values(firstElement));
+      
+      // 期待されるプロパティ名を試す
+      const possibleKeys = ['allergy_item_id', 'allergy_item', 'item_id', 'id', 'allergy_id'];
+      const possiblePresenceKeys = ['presence_type', 'presence', 'type', 'status'];
+      
+      possibleKeys.forEach(key => {
+        if (firstElement[key]) {
+          console.log(`🔍 getContaminationInfo - 発見: ${key} = ${firstElement[key]}`);
+        }
+      });
+      
+      possiblePresenceKeys.forEach(key => {
+        if (firstElement[key]) {
+          console.log(`🔍 getContaminationInfo - 発見: ${key} = ${firstElement[key]}`);
+        }
+      });
     }
 
     const contaminationAllergies = [];

@@ -255,7 +255,7 @@ export const RestaurantProvider = ({ children }) => {
         .from('products')
         .select(`
           *,
-          product_allergies_matrix (*)
+          product_allergies_matrix
         `)
         .limit(200);
 

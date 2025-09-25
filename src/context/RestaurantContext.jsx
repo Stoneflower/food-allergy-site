@@ -191,7 +191,11 @@ export const RestaurantProvider = ({ children }) => {
       const executionTime = performance.now() - startTime;
       
       // パフォーマンスログの記録
-      await searchService.logSearchPerformance(searchKeyword, executionTime, data?.length || 0);
+      try {
+        await searchService.logPerformance('hybrid', searchKeyword, {}, executionTime, data?.length || 0);
+      } catch (logError) {
+        console.warn('パフォーマンスログ記録エラー:', logError);
+      }
 
       if (error) {
         console.error('検索エラー:', error);

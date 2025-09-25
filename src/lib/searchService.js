@@ -5,57 +5,12 @@ class SearchService {
     this.supabase = supabase;
   }
 
-  // 最適化された全文検索（インデックス活用）
+  // 最適化された全文検索（Supabase直接使用）
   async fullTextSearch(searchTerm, filters = {}) {
-    console.log('🔍 最適化全文検索開始:', { searchTerm, filters });
+    console.log('🔍 最適化全文検索開始（Supabase直接）:', { searchTerm, filters });
     
-    try {
-      // Typesenseの/search APIを呼び出し
-      const searchParams = new URLSearchParams();
-      
-      if (searchTerm) {
-        searchParams.append('q', searchTerm);
-      }
-      
-      if (filters.category) {
-        searchParams.append('filter_by', `category:=${filters.category}`);
-      }
-      
-      if (filters.area) {
-        searchParams.append('filter_by', `address:*${filters.area}*`);
-      }
-      
-      if (filters.allergies?.length > 0) {
-        const allergyFilter = filters.allergies.map(id => `allergy_item_id:=${id}`).join(' || ');
-        searchParams.append('filter_by', allergyFilter);
-      }
-      
-      searchParams.append('per_page', filters.limit || '200');
-      searchParams.append('sort_by', 'updated_at:desc');
-      
-      const response = await fetch(`/api/search?${searchParams.toString()}`);
-      
-      if (!response.ok) {
-        throw new Error(`Typesense API error: ${response.status}`);
-      }
-      
-      const result = await response.json();
-      console.log('🔍 Typesense検索結果:', { 
-        hits: result.hits?.length || 0, 
-        total: result.found || 0 
-      });
-      
-      // Typesenseの結果をSupabase形式に変換
-      const data = result.hits?.map(hit => hit.document) || [];
-      
-      return { data, error: null };
-    } catch (error) {
-      console.error('Typesense検索エラー:', error);
-      
-      // フォールバック: 最適化されたSupabaseクエリ（インデックス活用）
-      console.log('🔍 フォールバック: 最適化Supabaseクエリ実行');
-      return this.optimizedFallbackSearch(searchTerm, filters);
-    }
+    // 直接Supabaseクエリを使用（Typesense APIが存在しないため）
+    return this.optimizedFallbackSearch(searchTerm, filters);
   }
 
   // 最適化されたフォールバック検索（インデックス活用）
@@ -66,7 +21,7 @@ class SearchService {
       .from('products')
       .select(`
         *,
-        product_allergies!inner(
+        product_allergies(
           allergy_item_id,
           presence_type,
           notes,
@@ -84,16 +39,16 @@ class SearchService {
       `);
 
     if (searchTerm) {
-      // 全文検索の使用（GINインデックス活用）
-      query = query.textSearch('fts', searchTerm);
-      console.log('🔍 全文検索条件追加:', searchTerm);
+      // 基本的なLIKE検索を使用
+      query = query.or(`name.ilike.%${searchTerm}%,product_title.ilike.%${searchTerm}%`);
+      console.log('🔍 LIKE検索条件追加:', searchTerm);
     }
 
-    // アレルギー成分フィルタリング
-    if (filters.allergies?.length > 0) {
-      query = query.in('product_allergies.allergy_item_id', filters.allergies);
-      console.log('🔍 アレルギーフィルター条件追加:', filters.allergies);
-    }
+    // アレルギー成分フィルタリング（一時的に無効化）
+    // if (filters.allergies?.length > 0) {
+    //   query = query.in('product_allergies.allergy_item_id', filters.allergies);
+    //   console.log('🔍 アレルギーフィルター条件追加:', filters.allergies);
+    // }
 
     // エリアフィルタリング（トリグラムインデックス活用）
     if (filters.area) {

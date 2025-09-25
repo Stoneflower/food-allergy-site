@@ -1036,39 +1036,113 @@ const CsvExporter = ({ data, onBack }) => {
         if (!finalProductError && finalProductData) {
           console.log('🔄 フォールバック完了後のproduct_allergies_matrix最終更新開始');
           await updateProductAllergiesMatrix(finalProductData.id, jobId);
-          // === 追加: 香料/加熱ステータスを保存 ===
+
+          // === 追加: CSV -> products.product_title と product_allergies（正規化保存） ===
           const pid = finalProductData.id;
-          // heat_status 更新
+
+          // 1) products.product_title をCSVの全メニュー名で更新（重複も保持・順序維持）
+          try {
+            if (Array.isArray(stagingData) && stagingData.length > 0) {
+              const allNamesInOrder = (stagingData || [])
+                .map(r => String(r?.raw_menu_name || '').trim())
+                .filter(n => n.length > 0);
+              if (allNamesInOrder.length > 0) {
+                // 可能な限り全文保持（DB側の型制約を超えない前提。長すぎる場合のみ控えめにスライス）
+                const joined = allNamesInOrder.join(' / ');
+                const safe = joined.length > 6000 ? joined.slice(0, 6000) : joined;
+                await supabase.from('products').update({ product_title: safe }).eq('id', pid);
+                console.log('✅ product_title を更新（全メニュー連結・重複保持）:', safe.substring(0, 120) + (safe.length > 120 ? '...' : ''));
+              }
+            }
+          } catch (ePT) {
+            console.warn('product_title 更新失敗:', ePT);
+          }
+
+          // 2) heat_status を更新
           try {
             await supabase.from('products').update({ heat_status: heatStatus || 'none' }).eq('id', pid);
           } catch (e) {
             console.warn('heat_status 更新失敗:', e);
           }
-          // fragrance_allergens を presence_type='direct' として保存（none/空ならスキップ）
-          const parsedFragrance = (fragranceCsv || '').trim();
-          if (parsedFragrance && parsedFragrance.toLowerCase() !== 'none') {
-            const ids = parsedFragrance.split(',').map(s => s.trim()).filter(Boolean);
-            if (ids.length > 0) {
-              try {
-                // 既存の香料由来（notesに[fragrance]を含む）や direct 重複回避のため、同一presence_type=direct を一旦削除
-                await supabase.from('product_allergies').delete().eq('product_id', pid).eq('presence_type', 'direct');
-              } catch (eDel) {
-                console.warn('fragrance 削除時の警告:', eDel?.message || eDel);
-              }
-              const rows = ids.map(itemId => ({
-                product_id: pid,
-                allergy_item_id: itemId,
-                presence_type: 'direct',
-                amount_level: 'unknown',
-                notes: '[fragrance] 香料由来'
-              }));
-              try {
-                const { error: insErr } = await supabase.from('product_allergies').insert(rows);
-                if (insErr) console.error('fragrance 追加エラー:', insErr);
-              } catch (eIns) {
-                console.error('fragrance 追加例外:', eIns);
-              }
+
+          // 3) CSVの各行を集計して保存
+          //   - product_allergies: presence_type を direct/none に統一
+          //   - products.trace_allergies: 28品目の direct/none（traceをdirect扱いでJSON保存）
+          //   - products.fragrance_allergies: 28品目の direct/none（選択された香料のみdirectでJSON保存）
+          try {
+            // 既存のアレルギー行を全削除（このCSV取込で上書き）
+            await supabase.from('product_allergies').delete().eq('product_id', pid);
+
+            // アレルゲンごとに presence を集計: direct を優先（trace は別管理、none/unused は none）
+            const presenceOrder = { direct: 2, trace: 1, none: 0, unused: 0 };
+            const aggregated = new Map(); // allergy_item_id -> presence_type（direct/trace/none）
+
+            (Array.isArray(stagingData) ? stagingData : []).forEach(row => {
+              standardAllergens.forEach(allergen => {
+                const raw = row[allergen.slug];
+                const value = (raw || '').trim();
+                const mapped = normalizePresence(value); // 'direct' | 'trace' | 'none' | 'unused' など
+                const prev = aggregated.get(allergen.slug) || 'none';
+                if ((presenceOrder[mapped] || 0) > (presenceOrder[prev] || 0)) {
+                  aggregated.set(allergen.slug, mapped);
+                }
+              });
+            });
+
+            // 香料選択は別管理（product_allergies には反映しない）
+            const parsedFragrance = (fragranceCsv || '').trim();
+            const fragranceIds = (parsedFragrance && parsedFragrance.toLowerCase() !== 'none')
+              ? parsedFragrance.split(',').map(s => s.trim()).filter(Boolean)
+              : [];
+
+            // trace / fragrance を 28品目の direct/none マップ(JSON)として保存
+            const traceMap = {};
+            const fragranceMap = {};
+            standardAllergens.forEach(allergen => {
+              const key = allergen.slug;
+              const agg = aggregated.get(key) || 'none';
+              // traceMap: 集計がtraceのとき direct、それ以外 none
+              traceMap[key] = (agg === 'trace') ? 'direct' : 'none';
+              // fragranceMap: fragranceIdsに含まれていれば direct、それ以外 none
+              fragranceMap[key] = fragranceIds.includes(key) ? 'direct' : 'none';
+            });
+
+            try {
+              await supabase.from('products').update({
+                trace_allergies: JSON.stringify(traceMap),
+                fragrance_allergies: JSON.stringify(fragranceMap)
+              }).eq('id', pid);
+              console.log('✅ trace_allergies / fragrance_allergies を保存(JSON)');
+            } catch (eTF) {
+              console.warn('trace/fragrance JSON 保存スキップ（列が無い可能性）:', eTF?.message || eTF);
             }
+
+            // INSERT行を構築（全標準アレルゲンを direct/none で保存）
+            const rows = [];
+            standardAllergens.forEach(allergen => {
+              const agg = aggregated.get(allergen.slug) || 'none';
+              const presence_type = agg === 'direct' ? 'direct' : 'none';
+              rows.push({
+                product_id: pid,
+                allergy_item_id: allergen.slug,
+                presence_type,
+                amount_level: 'unknown',
+                notes: null
+              });
+            });
+
+            if (rows.length > 0) {
+              const { error: insErr } = await supabase.from('product_allergies').insert(rows);
+              if (insErr) {
+                console.error('❌ product_allergies 保存エラー:', insErr);
+              } else {
+                console.log('✅ product_allergies 保存完了:', rows.length, '件');
+              }
+            } else {
+              console.log('ℹ️ 保存すべきアレルギー行がありません（direct/traceなし）');
+            }
+          } catch (saveErr) {
+            console.error('❌ product_allergies 保存処理エラー:', saveErr);
           }
         }
       } catch (finalUpdateError) {

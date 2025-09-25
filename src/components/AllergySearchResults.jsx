@@ -58,9 +58,14 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
   // アレルギー情報を取得（Typesenseデータ用）
   const getContaminationInfo = (item) => {
     console.log(`🔍 getContaminationInfo 呼び出し - 商品: ${item.name || item.product_title}`);
+    console.log(`🔍 getContaminationInfo - 商品の全プロパティ:`, Object.keys(item));
+    console.log(`🔍 getContaminationInfo - product_allergies の値:`, item.product_allergies);
+    console.log(`🔍 getContaminationInfo - product_allergies の型:`, typeof item.product_allergies);
+    console.log(`🔍 getContaminationInfo - product_allergies は配列か:`, Array.isArray(item.product_allergies));
     
     if (!item.product_allergies || !Array.isArray(item.product_allergies)) {
       console.log(`❌ 商品 ${item.name || item.product_title} にproduct_allergiesがありません`);
+      console.log(`❌ 商品 ${item.name || item.product_title} の全プロパティ:`, Object.keys(item));
       return [];
     }
 

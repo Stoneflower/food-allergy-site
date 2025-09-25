@@ -231,10 +231,11 @@ export const RestaurantProvider = ({ children }) => {
       // アレルギー情報のデバッグログ
       console.log('🔍 アレルギー情報デバッグ:');
       data.forEach((item, index) => {
-        console.log(`🔍 アイテム${index + 1}: ${item.name} - product_allergies_matrix:`, item.product_allergies_matrix);
-        console.log(`🔍 アイテム${index + 1}: ${item.name} - product_allergies_matrix type:`, typeof item.product_allergies_matrix);
-        if (item.product_allergies_matrix && item.product_allergies_matrix.length > 0) {
-          console.log(`🔍 アイテム${index + 1}: ${item.name} - product_allergies_matrix[0]:`, item.product_allergies_matrix[0]);
+        console.log(`🔍 アイテム${index + 1}: ${item.name} - product_allergies:`, item.product_allergies);
+        console.log(`🔍 アイテム${index + 1}: ${item.name} - product_allergies type:`, typeof item.product_allergies);
+        console.log(`🔍 アイテム${index + 1}: ${item.name} - product_allergies length:`, item.product_allergies?.length || 0);
+        if (item.product_allergies && item.product_allergies.length > 0) {
+          console.log(`🔍 アイテム${index + 1}: ${item.name} - product_allergies[0]:`, item.product_allergies[0]);
         }
       });
       
@@ -266,7 +267,25 @@ export const RestaurantProvider = ({ children }) => {
         console.log(`🔍 アイテム${index + 1}: ${item.name} - カテゴリ: "${item.category}"`);
       });
       
+      // 変換前のデータを詳しく確認
+      console.log('🔍 変換前のデータ詳細確認:');
+      data?.forEach((item, index) => {
+        console.log(`🔍 変換前 アイテム${index + 1}: ${item.name}`);
+        console.log(`🔍 変換前 product_allergies:`, item.product_allergies);
+        console.log(`🔍 変換前 product_allergies type:`, typeof item.product_allergies);
+        console.log(`🔍 変換前 product_allergies length:`, item.product_allergies?.length || 0);
+      });
+      
       const transformedData = transformAndMergeData(data || []);
+      
+      // 変換後のデータを詳しく確認
+      console.log('🔍 変換後のデータ詳細確認:');
+      transformedData?.forEach((item, index) => {
+        console.log(`🔍 変換後 アイテム${index + 1}: ${item.name}`);
+        console.log(`🔍 変換後 product_allergies:`, item.product_allergies);
+        console.log(`🔍 変換後 product_allergies type:`, typeof item.product_allergies);
+        console.log(`🔍 変換後 product_allergies length:`, item.product_allergies?.length || 0);
+      });
       console.log('🔍 変換後のデータ:', transformedData.length, '件');
       console.log('🔍 変換後のデータサンプル:', transformedData[0]);
       
@@ -309,7 +328,12 @@ export const RestaurantProvider = ({ children }) => {
           brand: item.brand || '',
           allergyInfo: createDefaultAllergyInfo(),
           allergyFree: [],
-          product_allergies: processAllergies(item.product_allergies) || [],
+          product_allergies: (() => {
+            console.log(`🔍 transformAndMergeData - ${item.name} の product_allergies 処理開始:`, item.product_allergies);
+            const result = processAllergies(item.product_allergies) || [];
+            console.log(`🔍 transformAndMergeData - ${item.name} の product_allergies 処理結果:`, result);
+            return result;
+          })(),
           related_product: item,
           description: item.description || item.product_title || item.name || '',
           store_list_url: item.store_locations?.[0]?.store_list_url || null,

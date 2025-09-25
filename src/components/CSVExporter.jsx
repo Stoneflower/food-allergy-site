@@ -1040,14 +1040,15 @@ const CsvExporter = ({ data, onBack }) => {
                 .map(r => String(r?.raw_menu_name || '').trim())
                 .filter(n => n.length > 0);
               if (allNamesInOrder.length > 0) {
-                // DBの列長制約に備えて、保守的に1024文字に制限
+                // DBの列長制約 varchar(200) に合わせて厳格に200文字へ丸める
                 const joined = allNamesInOrder.join(' / ');
-                const safe = joined.length > 1024 ? joined.slice(0, 1024) : joined;
-                const { error: ptErr } = await supabase.from('products').update({ product_title: safe }).eq('id', pid);
+                const over = joined.length > 200;
+                const trimmed = over ? joined.slice(0, 199) + '…' : joined; // 200文字以内に収める
+                const { error: ptErr } = await supabase.from('products').update({ product_title: trimmed }).eq('id', pid);
                 if (ptErr) {
                   console.error('❌ product_title 更新失敗:', JSON.stringify(ptErr));
                 } else {
-                  console.log('✅ product_title を更新（全メニュー連結・重複保持）:', safe.substring(0, 120) + (safe.length > 120 ? '...' : ''));
+                  console.log('✅ product_title を更新（200文字制限適用）:', trimmed.substring(0, 120) + (trimmed.length > 120 ? '...' : ''));
                 }
               }
             }

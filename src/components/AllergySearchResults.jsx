@@ -141,7 +141,9 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
         
         // 商品名の優先順位: product_title > name
         const menuName = item.product_title || item.name || '商品名不明';
-        console.log(`商品名:`, menuName);
+        console.log(`🔍 商品名デバッグ - item.product_title:`, item.product_title);
+        console.log(`🔍 商品名デバッグ - item.name:`, item.name);
+        console.log(`🔍 商品名デバッグ - 最終的なmenuName:`, menuName);
         
         // アレルギー情報を取得
         const contaminationInfo = getContaminationInfo(item);
@@ -198,10 +200,16 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
             {store.menu_items.map((menuItem, menuIndex) => (
               <div key={menuIndex} className="border border-gray-200 rounded-lg p-4">
                 <div className="flex items-center justify-between">
-                  <h4 className="font-medium text-gray-800">{menuItem.display_name}</h4>
+                  <h4 className="font-medium text-gray-800">
+                    {menuItem.display_name || menuItem.name || '商品名不明'}
+                  </h4>
                   <span className="text-xs text-gray-500">
                     {menuItem.product_allergies?.length || 0} 件のアレルギー情報
                   </span>
+                </div>
+                {/* デバッグ情報 */}
+                <div className="text-xs text-gray-400 mt-1">
+                  デバッグ: display_name="{menuItem.display_name}", name="{menuItem.name}"
                 </div>
                 
                 {menuItem.contamination_info && menuItem.contamination_info.length > 0 ? (

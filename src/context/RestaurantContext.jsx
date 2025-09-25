@@ -4,7 +4,11 @@ import searchService from '../lib/searchService';
 
 // product_allergies_matrixを配列形式に変換する関数
 const convertAllergyMatrixToArray = (allergyMatrix) => {
+  console.log('🔍 convertAllergyMatrixToArray 呼び出し:', allergyMatrix);
+  console.log('🔍 convertAllergyMatrixToArray type:', typeof allergyMatrix);
+  
   if (!allergyMatrix || typeof allergyMatrix !== 'object') {
+    console.log('🔍 convertAllergyMatrixToArray: 無効なデータ、空配列を返す');
     return [];
   }
 
@@ -27,6 +31,7 @@ const convertAllergyMatrixToArray = (allergyMatrix) => {
           amount_level: 'unknown',
           notes: '含有'
         });
+        console.log(`🔍 含有発見: ${allergyId} = ${presenceType}`);
       } else if (presenceType === 'trace') {
         allergyArray.push({
           allergy_item_id: allergyId,
@@ -34,6 +39,7 @@ const convertAllergyMatrixToArray = (allergyMatrix) => {
           amount_level: 'trace',
           notes: 'コンタミネーション（微量混入）'
         });
+        console.log(`🔍 コンタミネーション発見: ${allergyId} = ${presenceType}`);
       } else if (presenceType === 'none') {
         allergyArray.push({
           allergy_item_id: allergyId,
@@ -41,10 +47,12 @@ const convertAllergyMatrixToArray = (allergyMatrix) => {
           amount_level: 'none',
           notes: '含有しない'
         });
+        console.log(`🔍 含有しない確認: ${allergyId} = ${presenceType}`);
       }
     }
   });
 
+  console.log('🔍 convertAllergyMatrixToArray 結果:', allergyArray);
   return allergyArray;
 };
 import { PREFECTURES, isPrefectureName, isAreaMatch } from '../constants/prefectures';
@@ -252,6 +260,10 @@ export const RestaurantProvider = ({ children }) => {
       console.log('🔍 アレルギー情報デバッグ:');
       data.forEach((item, index) => {
         console.log(`🔍 アイテム${index + 1}: ${item.name} - product_allergies_matrix:`, item.product_allergies_matrix);
+        console.log(`🔍 アイテム${index + 1}: ${item.name} - product_allergies_matrix type:`, typeof item.product_allergies_matrix);
+        if (item.product_allergies_matrix && item.product_allergies_matrix.length > 0) {
+          console.log(`🔍 アイテム${index + 1}: ${item.name} - product_allergies_matrix[0]:`, item.product_allergies_matrix[0]);
+        }
       });
       
       const error = null;

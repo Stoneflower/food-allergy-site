@@ -50,11 +50,11 @@ class SearchService {
     //   console.log('🔍 アレルギーフィルター条件追加:', filters.allergies);
     // }
 
-    // エリアフィルタリング（トリグラムインデックス活用）
-    if (filters.area) {
-      query = query.ilike('store_locations.address', `%${filters.area}%`);
-      console.log('🔍 エリアフィルター条件追加:', filters.area);
-    }
+    // エリアフィルタリング（一時的に無効化）
+    // if (filters.area) {
+    //   query = query.ilike('store_locations.address', `%${filters.area}%`);
+    //   console.log('🔍 エリアフィルター条件追加:', filters.area);
+    // }
 
     // カテゴリフィルタリング
     if (filters.category && filters.category !== 'all') {
@@ -144,7 +144,7 @@ class SearchService {
     }
   }
 
-  // パフォーマンスログ記録
+  // パフォーマンスログ記録（一時的に無効化）
   async logPerformance(searchType, searchTerm, filters, executionTime, resultCount) {
     try {
       console.log('パフォーマンスログ記録開始:', {
@@ -155,22 +155,25 @@ class SearchService {
         resultCount
       });
 
-      const { error } = await this.supabase
-        .from('search_performance_logs')
-        .insert({
-          search_type: searchType,
-          search_term: searchTerm,
-          filters: JSON.stringify(filters),
-          execution_time_ms: executionTime,
-          result_count: resultCount,
-          created_at: new Date().toISOString()
-        });
+      // パフォーマンスログテーブルが存在しないため一時的に無効化
+      console.log('パフォーマンスログ記録（無効化中）');
+      
+      // const { error } = await this.supabase
+      //   .from('search_performance_logs')
+      //   .insert({
+      //     search_type: searchType,
+      //     search_term: searchTerm,
+      //     filters: JSON.stringify(filters),
+      //     execution_time_ms: executionTime,
+      //     result_count: resultCount,
+      //     created_at: new Date().toISOString()
+      //   });
 
-      if (error) {
-        console.error('パフォーマンスログ記録エラー:', error);
-      } else {
-        console.log('パフォーマンスログ記録成功');
-      }
+      // if (error) {
+      //   console.error('パフォーマンスログ記録エラー:', error);
+      // } else {
+      //   console.log('パフォーマンスログ記録成功');
+      // }
     } catch (error) {
       console.error('パフォーマンスログ記録例外:', error);
     }

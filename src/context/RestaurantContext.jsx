@@ -684,10 +684,11 @@ export const RestaurantProvider = ({ children }) => {
       console.log('🔍 正規化されたカテゴリ:', normalizedSelectedCategory);
       
       items = items.filter(item => {
-        const matches = item.category === normalizedSelectedCategory || 
+        const isRestaurantByMenu = normalizedSelectedCategory === 'レストラン' && Array.isArray(item.menu_items) && item.menu_items.length > 0;
+        const matches = isRestaurantByMenu || item.category === normalizedSelectedCategory || 
                        (Array.isArray(item.category_tokens) && item.category_tokens.includes(normalizedSelectedCategory));
         if (matches) {
-          console.log('🔍 マッチしたアイテム:', item.name, 'カテゴリ:', item.category, 'トークン:', item.category_tokens);
+          console.log('🔍 マッチしたアイテム:', item.name, 'カテゴリ:', item.category, 'トークン:', item.category_tokens, 'menu_items:', item.menu_items?.length || 0);
         }
         return matches;
       });

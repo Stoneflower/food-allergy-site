@@ -13,7 +13,9 @@ const ImageUpload = ({
   accept = 'image/*',
   className = '',
   showPreview = true,
-  multiple = false
+  multiple = false,
+  maxImages = 2,
+  onImagesReordered
 }) => {
   const [dragActive, setDragActive] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -45,6 +47,7 @@ const ImageUpload = ({
     if (e.target.files && e.target.files.length > 0) {
       handleFiles(Array.from(e.target.files));
     }
+    try { e.target.value = ''; } catch (_) {}
   };
 
   const handleFiles = async (files) => {
@@ -57,7 +60,20 @@ const ImageUpload = ({
     setUploading(true);
 
     try {
-      const uploadPromises = files.map(async (file) => {
+      // 最大枚数の制限（既存＋今回の選択でmaxImagesを超えないように）
+      let selectable = files;
+      if (multiple) {
+        const remaining = Math.max(0, maxImages - uploadedImages.length);
+        if (remaining <= 0) {
+          throw new Error(`画像は最大${maxImages}枚までです`);
+        }
+        selectable = files.slice(0, remaining);
+        if (files.length > remaining) {
+          console.warn(`選択枚数が上限(${maxImages})を超えたため、先頭${remaining}枚のみを受け付けました`);
+        }
+      }
+
+      const uploadPromises = selectable.map(async (file) => {
         // ファイル形式チェック
         if (!file.type.startsWith('image/')) {
           throw new Error(`${file.name} は画像ファイルではありません`);
@@ -83,8 +99,9 @@ const ImageUpload = ({
       const results = await Promise.all(uploadPromises);
       
       if (multiple) {
-        setUploadedImages(prev => [...prev, ...results]);
-        onImageUploaded?.(results);
+        const next = [...uploadedImages, ...results].slice(0, maxImages);
+        setUploadedImages(next);
+        onImageUploaded?.(next);
       } else {
         setUploadedImages(results);
         onImageUploaded?.(results[0]);
@@ -101,6 +118,19 @@ const ImageUpload = ({
 
   const removeImage = (index) => {
     setUploadedImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const moveImage = (index, direction) => {
+    setUploadedImages(prev => {
+      const next = [...prev];
+      const newIndex = direction === 'up' ? index - 1 : index + 1;
+      if (newIndex < 0 || newIndex >= next.length) return prev;
+      const tmp = next[index];
+      next[index] = next[newIndex];
+      next[newIndex] = tmp;
+      onImagesReordered?.(next);
+      return next;
+    });
   };
 
   const triggerFileInput = () => {
@@ -212,6 +242,22 @@ const ImageUpload = ({
                     className="w-full h-full object-cover"
                   />
                 </div>
+                {multiple && (
+                  <div className="absolute top-1 left-1 flex gap-1">
+                    <button
+                      type="button"
+                      onClick={() => moveImage(index, 'up')}
+                      className="px-1 py-0.5 text-[10px] bg-white/80 border rounded hover:bg-white"
+                      disabled={index === 0}
+                    >↑</button>
+                    <button
+                      type="button"
+                      onClick={() => moveImage(index, 'down')}
+                      className="px-1 py-0.5 text-[10px] bg-white/80 border rounded hover:bg-white"
+                      disabled={index === uploadedImages.length - 1}
+                    >↓</button>
+                  </div>
+                )}
                 <button
                   type="button"
                   onClick={() => removeImage(index)}

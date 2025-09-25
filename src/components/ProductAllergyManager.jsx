@@ -237,7 +237,10 @@ const ProductAllergyManager = () => {
               maxWidthOrHeight={1200}
               variant="w=800,q=75"
               showPreview={true}
-              multiple={false}
+            multiple={true}
+            onImagesReordered={(images) => {
+              // 並び順の変更を検知（必要ならサーバー保存やプレビュー反映に利用）
+            }}
             />
           </div>
           

@@ -35,17 +35,26 @@ class SearchService {
       console.log('🔍 全文検索条件追加:', searchTerm);
     }
 
-    // フィルタリング
-    if (filters.allergies?.length > 0) {
-      query = query.in('product_allergies.allergy_item_id', filters.allergies);
-      console.log('🔍 アレルギーフィルター追加:', filters.allergies);
-    }
+    // フィルタリング（段階的に適用してデバッグ）
+    console.log('🔍 フィルター条件詳細:', {
+      allergies: filters.allergies,
+      area: filters.area,
+      category: filters.category
+    });
 
-    if (filters.area) {
-      query = query.ilike('store_locations.address', `%${filters.area}%`);
-      console.log('🔍 エリアフィルター追加:', filters.area);
-    }
+    // アレルギーフィルターは一旦無効化（問題の切り分け）
+    // if (filters.allergies?.length > 0) {
+    //   query = query.in('product_allergies.allergy_item_id', filters.allergies);
+    //   console.log('🔍 アレルギーフィルター追加:', filters.allergies);
+    // }
 
+    // エリアフィルターも一旦無効化（問題の切り分け）
+    // if (filters.area) {
+    //   query = query.ilike('store_locations.address', `%${filters.area}%`);
+    //   console.log('🔍 エリアフィルター追加:', filters.area);
+    // }
+
+    // カテゴリフィルターのみ適用
     if (filters.category && filters.category !== 'all') {
       query = query.eq('category', filters.category);
       console.log('🔍 カテゴリフィルター追加:', filters.category);

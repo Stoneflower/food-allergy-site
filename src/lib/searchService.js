@@ -7,6 +7,8 @@ class SearchService {
 
   // 全文検索（インデックス使用）
   async fullTextSearch(searchTerm, filters = {}) {
+    console.log('🔍 fullTextSearch開始:', { searchTerm, filters });
+    
     let query = this.supabase
       .from('products')
       .select(`
@@ -30,25 +32,30 @@ class SearchService {
         type: 'websearch',
         config: 'english'
       });
+      console.log('🔍 全文検索条件追加:', searchTerm);
     }
 
     // フィルタリング
     if (filters.allergies?.length > 0) {
       query = query.in('product_allergies.allergy_item_id', filters.allergies);
+      console.log('🔍 アレルギーフィルター追加:', filters.allergies);
     }
 
     if (filters.area) {
       query = query.ilike('store_locations.address', `%${filters.area}%`);
+      console.log('🔍 エリアフィルター追加:', filters.area);
     }
 
     if (filters.category && filters.category !== 'all') {
       query = query.eq('category', filters.category);
+      console.log('🔍 カテゴリフィルター追加:', filters.category);
     }
 
     const { data, error } = await query
       .order('updated_at', { ascending: false })
       .limit(filters.limit || 50);
 
+    console.log('🔍 fullTextSearch結果:', { dataCount: data?.length || 0, error });
     return { data, error };
   }
 

@@ -153,6 +153,10 @@ export const RestaurantProvider = ({ children }) => {
     
     setSelectedArea(areaInputValue.trim());
     console.log('検索実行完了:', areaInputValue.trim());
+    
+    // 手動でデータ取得を実行
+    console.log('手動でfetchDataFromSupabaseを実行');
+    fetchDataFromSupabase();
   };
 
   // 新しい検索サービスを使用したデータ取得関数
@@ -166,6 +170,14 @@ export const RestaurantProvider = ({ children }) => {
       
       // 元の商品検索のみに戻す（緊急対応）
       console.log('緊急対応: 商品検索のみ実行');
+      console.log('🔍 検索パラメータ詳細:', {
+        searchKeyword,
+        selectedAllergies,
+        selectedArea,
+        selectedCategory,
+        limit: 200
+      });
+      
       const { data, error } = await searchService.hybridSearch(
         searchKeyword,
         {
@@ -340,7 +352,7 @@ export const RestaurantProvider = ({ children }) => {
     }).catch((error) => {
       console.error('Supabase接続エラー:', error);
     });
-  }, [searchKeyword, selectedArea, selectedCategory, selectedAllergies]);
+  }, [searchKeyword, selectedArea, selectedCategory]); // selectedAllergiesを依存配列から削除
 
   // 統合データ
   const allItemsData = allItems;

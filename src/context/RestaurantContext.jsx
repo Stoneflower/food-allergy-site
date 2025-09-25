@@ -667,11 +667,13 @@ export const RestaurantProvider = ({ children }) => {
       console.log('🔍 eligibleProductIds:', Array.from(eligibleProductIds));
       
       items = items.filter(item => {
-        const isEligible = eligibleProductIds.has(item.id);
+        // item.idは "product_id_menu_item_id" 形式なので、product_id部分を抽出
+        const productId = item.product_id || item.id.split('_')[0];
+        const isEligible = eligibleProductIds.has(productId);
         if (!isEligible && (item.name === 'びっくりドンキー' || item.name === 'スシロー')) {
-          console.log('❌ eligibleProductIdsで除外:', item.name, 'ID:', item.id, 'eligibleProductIdsに含まれていない');
+          console.log('❌ eligibleProductIdsで除外:', item.name, 'ID:', item.id, 'productId:', productId, 'eligibleProductIdsに含まれていない');
         } else if (isEligible && (item.name === 'びっくりドンキー' || item.name === 'スシロー')) {
-          console.log('✅ eligibleProductIdsで通過:', item.name, 'ID:', item.id);
+          console.log('✅ eligibleProductIdsで通過:', item.name, 'ID:', item.id, 'productId:', productId);
         }
         return isEligible;
       });

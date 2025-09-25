@@ -236,11 +236,8 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
     <div className="space-y-6">
       {stores.map((store, index) => (
         <div key={index} className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center justify-between mb-4">
+          <div className="mb-4">
             <h3 className="text-xl font-bold text-gray-800">{store.name}</h3>
-            <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-              {store.category}
-            </span>
           </div>
           
           <div className="space-y-3">

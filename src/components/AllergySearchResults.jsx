@@ -138,7 +138,7 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
           console.log(`⚠️ アレルギー情報が見つかりません: ${allergyId}`);
         }
       }
-    });
+      });
 
     // 結果をまとめて返す
     const result = [];
@@ -148,7 +148,7 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
     if (fragranceAllergies.length > 0) {
       result.push(`${fragranceAllergies.join('、')}香料に含む`);
     }
-    
+
     console.log(`✅ 商品 ${item.name || item.product_title} の最終結果:`, result);
     return result;
   };
@@ -167,19 +167,19 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
       console.log('groupedStores - storeName:', storeName);
       
       // 店舗が存在しない場合は作成
-      if (!stores[storeName]) {
-        stores[storeName] = {
-          name: storeName,
+        if (!stores[storeName]) {
+          stores[storeName] = {
+            name: storeName,
           category: item.category || '不明',
-          menu_items: []
-        };
-      }
-      
+            menu_items: []
+          };
+        }
+        
       // アレルギー適合性チェック
       const isAllergyCompatible = checkAllergyCompatibility(item, selectedAllergies);
       
       if (isAllergyCompatible) {
-        console.log('=== 店舗:', storeName, '===');
+          console.log('=== 店舗:', storeName, '===');
         console.log('商品情報:', { 
           name: item.name, 
           product_title: item.product_title,
@@ -194,26 +194,27 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
         
         // アレルギー情報を取得
         const contaminationInfo = getContaminationInfo(item);
-        
-        stores[storeName].menu_items.push({
-          name: menuName,
+            
+            stores[storeName].menu_items.push({
+              name: menuName,
           display_name: menuName,
           product_allergies: item.product_allergies || [],
           contamination_info: contaminationInfo,
-          image_urls: [
+              image_urls: [
             item?.source_url,
             item?.source_url2,
             item?.image_url
-          ].filter(Boolean)
-        });
+              ].filter(Boolean)
+            });
         console.log('groupedStores - added product with allergies:', menuName, 'to store:', storeName);
-      } else {
+        } else {
         console.log(`❌ アレルギー不適合商品除外: ${item.name || item.product_title}`);
       }
     });
     
-    // 商品がない店舗を除外
-    const result = Object.values(stores).filter(store => store.menu_items.length > 0);
+    // 会社カードはRestaurantContext側のeligible判定で担保されるため、
+    // 商品が0件でもカード自体は表示する（詳細は空の可能性あり）
+    const result = Object.values(stores);
     console.log('groupedStores - final result:', result);
     console.log('groupedStores - stores with products:', result.length);
     console.log('groupedStores - stores with products names:', result.map(s => s.name));
@@ -243,7 +244,7 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
           <div className="space-y-3">
             {store.menu_items.map((menuItem, menuIndex) => (
               <div key={menuIndex} className="border border-gray-200 rounded-lg p-4">
-                <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between">
                   <h4 className="font-medium text-gray-800">
                     {menuItem.display_name || menuItem.name || '商品名不明'}
                   </h4>
@@ -254,8 +255,8 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
                 {/* デバッグ情報 */}
                 <div className="text-xs text-gray-400 mt-1">
                   デバッグ: display_name="{menuItem.display_name}", name="{menuItem.name}"
-                </div>
-                
+            </div>
+
                 {menuItem.contamination_info && menuItem.contamination_info.length > 0 ? (
                   <div className="mt-2">
                     {menuItem.contamination_info.map((info, infoIndex) => (
@@ -270,17 +271,17 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
                         {info}
                       </span>
                     ))}
-                  </div>
+                          </div>
                 ) : menuItem.product_allergies && menuItem.product_allergies.length > 0 ? (
                   <div className="mt-2">
                     <p className="text-sm text-gray-600">アレルギー情報あり（詳細なし）</p>
-                  </div>
-                ) : (
+                </div>
+              ) : (
                   <div className="mt-2">
                     <p className="text-sm text-gray-500">アレルギー情報なし</p>
-                  </div>
+                </div>
                 )}
-              </div>
+                </div>
             ))}
           </div>
         </div>

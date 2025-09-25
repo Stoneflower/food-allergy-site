@@ -375,8 +375,20 @@ const Upload = () => {
       // 画像URL               <= products.source_url
 
       // 既存チェック: 優先はバーコード、無ければ (name + product_title)
-      const productTitleToSave = (editedInfo.productName || '').trim() || null; // 商品名 → products.product_title
+      const rawTitle = (editedInfo.productName || '').trim();
       const nameToSave = (editedInfo.brand || '').trim() || null;              // メーカー → products.name
+
+      // product_title 正規化（200文字制限）
+      const truncate200 = (s) => (s?.length > 200 ? s.slice(0, 200) : s);
+      const withEllipsis = (s) => (s?.length > 199 ? (s.slice(0, 199) + '…') : s);
+      const productTitleToSave = rawTitle ? truncate200(rawTitle) : null;
+
+      // 既存照合用の候補（生値/200カット/199+…）
+      const titleCandidates = Array.from(new Set([
+        rawTitle || null,
+        productTitleToSave,
+        withEllipsis(rawTitle || '') || null,
+      ].filter(Boolean)));
 
       let existingProduct = null;
       if (editedInfo.barcode && String(editedInfo.barcode).trim()) {
@@ -388,28 +400,32 @@ const Upload = () => {
         if (error) throw error;
         existingProduct = data || null;
       }
-      if (!existingProduct && nameToSave && productTitleToSave) {
-        const { data, error } = await supabase
-          .from('products')
-          .select('*')
-          .eq('name', nameToSave)
-          .eq('product_title', productTitleToSave)
-          .maybeSingle();
-        if (error) throw error;
-        existingProduct = data || null;
+      if (!existingProduct && nameToSave && titleCandidates.length > 0) {
+        for (const titleCandidate of titleCandidates) {
+          const { data, error } = await supabase
+            .from('products')
+            .select('*')
+            .eq('name', nameToSave)
+            .eq('product_title', titleCandidate)
+            .maybeSingle();
+          if (error) throw error;
+          if (data) { existingProduct = data; break; }
+        }
       }
 
       // さらに片方欠損するケースも考慮: product_title 単独でも既存チェック（すり抜け防止）
-      if (!existingProduct && productTitleToSave) {
-        const { data, error } = await supabase
-          .from('products')
-          .select('*')
-          .eq('product_title', productTitleToSave)
-          .order('updated_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        if (error) throw error;
-        existingProduct = data || null;
+      if (!existingProduct && titleCandidates.length > 0) {
+        for (const titleCandidate of titleCandidates) {
+          const { data, error } = await supabase
+            .from('products')
+            .select('*')
+            .eq('product_title', titleCandidate)
+            .order('updated_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (error) throw error;
+          if (data) { existingProduct = data; break; }
+        }
       }
 
       let productId = null;

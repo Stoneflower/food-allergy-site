@@ -63,10 +63,18 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
       return [];
     }
 
+    console.log(`🔍 getContaminationInfo - product_allergies_matrix配列の長さ: ${item.product_allergies_matrix.length}`);
+    if (item.product_allergies_matrix.length > 0) {
+      console.log(`🔍 getContaminationInfo - 最初の要素の詳細:`, item.product_allergies_matrix[0]);
+      console.log(`🔍 getContaminationInfo - 最初の要素のキー:`, Object.keys(item.product_allergies_matrix[0]));
+    }
+
     const contaminationAllergies = [];
     const fragranceAllergies = [];
     
-    item.product_allergies_matrix.forEach(allergy => {
+    item.product_allergies_matrix.forEach((allergy, index) => {
+      console.log(`🔍 getContaminationInfo - アレルギー要素${index}:`, allergy);
+      
       const allergyId = allergy.allergy_item_id;
       const presenceType = allergy.presence_type;
       console.log(`アレルギー確認 - 商品: ${item.name || item.product_title}, アレルギー: ${allergyId}, 含有タイプ: ${presenceType}`);
@@ -89,6 +97,8 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
           } else if (presenceType === 'none') {
             console.log(`含有しない確認: ${allergyInfo.name}含有しない`);
           }
+        } else {
+          console.log(`⚠️ アレルギー情報が見つかりません: ${allergyId}`);
         }
       }
     });

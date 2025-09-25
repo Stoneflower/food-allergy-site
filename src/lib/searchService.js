@@ -258,6 +258,69 @@ class SearchService {
     }
   }
 
+  // レストラン検索
+  async searchRestaurants(searchTerm, filters = {}) {
+    try {
+      console.log('レストラン検索開始:', { searchTerm, filters });
+      
+      let query = this.supabase
+        .from('restaurants')
+        .select(`
+          *,
+          restaurant_allergies(
+            allergy_item_id,
+            presence_type,
+            notes
+          ),
+          store_locations(
+            id,
+            branch_name,
+            address,
+            store_list_url
+          )
+        `);
+
+      if (searchTerm && searchTerm.trim() !== '') {
+        query = query.or(`
+          name.ilike.%${searchTerm}%,
+          description.ilike.%${searchTerm}%,
+          cuisine_type.ilike.%${searchTerm}%
+        `);
+      }
+
+      // フィルタリング
+      if (filters.area && filters.area.trim() !== '') {
+        query = query.ilike('store_locations.address', `%${filters.area}%`);
+      }
+
+      if (filters.category && filters.category !== 'all') {
+        query = query.eq('category', filters.category);
+      }
+
+      const { data, error } = await query
+        .order('updated_at', { ascending: false })
+        .limit(filters.limit || 50);
+
+      if (error) {
+        console.error('レストラン検索エラー:', error);
+        return { data: [], error };
+      }
+
+      console.log('レストラン検索結果:', data?.length || 0, '件');
+      return { data: data || [], error: null };
+      
+    } catch (err) {
+      console.error('レストラン検索例外エラー:', err);
+      return { data: [], error: err.message };
+    }
+  }
+
+  // 統合検索（レストラン + 商品）- 一時的に無効化
+  async unifiedSearch(searchTerm, filters = {}) {
+    console.log('統合検索は一時的に無効化されています。hybridSearchを使用してください。');
+    return this.hybridSearch(searchTerm, filters);
+  }
+
   // 検索統計の取得
   async getSearchStats() {
     try {

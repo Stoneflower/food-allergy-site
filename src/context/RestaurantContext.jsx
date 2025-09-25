@@ -148,7 +148,8 @@ export const RestaurantProvider = ({ children }) => {
     try {
       const startTime = performance.now();
       
-      // 新しい検索サービスを使用
+      // 元の商品検索のみに戻す（緊急対応）
+      console.log('緊急対応: 商品検索のみ実行');
       const { data, error } = await searchService.hybridSearch(
         searchKeyword,
         {

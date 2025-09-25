@@ -21,15 +21,6 @@ class SearchService {
       .from('products')
       .select(`
         *,
-        product_allergies(
-          allergy_item_id,
-          presence_type,
-          notes,
-          allergy_items(
-            id,
-            name
-          )
-        ),
         store_locations(
           id,
           branch_name,
@@ -70,6 +61,16 @@ class SearchService {
     const { data, error } = await query;
     
     console.log('🔍 最適化フォールバック検索結果:', { dataCount: data?.length || 0, error });
+    
+    if (error) {
+      console.error('❌ Supabaseクエリエラー:', error);
+      console.error('❌ エラー詳細:', JSON.stringify(error, null, 2));
+    }
+    
+    if (data && data.length > 0) {
+      console.log('🔍 取得データサンプル:', JSON.stringify(data[0], null, 2));
+    }
+    
     return { data, error };
   }
 

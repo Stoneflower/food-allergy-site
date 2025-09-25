@@ -31,6 +31,47 @@ const AllergySearchResults = ({ items }) => {
   const [isMobile, setIsMobile] = useState(false);
   const [visibleCount, setVisibleCount] = useState(100); // 仮想化: 最初は100件
 
+  // アレルギー適合性チェック関数
+  const checkAllergyCompatibility = (matrix, selectedAllergies, selectedFragranceForSearch, selectedTraceForSearch) => {
+    console.log('🔍 checkAllergyCompatibility開始:', {
+      matrix,
+      selectedAllergies,
+      selectedFragranceForSearch,
+      selectedTraceForSearch
+    });
+
+    // アレルギー検索条件が設定されていない場合は、すべての商品を表示
+    if (!selectedAllergies || selectedAllergies.length === 0) {
+      console.log('🔍 アレルギー検索条件なし - すべての商品を表示');
+      return true;
+    }
+
+    // matrixにアレルギー情報がない場合は表示しない
+    if (!matrix || !matrix.allergy_item_id) {
+      console.log('🔍 アレルギー情報なし - 商品を除外');
+      return false;
+    }
+
+    // 選択されたアレルギーに該当するかチェック
+    const isSelectedAllergy = selectedAllergies.includes(matrix.allergy_item_id);
+    
+    // presence_typeが'contains'（含有）の場合は除外
+    if (isSelectedAllergy && matrix.presence_type === 'contains') {
+      console.log('🔍 アレルギー含有 - 商品を除外:', matrix.allergy_item_id);
+      return false;
+    }
+
+    // presence_typeが'not_contains'（非含有）の場合は表示
+    if (isSelectedAllergy && matrix.presence_type === 'not_contains') {
+      console.log('🔍 アレルギー非含有 - 商品を表示:', matrix.allergy_item_id);
+      return true;
+    }
+
+    // その他の場合は表示
+    console.log('🔍 その他の条件 - 商品を表示');
+    return true;
+  };
+
   // エリア情報URLを取得する関数
   const getAreaInfoUrl = (store) => {
     if (import.meta?.env?.DEV) {
@@ -286,13 +327,14 @@ const AllergySearchResults = ({ items }) => {
           };
         }
         
-        // 店舗に関連する商品を追加
+        // 店舗に関連する商品を追加（アレルギー検索条件に適合するもののみ）
         if (item.product_allergies_matrix && item.product_allergies_matrix.length > 0) {
           // デバッグ: product_allergies_matrixの構造を確認
           console.log('=== 店舗:', storeName, '===');
           console.log('product_allergies_matrix全体:', item.product_allergies_matrix);
           console.log('product_allergies_matrix件数:', item.product_allergies_matrix.length);
           console.log('最初のmatrix要素:', item.product_allergies_matrix[0]);
+          console.log('選択されたアレルギー:', selectedAllergies);
           
           // product_allergies_matrixの全要素を処理
           item.product_allergies_matrix.forEach((matrix, index) => {
@@ -302,31 +344,42 @@ const AllergySearchResults = ({ items }) => {
               || `商品${index + 1}`;
             console.log(`商品${index + 1}:`, menuName, 'matrix:', matrix);
             
-            // 不明な商品のチェック
-            if (!matrix.menu_name) {
-              console.warn(`⚠️ 不明な商品発見: matrix.menu_nameがnull/undefined - 商品${index + 1}として表示`);
-            }
+            // アレルギー検索条件に適合するかチェック
+            const isAllergyCompatible = checkAllergyCompatibility(matrix, selectedAllergies, selectedFragranceForSearch, selectedTraceForSearch);
+            console.log(`🔍 アレルギー適合性チェック - ${menuName}:`, isAllergyCompatible);
             
-            // 同じ商品名で異なるアレルギー情報があるかチェック
-            const existingProduct = stores[storeName].menu_items.find(item => item.name === menuName);
-            if (existingProduct) {
-              console.log(`🔄 同じ商品名発見: ${menuName} - 既存のアレルギー情報と新しい情報を比較`);
-              console.log('既存のmatrix:', existingProduct.product_allergies_matrix);
-              console.log('新しいmatrix:', matrix);
+            // アレルギー検索条件に適合する商品のみを追加
+            if (isAllergyCompatible) {
+              // 不明な商品のチェック
+              if (!matrix.menu_name) {
+                console.warn(`⚠️ 不明な商品発見: matrix.menu_nameがnull/undefined - 商品${index + 1}として表示`);
+              }
+              
+              // 同じ商品名で異なるアレルギー情報があるかチェック
+              const existingProduct = stores[storeName].menu_items.find(item => item.name === menuName);
+              if (existingProduct) {
+                console.log(`🔄 同じ商品名発見: ${menuName} - 既存のアレルギー情報と新しい情報を比較`);
+                console.log('既存のmatrix:', existingProduct.product_allergies_matrix);
+                console.log('新しいmatrix:', matrix);
+              }
+              
+              stores[storeName].menu_items.push({
+                name: menuName,
+                display_name: (item?.related_product?.product_title) || menuName || (item?.related_product?.name) || menuName,
+                product_allergies_matrix: [matrix], // 個別のmatrixを配列で渡す
+                image_urls: [
+                  item?.related_product?.source_url,
+                  item?.related_product?.source_url2
+                ].filter(Boolean)
+              });
+              
+              console.log(`✅ アレルギー適合商品追加: ${menuName} to store: ${storeName}`);
+            } else {
+              console.log(`❌ アレルギー不適合商品除外: ${menuName}`);
             }
-            
-            stores[storeName].menu_items.push({
-              name: menuName,
-              display_name: (item?.related_product?.product_title) || menuName || (item?.related_product?.name) || menuName,
-              product_allergies_matrix: [matrix], // 個別のmatrixを配列で渡す
-              image_urls: [
-                item?.related_product?.source_url,
-                item?.related_product?.source_url2
-              ].filter(Boolean)
-            });
           });
           
-          console.log('groupedStores - added', item.product_allergies_matrix.length, 'products to store:', storeName);
+          console.log('groupedStores - added', stores[storeName].menu_items.length, 'allergy-compatible products to store:', storeName);
         } else if (item.related_product) {
           // product_allergies_matrixがない場合はrelated_productのnameを使用
           stores[storeName].menu_items.push({
@@ -358,8 +411,15 @@ const AllergySearchResults = ({ items }) => {
       }
     });
 
-    const result = Object.values(stores);
+    // 商品がない店舗を除外
+    const result = Object.values(stores).filter(store => 
+      store.menu_items && store.menu_items.length > 0
+    );
+    
     console.log('groupedStores - final result:', result);
+    console.log('groupedStores - stores with products:', result.length);
+    console.log('groupedStores - stores with products names:', result.map(s => s.name));
+    
     return result;
   }, [filteredItems, selectedAllergies]);
 

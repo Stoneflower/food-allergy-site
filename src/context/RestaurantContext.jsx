@@ -453,6 +453,8 @@ export const RestaurantProvider = ({ children }) => {
         // menu_itemsが存在する場合は、各menu_itemを個別のアイテムとして展開
         if (menuItems.length > 0) {
           menuItems.forEach((menuItem, index) => {
+            const normalizedCategory = 'レストラン';
+            const categoryTokens = Array.from(new Set([...(getCategoryTokens(item.category) || []), 'レストラン']));
             const transformedItem = {
               id: `${item.id}_${menuItem.id}`, // 一意ID（product_id + menu_item_id）
               product_id: item.id, // 元のproduct_idを保持
@@ -465,12 +467,8 @@ export const RestaurantProvider = ({ children }) => {
               price: '¥500～¥1,500',
               area: item.store_locations?.[0]?.address || 'すべて',
               cuisine: '商品',
-              category: (() => {
-                const normalized = normalizeCategory(item.category);
-                console.log(`🔍 transformAndMergeData - ${menuItem.name} のカテゴリ正規化:`, { original: item.category, normalized });
-                return normalized;
-              })(),
-              category_tokens: getCategoryTokens(item.category),
+              category: normalizedCategory,
+              category_tokens: categoryTokens,
               brand: item.brand || '',
               allergyInfo: createDefaultAllergyInfo(),
               allergyFree: [],

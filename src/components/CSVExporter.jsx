@@ -1065,6 +1065,19 @@ const CsvExporter = ({ data, onBack }) => {
               .eq('id', pid);
             if (hsErr) {
               console.warn('❌ products.heat_status 更新失敗:', JSON.stringify(hsErr));
+            } else {
+              console.log('✅ products.heat_status 更新成功:', hsValue);
+              // 直後に読み戻して実値を確認
+              const { data: hsRow, error: hsReadErr } = await supabase
+                .from('products')
+                .select('id, heat_status')
+                .eq('id', pid)
+                .single();
+              if (hsReadErr) {
+                console.warn('⚠️ products.heat_status 読み戻し失敗:', JSON.stringify(hsReadErr));
+              } else {
+                console.log('🔍 products.heat_status 読み戻し結果:', hsRow);
+              }
             }
           } catch (e) {
             console.warn('products.heat_status 更新例外:', e?.message || e);

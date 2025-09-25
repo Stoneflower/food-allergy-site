@@ -229,15 +229,13 @@ export const RestaurantProvider = ({ children }) => {
         .from('products')
         .select(`
           *,
-          product_allergies_matrix (
-            *,
-            allergy_items (name, icon, category)
-          )
+          product_allergies_matrix (*)
         `)
         .limit(200);
 
       if (productsError) {
         console.error('❌ 商品データ取得エラー:', productsError);
+        console.error('❌ エラー詳細:', JSON.stringify(productsError, null, 2));
         throw productsError;
       }
 

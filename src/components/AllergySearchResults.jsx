@@ -25,7 +25,7 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
     }
 
     // Typesenseから取得したデータにアレルギー情報があるかチェック
-    if (!item.product_allergies_matrix || !Array.isArray(item.product_allergies_matrix)) {
+    if (!item.product_allergies || !Array.isArray(item.product_allergies)) {
       console.log('⚠️ アレルギー情報なし - 警告表示するが商品は表示');
       return true;
     }
@@ -33,7 +33,7 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
     // アレルギー情報をチェック
     let hasSelectedAllergy = false;
     
-    item.product_allergies_matrix.forEach(allergy => {
+    item.product_allergies.forEach(allergy => {
       if (selectedAllergies.includes(allergy.allergy_item_id)) {
         if (allergy.presence_type === 'direct') {
           hasSelectedAllergy = true;
@@ -58,28 +58,28 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
   const getContaminationInfo = (item) => {
     console.log(`🔍 getContaminationInfo 呼び出し - 商品: ${item.name || item.product_title}`);
     
-    if (!item.product_allergies_matrix || !Array.isArray(item.product_allergies_matrix)) {
-      console.log(`❌ 商品 ${item.name || item.product_title} にproduct_allergies_matrixがありません`);
+    if (!item.product_allergies || !Array.isArray(item.product_allergies)) {
+      console.log(`❌ 商品 ${item.name || item.product_title} にproduct_allergiesがありません`);
       return [];
     }
 
-    console.log(`🔍 getContaminationInfo - product_allergies_matrix配列の長さ: ${item.product_allergies_matrix.length}`);
-    if (item.product_allergies_matrix.length > 0) {
-      console.log(`🔍 getContaminationInfo - 最初の要素の詳細:`, item.product_allergies_matrix[0]);
-      console.log(`🔍 getContaminationInfo - 最初の要素のキー:`, Object.keys(item.product_allergies_matrix[0]));
-      console.log(`🔍 getContaminationInfo - 最初の要素のJSON:`, JSON.stringify(item.product_allergies_matrix[0], null, 2));
+    console.log(`🔍 getContaminationInfo - product_allergies配列の長さ: ${item.product_allergies.length}`);
+    if (item.product_allergies.length > 0) {
+      console.log(`🔍 getContaminationInfo - 最初の要素の詳細:`, item.product_allergies[0]);
+      console.log(`🔍 getContaminationInfo - 最初の要素のキー:`, Object.keys(item.product_allergies[0]));
+      console.log(`🔍 getContaminationInfo - 最初の要素のJSON:`, JSON.stringify(item.product_allergies[0], null, 2));
       
       // 最初の3つの要素を詳しく確認
-      for (let i = 0; i < Math.min(3, item.product_allergies_matrix.length); i++) {
+      for (let i = 0; i < Math.min(3, item.product_allergies.length); i++) {
         console.log(`🔍 getContaminationInfo - 要素${i}の詳細:`, {
-          element: item.product_allergies_matrix[i],
-          keys: Object.keys(item.product_allergies_matrix[i]),
-          values: Object.values(item.product_allergies_matrix[i])
+          element: item.product_allergies[i],
+          keys: Object.keys(item.product_allergies[i]),
+          values: Object.values(item.product_allergies[i])
         });
       }
       
       // 実際のプロパティ名を確認
-      const firstElement = item.product_allergies_matrix[0];
+      const firstElement = item.product_allergies[0];
       console.log(`🔍 getContaminationInfo - 実際のプロパティ名:`, Object.keys(firstElement));
       console.log(`🔍 getContaminationInfo - 実際の値:`, Object.values(firstElement));
       
@@ -103,7 +103,7 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
     const contaminationAllergies = [];
     const fragranceAllergies = [];
     
-    item.product_allergies_matrix.forEach((allergy, index) => {
+    item.product_allergies.forEach((allergy, index) => {
       console.log(`🔍 getContaminationInfo - アレルギー要素${index}:`, allergy);
       
       const allergyId = allergy.allergy_item_id;
@@ -177,7 +177,7 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
         console.log('商品情報:', { 
           name: item.name, 
           product_title: item.product_title,
-          hasAllergies: !!item.product_allergies_matrix?.length
+          hasAllergies: !!item.product_allergies?.length
         });
         
         // 商品名の優先順位: product_title > name
@@ -192,7 +192,7 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
         stores[storeName].menu_items.push({
           name: menuName,
           display_name: menuName,
-          product_allergies: item.product_allergies_matrix || [],
+          product_allergies: item.product_allergies || [],
           contamination_info: contaminationInfo,
           image_urls: [
             item?.source_url,

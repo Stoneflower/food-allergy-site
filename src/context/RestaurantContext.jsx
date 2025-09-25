@@ -2,75 +2,22 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import searchService from '../lib/searchService';
 
-// product_allergies_matrixを配列形式に変換する関数
-const convertAllergyMatrixToArray = (allergyMatrix) => {
-  console.log('🔍 convertAllergyMatrixToArray 呼び出し:', allergyMatrix);
-  console.log('🔍 convertAllergyMatrixToArray type:', typeof allergyMatrix);
-  console.log('🔍 convertAllergyMatrixToArray isArray:', Array.isArray(allergyMatrix));
+// product_allergies配列をそのまま使用する関数（変換不要）
+const processAllergies = (allergies) => {
+  console.log('🔍 processAllergies 呼び出し:', allergies);
+  console.log('🔍 processAllergies type:', typeof allergies);
+  console.log('🔍 processAllergies isArray:', Array.isArray(allergies));
   
-  if (!allergyMatrix) {
-    console.log('🔍 convertAllergyMatrixToArray: 無効なデータ、空配列を返す');
-    return [];
-  }
-
-  // 配列の場合はそのまま返す
-  if (Array.isArray(allergyMatrix)) {
-    console.log('🔍 convertAllergyMatrixToArray: 配列として取得、そのまま返す');
-    console.log('🔍 convertAllergyMatrixToArray 配列の長さ:', allergyMatrix.length);
-    if (allergyMatrix.length > 0) {
-      console.log('🔍 convertAllergyMatrixToArray 配列の最初の要素:', allergyMatrix[0]);
+  if (Array.isArray(allergies)) {
+    console.log('🔍 processAllergies: 配列として取得、そのまま返す');
+    console.log('🔍 processAllergies 配列の長さ:', allergies.length);
+    if (allergies.length > 0) {
+      console.log('🔍 processAllergies 配列の最初の要素:', allergies[0]);
     }
-    return allergyMatrix;
+    return allergies;
   }
-
-  // オブジェクトの場合は変換処理
-  if (typeof allergyMatrix === 'object') {
-    console.log('🔍 convertAllergyMatrixToArray: オブジェクトとして取得、変換処理実行');
-    const allergyArray = [];
-    const allergyItems = [
-      'egg', 'milk', 'wheat', 'buckwheat', 'peanut', 'shrimp', 'crab', 
-      'walnut', 'almond', 'abalone', 'squid', 'salmon_roe', 'orange', 
-      'cashew', 'kiwi', 'beef', 'gelatin', 'sesame', 'salmon', 'mackerel', 
-      'soybean', 'chicken', 'banana', 'pork', 'matsutake', 'peach', 
-      'yam', 'apple', 'macadamia'
-    ];
-
-    allergyItems.forEach(allergyId => {
-      const presenceType = allergyMatrix[allergyId];
-      if (presenceType) {
-        if (presenceType === 'direct') {
-          allergyArray.push({
-            allergy_item_id: allergyId,
-            presence_type: 'direct',
-            amount_level: 'unknown',
-            notes: '含有'
-          });
-          console.log(`🔍 含有発見: ${allergyId} = ${presenceType}`);
-        } else if (presenceType === 'trace') {
-          allergyArray.push({
-            allergy_item_id: allergyId,
-            presence_type: 'trace',
-            amount_level: 'trace',
-            notes: 'コンタミネーション（微量混入）'
-          });
-          console.log(`🔍 コンタミネーション発見: ${allergyId} = ${presenceType}`);
-        } else if (presenceType === 'none') {
-          allergyArray.push({
-            allergy_item_id: allergyId,
-            presence_type: 'none',
-            amount_level: 'none',
-            notes: '含有しない'
-          });
-          console.log(`🔍 含有しない確認: ${allergyId} = ${presenceType}`);
-        }
-      }
-    });
-
-    console.log('🔍 convertAllergyMatrixToArray 結果:', allergyArray);
-    return allergyArray;
-  }
-
-  console.log('🔍 convertAllergyMatrixToArray: 予期しないデータ型、空配列を返す');
+  
+  console.log('🔍 processAllergies: 配列ではない、空配列を返す');
   return [];
 };
 import { PREFECTURES, isPrefectureName, isAreaMatch } from '../constants/prefectures';
@@ -255,7 +202,14 @@ export const RestaurantProvider = ({ children }) => {
         .from('products')
         .select(`
           *,
-          product_allergies_matrix
+          product_allergies (
+            id,
+            product_id,
+            allergy_item_id,
+            presence_type,
+            amount_level,
+            notes
+          )
         `)
         .limit(200);
 
@@ -355,7 +309,7 @@ export const RestaurantProvider = ({ children }) => {
           brand: item.brand || '',
           allergyInfo: createDefaultAllergyInfo(),
           allergyFree: [],
-          product_allergies_matrix: convertAllergyMatrixToArray(item.product_allergies_matrix) || [],
+          product_allergies: processAllergies(item.product_allergies) || [],
           related_product: item,
           description: item.description || item.product_title || item.name || '',
           store_list_url: item.store_locations?.[0]?.store_list_url || null,

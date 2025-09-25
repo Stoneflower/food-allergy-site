@@ -47,23 +47,31 @@ const AllergySearchResults = ({ items }) => {
     }
 
     // matrixにアレルギー情報がない場合は表示しない
-    if (!matrix || !matrix.allergy_item_id) {
+    if (!matrix) {
+      console.log('🔍 アレルギー情報なし - 商品を除外');
+      return false;
+    }
+
+    // matrixが配列の場合、最初の要素を使用
+    const matrixData = Array.isArray(matrix) ? matrix[0] : matrix;
+    
+    if (!matrixData || !matrixData.allergy_item_id) {
       console.log('🔍 アレルギー情報なし - 商品を除外');
       return false;
     }
 
     // 選択されたアレルギーに該当するかチェック
-    const isSelectedAllergy = selectedAllergies.includes(matrix.allergy_item_id);
+    const isSelectedAllergy = selectedAllergies.includes(matrixData.allergy_item_id);
     
     // presence_typeが'contains'（含有）の場合は除外
-    if (isSelectedAllergy && matrix.presence_type === 'contains') {
-      console.log('🔍 アレルギー含有 - 商品を除外:', matrix.allergy_item_id);
+    if (isSelectedAllergy && matrixData.presence_type === 'contains') {
+      console.log('🔍 アレルギー含有 - 商品を除外:', matrixData.allergy_item_id);
       return false;
     }
 
     // presence_typeが'not_contains'（非含有）の場合は表示
-    if (isSelectedAllergy && matrix.presence_type === 'not_contains') {
-      console.log('🔍 アレルギー非含有 - 商品を表示:', matrix.allergy_item_id);
+    if (isSelectedAllergy && matrixData.presence_type === 'not_contains') {
+      console.log('🔍 アレルギー非含有 - 商品を表示:', matrixData.allergy_item_id);
       return true;
     }
 
@@ -382,6 +390,12 @@ const AllergySearchResults = ({ items }) => {
           console.log('groupedStores - added', stores[storeName].menu_items.length, 'allergy-compatible products to store:', storeName);
         } else if (item.related_product) {
           // product_allergies_matrixがない場合はrelated_productのnameを使用
+          // アレルギー検索条件が設定されている場合は、商品情報がないため表示しない
+          if (selectedAllergies && selectedAllergies.length > 0) {
+            console.log('🔍 アレルギー検索条件あり - 商品情報がないため表示をスキップ:', item.related_product.name);
+            return;
+          }
+          
           stores[storeName].menu_items.push({
             name: item.related_product.product_title || item.related_product.name,
             display_name: item.related_product.product_title || item.related_product.name,

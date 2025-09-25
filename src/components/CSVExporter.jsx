@@ -1056,17 +1056,18 @@ const CsvExporter = ({ data, onBack }) => {
             console.warn('product_title 更新例外:', ePT?.message || ePT);
           }
 
-          // 2) heat_status を国別テーブルに保存（JP）
+          // 2) heat_status を products に直接保存（グローバル属性）
           try {
             const hsValue = (heatStatus || 'none').trim();
             const { error: hsErr } = await supabase
-              .from('product_heat_status')
-              .upsert({ product_id: pid, country_code: 'JP', heat_status: hsValue }, { onConflict: 'product_id,country_code' });
+              .from('products')
+              .update({ heat_status: hsValue })
+              .eq('id', pid);
             if (hsErr) {
-              console.warn('❌ heat_status(JP) 更新失敗:', JSON.stringify(hsErr));
+              console.warn('❌ products.heat_status 更新失敗:', JSON.stringify(hsErr));
             }
           } catch (e) {
-            console.warn('heat_status(JP) 更新例外:', e?.message || e);
+            console.warn('products.heat_status 更新例外:', e?.message || e);
           }
 
           // 3) CSVの各行を集計して保存

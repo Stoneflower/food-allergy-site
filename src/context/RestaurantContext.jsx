@@ -662,7 +662,20 @@ export const RestaurantProvider = ({ children }) => {
     let items = allItemsData;
     // 会社カード表示条件: 選択アレルギーで direct以外（none/trace/香料）が1件でもある会社のみ
     if (eligibleProductIds && eligibleProductIds.size > 0) {
-      items = items.filter(item => eligibleProductIds.has(item.id));
+      console.log('🔍 eligibleProductIdsフィルタリング開始');
+      console.log('🔍 フィルタリング前のアイテム数:', items.length);
+      console.log('🔍 eligibleProductIds:', Array.from(eligibleProductIds));
+      
+      items = items.filter(item => {
+        const isEligible = eligibleProductIds.has(item.id);
+        if (!isEligible && (item.name === 'びっくりドンキー' || item.name === 'スシロー')) {
+          console.log('❌ eligibleProductIdsで除外:', item.name, 'ID:', item.id, 'eligibleProductIdsに含まれていない');
+        } else if (isEligible && (item.name === 'びっくりドンキー' || item.name === 'スシロー')) {
+          console.log('✅ eligibleProductIdsで通過:', item.name, 'ID:', item.id);
+        }
+        return isEligible;
+      });
+      console.log('🔍 eligibleProductIdsフィルター後:', items.length, '件');
     }
     
     console.log('🔍 getFilteredItems開始 - allItemsData:', allItemsData.length);
@@ -687,6 +700,21 @@ export const RestaurantProvider = ({ children }) => {
         const isRestaurantByMenu = normalizedSelectedCategory === 'レストラン' && Array.isArray(item.menu_items) && item.menu_items.length > 0;
         const matches = isRestaurantByMenu || item.category === normalizedSelectedCategory || 
                        (Array.isArray(item.category_tokens) && item.category_tokens.includes(normalizedSelectedCategory));
+        
+        // デバッグログを追加
+        if (item.name === 'びっくりドンキー' || item.name === 'スシロー') {
+          console.log('🔍 カテゴリフィルターデバッグ - 会社:', item.name, {
+            normalizedSelectedCategory,
+            itemCategory: item.category,
+            categoryTokens: item.category_tokens,
+            menuItemsLength: item.menu_items?.length || 0,
+            isRestaurantByMenu,
+            categoryMatch: item.category === normalizedSelectedCategory,
+            tokenMatch: Array.isArray(item.category_tokens) && item.category_tokens.includes(normalizedSelectedCategory),
+            matches
+          });
+        }
+        
         if (matches) {
           console.log('🔍 マッチしたアイテム:', item.name, 'カテゴリ:', item.category, 'トークン:', item.category_tokens, 'menu_items:', item.menu_items?.length || 0);
         }

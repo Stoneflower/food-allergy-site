@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { searchService } from '../lib/searchService';
 import { PREFECTURES, isPrefectureName, isAreaMatch } from '../constants/prefectures';
 
 const RestaurantContext = createContext();
@@ -25,57 +26,6 @@ export const RestaurantProvider = ({ children }) => {
     { id: 'walnut', name: 'くるみ', icon: '🌰' }
   ];
 
-  const [selectedAllergies, setSelectedAllergies] = useState([]);
-  const [selectedFragranceForSearch, setSelectedFragranceForSearch] = useState([]);
-  const [selectedTraceForSearch, setSelectedTraceForSearch] = useState([]);
-  const [activeAllergyTarget, setActiveAllergyTarget] = useState(() => {
-    try {
-      const raw = localStorage.getItem('activeAllergyTarget');
-      return raw ? JSON.parse(raw) : null; // { profileType: 'user'|'member', id, label }
-    } catch (_) {
-      return null;
-    }
-  });
-  const [searchKeyword, setSearchKeyword] = useState('');
-  // エリア入力（検索ボタン方式）
-  const [areaInputValue, setAreaInputValue] = useState('');
-  const [selectedArea, setSelectedArea] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [favorites, setFavorites] = useState([]);
-  const [history, setHistory] = useState([]);
-  const [allItems, setAllItems] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  // 画像フォールバック（名称ベース）
-  const pickFallbackImage = (name, current, related) => {
-    if (current && String(current).trim()) return current;
-    const texts = [
-      String(name || ''),
-      String(related?.name || ''),
-      String(related?.product_title || ''),
-      String(related?.brand || ''),
-    ].join(' ').toLowerCase();
-    if (texts.includes('びっくりドンキー')) return 'https://stoneflower.net/uploads/hamburger.jpg';
-    if (texts.includes('スシロー') || texts.includes('すしろー') || texts.includes('sushiro')) return 'https://stoneflower.net/uploads/sushi.jpg';
-    return 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=800&q=70&auto=format';
-  };
-
-  // 検索実行関数（検索ボタン方式）
-  const executeSearch = () => {
-    console.log('検索実行:', { areaInputValue, searchKeyword, selectedCategory });
-    
-    // エリア入力が空の場合は検索しない
-    if (!areaInputValue || areaInputValue.trim() === '') {
-      console.log('エリア入力が空のため、検索を実行しません');
-      setSelectedArea('');
-      return;
-    }
-    
-    // エリア入力をselectedAreaに設定して検索実行
-    setSelectedArea(areaInputValue.trim());
-    console.log('検索実行完了:', areaInputValue.trim());
-  };
   const defaultRecommendedAllergies = [
     { id: 'almond', name: 'アーモンド', icon: '🌰' },
     { id: 'abalone', name: 'あわび', icon: '🐚' },
@@ -92,7 +42,7 @@ export const RestaurantProvider = ({ children }) => {
     { id: 'soy', name: '大豆', icon: '🫘' },
     { id: 'chicken', name: '鶏肉', icon: '🐔' },
     { id: 'banana', name: 'バナナ', icon: '🍌' },
-    { id: 'pork', name: '豚肉', icon: '🐷' },
+    { id: 'pork', name: '豚肉', icon: '🥓' },
     { id: 'matsutake', name: 'まつたけ', icon: '🍄' },
     { id: 'peach', name: 'もも', icon: '🍑' },
     { id: 'yam', name: 'やまいも', icon: '🍠' },
@@ -101,6 +51,29 @@ export const RestaurantProvider = ({ children }) => {
 
   const defaultAllergyOptions = [...defaultMandatoryAllergies, ...defaultRecommendedAllergies];
 
+  // 状態管理
+  const [selectedAllergies, setSelectedAllergies] = useState([]);
+  const [selectedFragranceForSearch, setSelectedFragranceForSearch] = useState([]);
+  const [selectedTraceForSearch, setSelectedTraceForSearch] = useState([]);
+  const [activeAllergyTarget, setActiveAllergyTarget] = useState(() => {
+    try {
+      const raw = localStorage.getItem('activeAllergyTarget');
+      return raw ? JSON.parse(raw) : null;
+    } catch (_) {
+      return null;
+    }
+  });
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [areaInputValue, setAreaInputValue] = useState('');
+  const [selectedArea, setSelectedArea] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [favorites, setFavorites] = useState([]);
+  const [history, setHistory] = useState([]);
+  const [allItems, setAllItems] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // アレルギー項目の状態
   const [allergyOptions, setAllergyOptions] = useState(defaultAllergyOptions);
   const [mandatoryAllergies, setMandatoryAllergies] = useState(defaultMandatoryAllergies);
   const [recommendedAllergies, setRecommendedAllergies] = useState(defaultRecommendedAllergies);
@@ -118,7 +91,7 @@ export const RestaurantProvider = ({ children }) => {
   const createDefaultAllergyInfo = () => {
     const allergyInfo = {};
     defaultAllergyOptions.forEach(allergy => {
-      allergyInfo[allergy.id] = false; // デフォルトでは含まれていない
+      allergyInfo[allergy.id] = false;
     });
     return allergyInfo;
   };
@@ -126,84 +99,139 @@ export const RestaurantProvider = ({ children }) => {
   // 利用シーン（products.category 文字列）→ 内部カテゴリIDへの正規化
   const normalizeCategory = (categoryText) => {
     if (!categoryText || typeof categoryText !== 'string') return 'products';
-    // 複数選択時はスラッシュ区切りで保存されている想定
     const tokens = categoryText.split(/[/、,\s]+/).filter(Boolean);
     const text = categoryText;
-    // 優先順位: スーパー → ネットショップ → テイクアウト → レストラン
+    
     if (tokens.some(t => t.includes('スーパー')) || text.includes('スーパー')) return 'supermarkets';
     if (tokens.some(t => t.includes('ネットショップ')) || text.includes('ネットショップ')) return 'online';
     if (tokens.some(t => t.includes('テイクアウト')) || text.includes('テイクアウト')) return 'products';
     if (tokens.some(t => t.includes('レストラン')) || text.includes('レストラン')) return 'restaurants';
+    
     return 'products';
   };
 
-  // すべての含有カテゴリトークンを配列で返す（フィルタ用）
+  // カテゴリトークンの生成
   const getCategoryTokens = (categoryText) => {
-    if (!categoryText || typeof categoryText !== 'string') return [];
-    const tokens = categoryText.split(/[/、,\s]+/).filter(Boolean);
+    if (!categoryText || typeof categoryText !== 'string') return ['products'];
     const result = new Set();
+    const tokens = categoryText.split(/[/、,\s]+/).filter(Boolean);
+    
+    result.add('products');
     if (tokens.some(t => t.includes('スーパー')) || categoryText.includes('スーパー')) result.add('supermarkets');
     if (tokens.some(t => t.includes('ネットショップ')) || categoryText.includes('ネットショップ')) result.add('online');
     if (tokens.some(t => t.includes('テイクアウト')) || categoryText.includes('テイクアウト')) result.add('products');
     if (tokens.some(t => t.includes('レストラン')) || categoryText.includes('レストラン')) result.add('restaurants');
+    
     return Array.from(result);
   };
 
-  // Supabaseからデータを取得する関数
+  // 検索実行関数
+  const executeSearch = () => {
+    console.log('検索実行:', { areaInputValue, searchKeyword, selectedCategory });
+    
+    if (!areaInputValue || areaInputValue.trim() === '') {
+      console.log('エリア入力が空のため、検索を実行しません');
+      setSelectedArea('');
+      return;
+    }
+    
+    setSelectedArea(areaInputValue.trim());
+    console.log('検索実行完了:', areaInputValue.trim());
+  };
+
+  // 新しい検索サービスを使用したデータ取得関数
   const fetchDataFromSupabase = async () => {
     console.log('fetchDataFromSupabase開始...');
     setIsLoading(true);
     setError(null);
     
     try {
-      // まず基本的なテーブルのみでテスト
-      let storeData = null;
-      let productData = null;
+      const startTime = performance.now();
       
-      // 店舗情報を取得（県名サーバー絞り込み＋列最小化＋ページネーション）
-      try {
-        console.log('store_locationsテーブルにアクセス中...');
-        let query = supabase
-          .from('store_locations')
-          .select('id,product_id,branch_name,address,phone,hours,notes,closed,source_url,store_list_url', { count: 'exact' });
-        if (selectedArea && selectedArea.trim() !== '') {
-          query = query.ilike('address', `%${selectedArea.trim()}%`);
+      // 新しい検索サービスを使用
+      const { data, error } = await searchService.hybridSearch(
+        searchKeyword,
+        {
+          allergies: selectedAllergies,
+          area: selectedArea,
+          category: selectedCategory,
+          limit: 200
         }
-        // ページネーション（初期は先頭200件）
-        query = query.range(0, 199);
-        const { data, error } = await query;
-        
-        if (!error) {
-          storeData = data;
-          console.log('store_locationsデータ取得成功:', data?.length || 0, '件');
-          console.log('store_locationsデータ詳細:', data);
-        } else {
-          console.error('store_locationsテーブルエラー:', error);
-        }
-      } catch (err) {
-        console.error('store_locationsテーブルアクセスエラー:', err);
+      );
+
+      const executionTime = performance.now() - startTime;
+      
+      // パフォーマンスログの記録
+      await searchService.logSearchPerformance(searchKeyword, executionTime, data?.length || 0);
+
+      if (error) {
+        console.error('検索エラー:', error);
+        throw error;
       }
 
-      // 商品情報を取得（列最小化）
-      try {
-        console.log('productsテーブルにアクセス中...');
-        const { data, error } = await supabase
-          .from('products')
-          .select('id,name,brand,category,description,image_url,source_url,source_url2,product_title,product_category_id,updated_at');
-        
-        if (!error) {
-          productData = data;
-          console.log('productsデータ取得成功:', data?.length || 0, '件');
-          console.log('productsデータ詳細:', data);
-        } else {
-          console.error('productsテーブルエラー:', error);
-        }
-      } catch (err) {
-        console.error('productsテーブルアクセスエラー:', err);
-      }
+      console.log('検索結果:', data?.length || 0, '件', '実行時間:', executionTime.toFixed(2), 'ms');
 
-      // アレルギー項目を取得
-      console.log('allergy_itemsテーブルにアクセス中...');
+      // データの変換処理
+      const transformedData = transformAndMergeData(data || []);
+      setAllItems(transformedData);
+      
+    } catch (err) {
+      console.error('データ取得エラー:', err);
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // データ変換処理
+  const transformAndMergeData = (searchData) => {
+    const transformedData = [];
+    
+    try {
+      searchData.forEach(item => {
+        const transformedItem = {
+          id: item.id,
+          name: item.name || '商品名不明',
+          image: item.source_url || item.source_url2 || item.image_url || 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400',
+          rating: 4.0,
+          reviewCount: 0,
+          price: '¥500～¥1,500',
+          area: item.store_locations?.[0]?.address || 'すべて',
+          cuisine: '商品',
+          category: normalizeCategory(item.category),
+          category_tokens: getCategoryTokens(item.category),
+          brand: item.brand || '',
+          allergyInfo: createDefaultAllergyInfo(),
+          allergyFree: [],
+          product_allergies_matrix: item.product_allergies || [],
+          related_product: item,
+          description: item.description || item.product_title || item.name || '',
+          store_list_url: item.store_locations?.[0]?.store_list_url || null,
+          source: {
+            type: 'official',
+            contributor: '商品公式',
+            lastUpdated: new Date().toISOString().split('T')[0],
+            confidence: 85,
+            verified: true,
+            url: item.store_locations?.[0]?.source_url || ''
+          }
+        };
+        
+        transformedData.push(transformedItem);
+      });
+      
+      console.log('データ変換完了:', transformedData.length, '件');
+      return transformedData;
+      
+    } catch (err) {
+      console.error('データ変換エラー:', err);
+      return [];
+    }
+  };
+
+  // アレルギー項目の取得と設定
+  const fetchAllergyItems = async () => {
+    try {
       const { data: allergyData, error: allergyError } = await supabase
         .from('allergy_items')
         .select('*')
@@ -213,59 +241,7 @@ export const RestaurantProvider = ({ children }) => {
         console.error('allergy_itemsテーブルエラー:', allergyError);
         throw allergyError;
       }
-      
-      console.log('allergy_itemsデータ取得成功:', allergyData?.length || 0, '件');
 
-      // product_allergies_matrixを取得
-      let matrixData = [];
-      try {
-        console.log('product_allergies_matrixテーブルにアクセス中...');
-        const productIdsOnPage = Array.from(new Set((storeData || []).map(s => s.product_id).filter(Boolean)));
-        let mQuery = supabase
-          .from('product_allergies_matrix')
-          .select('*');
-        if (productIdsOnPage.length > 0) {
-          mQuery = mQuery.in('product_id', productIdsOnPage);
-        } else {
-          mQuery = mQuery.limit(0);
-        }
-        const { data: matrix, error: matrixError } = await mQuery;
-        
-        if (!matrixError && matrix) {
-          matrixData = matrix;
-          console.log('product_allergies_matrixデータ取得成功:', matrix.length, '件');
-        } else {
-          console.error('product_allergies_matrixテーブルエラー:', matrixError);
-        }
-      } catch (err) {
-        console.error('product_allergies_matrixテーブルアクセスエラー:', err);
-      }
-
-      // 追加: product_allergies（行形式）も取得し、UI用にproduct_allergies_matrix風に組み立てる
-      let productAllergiesRows = [];
-      try {
-        console.log('product_allergiesテーブルにアクセス中...');
-        const productIdsOnPage = Array.from(new Set((storeData || []).map(s => s.product_id).filter(Boolean)));
-        let pQuery = supabase
-          .from('product_allergies')
-          .select('product_id,allergy_item_id,presence_type,notes');
-        if (productIdsOnPage.length > 0) {
-          pQuery = pQuery.in('product_id', productIdsOnPage);
-        } else {
-          pQuery = pQuery.limit(0);
-        }
-        const { data: par, error: parErr } = await pQuery;
-        if (!parErr && par) {
-          productAllergiesRows = par;
-          console.log('product_allergiesデータ取得成功:', par.length, '件');
-        } else {
-          console.error('product_allergiesテーブルエラー:', parErr);
-        }
-      } catch (err) {
-        console.error('product_allergiesテーブルアクセスエラー:', err);
-      }
-
-      // アレルギー項目を分類
       if (allergyData && allergyData.length > 0) {
         const mandatory = allergyData.filter(item => item.category === 'mandatory');
         const recommended = allergyData.filter(item => item.category === 'recommended');
@@ -293,245 +269,12 @@ export const RestaurantProvider = ({ children }) => {
         setRecommendedAllergies(defaultRecommendedAllergies);
         setAllergyOptions(defaultAllergyOptions);
       }
-
-      // データを統合してallItems形式に変換
-      const transformedData = [];
-      
-      // 店舗データを変換
-      if (storeData && storeData.length > 0) {
-        console.log('店舗データ変換開始:', storeData);
-        console.log('最初の店舗データの構造:', storeData[0]);
-        storeData.forEach(store => {
-          const defaultAllergyInfo = createDefaultAllergyInfo();
-          const allergyFree = Object.keys(defaultAllergyInfo).filter(key => !defaultAllergyInfo[key]);
-          
-          console.log('store_locationsデータ:', store);
-          console.log('store.branch_name:', store.branch_name);
-          console.log('store.address:', store.address);
-          console.log('store.product_id:', store.product_id);
-          console.log('store.source_url:', store.source_url);
-          console.log('store.store_list_url:', store.store_list_url);
-          console.log('store.store_list_urlの型:', typeof store.store_list_url);
-          console.log('store.store_list_urlが空かどうか:', !store.store_list_url);
-          console.log('store.store_list_urlがnullかどうか:', store.store_list_url === null);
-          console.log('store.store_list_urlがundefinedかどうか:', store.store_list_url === undefined);
-          
-          // branch_nameまたはaddressを使用して店舗名を作成
-          const storeName = store.branch_name || store.address || '店舗名不明';
-          console.log('店舗名:', storeName);
-          
-          // この店舗に関連する商品を取得
-          const relatedProduct = productData && store.product_id ? productData.find(product => product.id === store.product_id) : null;
-          console.log('関連商品:', relatedProduct);
-          
-          // 関連商品のproduct_allergies_matrixを取得
-          const productMatrix = relatedProduct ? matrixData.filter(matrix => matrix.product_id === relatedProduct.id) : [];
-          console.log('関連商品のmatrix:', productMatrix);
-          
-          // 商品情報がない店舗は除外する（ただし、store_list_urlがある場合は除外しない）
-          if (!relatedProduct && productMatrix.length === 0 && (!store.store_list_url || store.store_list_url.trim() === '')) {
-            console.log('商品情報がない店舗のため除外:', storeName);
-            return; // この店舗の処理をスキップ
-          }
-          
-          const transformedItem = {
-            id: store.id,
-            name: storeName,
-            image: pickFallbackImage(storeName, relatedProduct?.source_url || relatedProduct?.image_url, relatedProduct),
-            rating: 4.0, // デフォルト値
-            reviewCount: 0,
-            price: '¥1,000～¥2,000', // デフォルト値
-            area: store.address || '',
-            cuisine: 'レストラン',
-            category: 'restaurants',
-            brand: relatedProduct?.brand || '',
-            allergyInfo: defaultAllergyInfo,
-            allergyFree: allergyFree, // アレルギー対応項目のリスト
-            product_allergies_matrix: productMatrix, // 関連商品のマトリックス
-            related_product: relatedProduct, // 関連商品
-            description: store.notes || relatedProduct?.description || '',
-            store_list_url: store.store_list_url || null, // エリア情報のリンク先
-            source: {
-              type: 'official',
-              contributor: '店舗公式',
-              lastUpdated: new Date().toISOString().split('T')[0],
-              confidence: 90,
-              verified: true,
-              url: store.source_url || '' // アレルギー情報元のリンク先
-            }
-          };
-          
-          console.log('変換後のstore_list_url:', transformedItem.store_list_url);
-          console.log('変換後のstore_list_urlの型:', typeof transformedItem.store_list_url);
-          console.log('変換後のstore_list_urlがnullかどうか:', transformedItem.store_list_url === null);
-          console.log('変換後のstore_list_urlがundefinedかどうか:', transformedItem.store_list_url === undefined);
-          
-          transformedData.push(transformedItem);
-        });
-        console.log('店舗データ変換完了:', transformedData.filter(item => item.category === 'restaurants'));
-      }
-
-      // 商品データを変換
-      if (productData && productData.length > 0) {
-        console.log('商品データ変換開始:', productData);
-        console.log('商品データ数:', productData.length);
-        productData.forEach(product => {
-          const defaultAllergyInfo = createDefaultAllergyInfo();
-          const allergyFree = Object.keys(defaultAllergyInfo).filter(key => !defaultAllergyInfo[key]);
-          
-          // デバッグ: 商品データの構造を確認
-          console.log(`商品データ構造確認 - ${product.name}:`, product);
-          console.log(`商品の全プロパティ:`, Object.keys(product));
-          console.log(`商品のstore_list_url:`, product.store_list_url);
-          console.log(`商品のstore_list_urlの型:`, typeof product.store_list_url);
-          
-          // この商品に関連するstore_locationsを取得
-          const relatedStores = storeData ? storeData.filter(store => store.product_id === product.id) : [];
-          console.log(`商品 ${product.name} の関連店舗:`, relatedStores);
-          
-          // この商品のproduct_allergies_matrixを取得
-          let productMatrix = matrixData
-            .filter(matrix => matrix.product_id === product.id)
-            .map(m => ({ ...m, menu_name: (product.product_title || m.menu_name || product.name) }));
-          // 行形式のproduct_allergiesからもmatrix風オブジェクトを生成して追加
-          const rowsForProduct = productAllergiesRows.filter(r => r.product_id === product.id);
-          if (rowsForProduct.length > 0) {
-            const generated = {};
-            rowsForProduct.forEach(r => {
-              // presence_typeのマッピング: DBのdirectでも香料由来([fragrance])なら互換のためIncludedとして扱う
-              let mapped = r.presence_type;
-              const isFragranceDirect = (
-                typeof r?.presence_type === 'string' && r.presence_type.toLowerCase() === 'direct' &&
-                typeof r?.notes === 'string' && r.notes.includes('[fragrance]')
-              );
-              if (isFragranceDirect) {
-                mapped = 'Included';
-              }
-              
-              // 同じallergy_item_idに対して複数のpresence_typeがある場合の処理
-              if (generated[r.allergy_item_id]) {
-                // 既に値がある場合は、配列として管理する
-                if (Array.isArray(generated[r.allergy_item_id])) {
-                  generated[r.allergy_item_id].push(mapped);
-                } else {
-                  // 既存の値を配列に変換して追加
-                  generated[r.allergy_item_id] = [generated[r.allergy_item_id], mapped];
-                }
-              } else {
-                generated[r.allergy_item_id] = mapped;
-              }
-            });
-            productMatrix.push({ ...generated, menu_name: product.product_title || generated.menu_name || product.name });
-          }
-          console.log(`商品 ${product.name} のmatrix:`, productMatrix);
-          
-          // 関連店舗がある場合は店舗ごとにデータを作成、ない場合は商品データとして作成
-          if (relatedStores.length > 0) {
-            relatedStores.forEach(store => {
-              // 商品情報がない店舗は除外する
-              if (!product && productMatrix.length === 0) {
-                console.log('商品情報がない店舗のため除外:', store.branch_name || store.address);
-                return; // この店舗の処理をスキップ
-              }
-              
-              const transformedItem = {
-                id: `product-${product.id}-store-${store.id}`, // 商品と店舗の組み合わせID
-                name: store.branch_name || product.name || '店舗名不明',
-            image: pickFallbackImage(product.name, product.source_url || product.source_url2 || product.image_url, product),
-                rating: 4.0,
-                reviewCount: 0,
-                price: '¥500～¥1,500',
-                area: store.address || '',
-                cuisine: '商品',
-                category: normalizeCategory(product.category),
-                category_tokens: getCategoryTokens(product.category),
-                brand: product.brand || '',
-                allergyInfo: defaultAllergyInfo,
-                allergyFree: allergyFree,
-                product_allergies_matrix: productMatrix,
-                related_product: product,
-                description: product.description || product.product_title || product.name || '',
-                store_list_url: store.store_list_url || product.store_list_url || null, // エリア情報のリンク先（アレルギー情報元と同じロジック）
-                source: {
-                  type: 'official',
-                  contributor: '商品公式',
-                  lastUpdated: new Date().toISOString().split('T')[0],
-                  confidence: 85,
-                  verified: true,
-                  url: store.source_url || '' // store_locations.source_url のみを反映（products.source_urlはここでは使わない）
-                }
-              };
-              
-              console.log(`商品-店舗組み合わせ ${product.name}-${store.branch_name || store.address} のstore_list_url:`, transformedItem.store_list_url);
-              console.log(`元のstore.store_list_url:`, store.store_list_url);
-              
-              transformedData.push(transformedItem);
-            });
-          } else {
-            // 関連店舗がない場合は商品データとして作成
-            // 商品情報がない場合は除外する
-            if (!product && productMatrix.length === 0) {
-              console.log('商品情報がない商品のため除外:', product.name);
-              return; // この商品の処理をスキップ
-            }
-            
-            // 関連するstore_locationsからstore_list_urlを取得（アレルギー情報元と同じロジック）
-            const relatedStoreForUrl = storeData ? storeData.find(store => store.product_id === product.id) : null;
-            const storeListUrl = relatedStoreForUrl ? relatedStoreForUrl.store_list_url : (product.store_list_url || null);
-            
-            const transformedItem = {
-              id: product.id + 10000,
-              name: product.name || '商品名不明',
-              image: product.source_url || product.source_url2 || product.image_url || 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400',
-              rating: 4.0,
-              reviewCount: 0,
-              price: '¥500～¥1,500',
-              area: 'すべて',
-              cuisine: '商品',
-              category: normalizeCategory(product.category),
-              category_tokens: getCategoryTokens(product.category),
-              brand: product.brand || '',
-              allergyInfo: defaultAllergyInfo,
-              allergyFree: allergyFree,
-              product_allergies_matrix: productMatrix,
-              related_product: product,
-              description: product.description || product.product_title || product.name || '',
-              store_list_url: storeListUrl, // store_locationsから取得
-              source: {
-                type: 'official',
-                contributor: '商品公式',
-                lastUpdated: new Date().toISOString().split('T')[0],
-                confidence: 85,
-                verified: true,
-                url: '' // store_locations.source_url が無い場合は空。画像リンクはUI側で products.source_url/2 を表示
-              }
-            };
-            
-            console.log(`商品単体 ${product.name} のstore_list_url:`, transformedItem.store_list_url);
-            console.log(`関連するstore_locations:`, relatedStoreForUrl);
-            console.log(`store_locationsから取得したstore_list_url:`, storeListUrl);
-            
-            transformedData.push(transformedItem);
-          }
-        });
-        console.log('商品データ変換完了:', transformedData.filter(item => item.category === 'restaurants'));
-        console.log('商品データ変換完了数:', transformedData.filter(item => item.category === 'restaurants').length);
-        } else {
-        console.log('商品データがありません:', productData);
-      }
-
-      console.log('最終的なtransformedData:', transformedData);
-      console.log('商品データ数:', transformedData.filter(item => item.category === 'products').length);
-      console.log('店舗データ数:', transformedData.filter(item => item.category === 'restaurants').length);
-      console.log('transformedData.length:', transformedData.length);
-      setAllItems(transformedData);
-      console.log('setAllItems完了');
-      
     } catch (err) {
-      console.error('データ取得エラー:', err);
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
+      console.error('アレルギー項目取得エラー:', err);
+      // フォールバック
+      setMandatoryAllergies(defaultMandatoryAllergies);
+      setRecommendedAllergies(defaultRecommendedAllergies);
+      setAllergyOptions(defaultAllergyOptions);
     }
   };
 
@@ -539,13 +282,12 @@ export const RestaurantProvider = ({ children }) => {
   const testSupabaseConnection = async () => {
     try {
       console.log('Supabase接続テスト開始...');
-        const { data, error } = await supabase
-          .from('allergy_items')
+      const { data, error } = await supabase
+        .from('allergy_items')
         .select('id')
         .limit(1);
       
       if (error) {
-        console.error('Supabase接続エラー:', error);
         return false;
       }
       
@@ -560,16 +302,16 @@ export const RestaurantProvider = ({ children }) => {
   // コンポーネントマウント時にデータを取得
   useEffect(() => {
     console.log('useEffect実行開始');
-    // まず接続テストを実行
     testSupabaseConnection().then(() => {
       console.log('Supabase接続成功、データ取得開始');
+      fetchAllergyItems();
       fetchDataFromSupabase();
     }).catch((error) => {
       console.error('Supabase接続エラー:', error);
     });
-  }, []);
+  }, [searchKeyword, selectedArea, selectedCategory, selectedAllergies]);
 
-  // 統合データ（Supabaseデータを優先使用）
+  // 統合データ
   const allItemsData = allItems;
 
   // お気に入り機能
@@ -582,7 +324,6 @@ export const RestaurantProvider = ({ children }) => {
     );
   };
 
-  // お気に入り状態の確認
   const isFavorite = (itemId, category) => {
     const favoriteId = `${category}-${itemId}`;
     return favorites.includes(favoriteId);
@@ -592,7 +333,7 @@ export const RestaurantProvider = ({ children }) => {
   const addToHistory = (item) => {
     setHistory(prev => {
       const newHistory = [item, ...prev.filter(h => h.id !== item.id)];
-      return newHistory.slice(0, 10); // 最新10件のみ保持
+      return newHistory.slice(0, 10);
     });
   };
 
@@ -600,13 +341,7 @@ export const RestaurantProvider = ({ children }) => {
   const getFilteredItems = () => {
     let items = allItemsData;
     
-    console.log('getFilteredItems - allItemsData:', allItemsData);
-    console.log('getFilteredItems - allItemsData products count:', allItemsData.filter(item => item.category === 'products').length);
-    console.log('getFilteredItems - allItemsData restaurants count:', allItemsData.filter(item => item.category === 'restaurants').length);
-    console.log('getFilteredItems - selectedCategory:', selectedCategory);
-    console.log('getFilteredItems - selectedAllergies:', selectedAllergies);
-    console.log('getFilteredItems - searchKeyword:', searchKeyword);
-    console.log('getFilteredItems - selectedArea:', selectedArea);
+    console.log('getFilteredItems - allItemsData:', allItemsData.length);
 
     if (selectedCategory !== 'all') {
       items = items.filter(item => {
@@ -614,7 +349,6 @@ export const RestaurantProvider = ({ children }) => {
         if (Array.isArray(item.category_tokens) && item.category_tokens.includes(selectedCategory)) return true;
         return false;
       });
-      console.log('getFilteredItems - after category filter:', items);
     }
 
     if (searchKeyword) {
@@ -627,81 +361,24 @@ export const RestaurantProvider = ({ children }) => {
         (item.related_product && item.related_product.name?.toLowerCase().includes(searchKeyword.toLowerCase())) ||
         (item.related_product && item.related_product.description?.toLowerCase().includes(searchKeyword.toLowerCase()))
       );
-      console.log('getFilteredItems - after search filter:', items);
     }
 
-    // アレルギーフィルタリングはAllergySearchResults.jsxで行うため、ここでは削除
-    // if (selectedAllergies.length > 0) { ... }
-
-    // エリア入力が空の場合でも結果をクリアしない（トップ等で表示するため）
     if (!selectedArea || selectedArea.trim() === '') {
       console.log('エリア入力が空: クリアせず全件から他条件のみ適用');
-      // 何もしない（カテゴリ/検索キーワード等は上で適用済み）
     } else if (selectedArea) {
-      // 都道府県名の判定（静的データを使用）
       const isPrefectureNameInput = isPrefectureName(selectedArea);
       
       if (isPrefectureNameInput) {
-        // 都道府県名が入力された場合、その都道府県内の具体的な店舗のみを表示
-        // 1. 入力された都道府県内の店舗のみを表示
-        // 入力された都道府県名と完全一致する店舗名は除外
-        // 他の都道府県名の店舗も除外
         items = items.filter(item => {
           const isPrefectureNameItem = PREFECTURES.some(pref => 
-            item.name.includes(pref) && (
-              item.name === pref || // 完全一致
-              item.name.includes(`${pref}(`) || // "鳥取県(401件)" 形式
-              item.name.includes(`${pref} `) || // "鳥取県 " 形式
-              item.name.startsWith(pref) // "鳥取県" で始まる
-            )
+            item.name === pref || item.area === pref
           );
           
-          if (isPrefectureNameItem) {
-            // 都道府県名の店舗の場合
-            const isExactMatch = PREFECTURES.some(pref => 
-              selectedArea.toLowerCase().includes(pref.toLowerCase()) && item.name === pref
-            );
-            
-            if (isExactMatch) {
-              // 入力された都道府県名と完全一致する場合は除外
-              console.log('❌ 入力された都道府県名と完全一致するため除外:', item.name);
-              return false;
-            } else {
-              // 他の都道府県名の店舗は除外
-              console.log('❌ 他の都道府県名の店舗のため除外:', item.name);
-              return false;
-            }
-          }
+          const areaMatch = isAreaMatch(item.area, selectedArea);
           
-          // 都道府県名でない店舗は除外しない
-          return true;
-        });
-        
-        // 2. その都道府県内の具体的な店舗のみをフィルタリング
-        // ただし、都道府県名の店舗は除外
-        items = items.filter(item => {
-          // エリアフィルタリング（静的データを使用）
-          let areaMatch = isAreaMatch(item.area, selectedArea);
-          // 追加: store_locations.address が『すべて』なら常に表示
-          if (item.area === 'すべて') areaMatch = true;
-          
-          // 都道府県名の店舗かどうかをチェック
-          const isPrefectureNameItem = PREFECTURES.some(pref => 
-            item.name.includes(pref) && (
-              item.name === pref || // 完全一致
-              item.name.includes(`${pref}(`) || // "島根県(401件)" 形式
-              item.name.includes(`${pref} `) || // "島根県 " 形式
-              item.name.startsWith(pref) // "島根県" で始まる
-            )
-          );
-          
-          // エリアにマッチし、かつ都道府県名の店舗でない場合のみ表示
           return areaMatch && !isPrefectureNameItem;
         });
-        
-        console.log('getFilteredItems - 都道府県名の店舗を除外し、具体的な店舗のみ表示:', items);
       } else {
-        // 都道府県名以外の場合は通常のフィルタリング
         items = items.filter(item =>
           (item.area === 'すべて') ||
           (item.area && item.area.toLowerCase().includes(selectedArea.toLowerCase()))
@@ -709,9 +386,7 @@ export const RestaurantProvider = ({ children }) => {
       }
     }
 
-    console.log('getFilteredItems - final result:', items);
-    console.log('getFilteredItems - products count:', items.filter(item => item.category === 'products').length);
-    console.log('getFilteredItems - restaurants count:', items.filter(item => item.category === 'restaurants').length);
+    console.log('getFilteredItems - final result:', items.length);
     return items;
   };
 
@@ -749,21 +424,19 @@ export const RestaurantProvider = ({ children }) => {
     setSearchKeyword,
     selectedArea,
     setSelectedArea,
-    areaInputValue,
-    setAreaInputValue,
-    executeSearch,
     selectedCategory,
     setSelectedCategory,
+    areaInputValue,
+    setAreaInputValue,
     favorites,
-    setFavorites,
     history,
-    setHistory,
     allItemsData,
     isLoading,
     error,
     allergyOptions,
     mandatoryAllergies,
     recommendedAllergies,
+    categories,
     
     // 関数
     toggleFavorite,
@@ -777,9 +450,9 @@ export const RestaurantProvider = ({ children }) => {
     getRecommendations,
     fetchDataFromSupabase,
     testSupabaseConnection,
+    executeSearch,
     applyAllergyTarget: async (target) => {
       try {
-        // target: null -> 設定をしない
         if (!target || target.profileType === 'none') {
           setActiveAllergyTarget(null);
           localStorage.removeItem('activeAllergyTarget');
@@ -809,18 +482,13 @@ export const RestaurantProvider = ({ children }) => {
           .map(a => a.replace('trace:', ''));
         const frag = Array.from(new Set(fragRaw));
         const trace = Array.from(new Set(traceRaw));
-        setSelectedAllergies(Array.from(new Set(normal)));
+        setSelectedAllergies(normal);
         setSelectedFragranceForSearch(frag);
         setSelectedTraceForSearch(trace);
-      } catch (e) {
-        console.warn('applyAllergyTarget failed', e);
+      } catch (err) {
+        console.error('アレルギー設定適用エラー:', err);
       }
-    },
-    
-    // データ
-    categories,
-    products: getFilteredProducts(),
-    restaurants: getFilteredRestaurants()
+    }
   };
 
   return (

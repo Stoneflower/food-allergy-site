@@ -16,51 +16,13 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
   const checkAllergyCompatibility = (item, selectedAllergies) => {
     console.log('🔍 アレルギー適合性チェック開始:', {
       itemName: item.name,
-      selectedAllergies
+    selectedAllergies, 
+      menuItemsCount: item.menu_items?.length || 0
     });
 
-    // アレルギー検索条件が設定されていない場合は、すべての商品を表示
-    if (!selectedAllergies || selectedAllergies.length === 0) {
-      console.log('🔍 アレルギー検索条件なし - すべての商品を表示');
-      return true;
-    }
-
-    // アレルギー情報があるかチェック
-    if (!item.product_allergies || !Array.isArray(item.product_allergies)) {
-      console.log('⚠️ アレルギー情報なし - 表示');
-      return true;
-    }
-
-    // 選択アレルギーに対してdirect以外（none/trace/fragrance）があるかチェック
-    let hasDirectOnly = true; // directのみかどうか
-    let hasNonDirect = false; // direct以外があるかどうか
-    
-    item.product_allergies.forEach(allergy => {
-      if (selectedAllergies.includes(allergy.allergy_item_id)) {
-        if (allergy.presence_type === 'direct') {
-          console.log('🔍 アレルギー含有 - direct:', allergy.allergy_item_id);
-          // directは除外対象だが、他のアレルギーでnon-directがあれば表示
-        } else if (allergy.presence_type === 'trace' || allergy.presence_type === 'fragrance' || allergy.presence_type === 'none') {
-          console.log('🔍 アレルギー含有 - non-direct:', allergy.allergy_item_id, allergy.presence_type);
-          hasNonDirect = true;
-          hasDirectOnly = false;
-        }
-      }
-    });
-
-    // direct以外（none/trace/fragrance）が1件でもあれば表示
-    if (hasNonDirect) {
-      console.log('🔍 選択アレルギーでnon-direct商品あり - 表示');
-      return true;
-    }
-
-    // directのみの場合は除外
-    if (hasDirectOnly) {
-      console.log('🔍 選択アレルギーでdirectのみ - 除外');
-      return false;
-    }
-
-    console.log('🔍 選択アレルギー関連商品なし - 表示');
+    // RestaurantContextで既にvw_company_card_eligibleでフィルタリング済みなので、
+    // ここではすべての商品を表示（direct以外の商品が1件でもある会社のみが渡されている）
+    console.log('🔍 RestaurantContextでフィルタリング済み - 会社カード表示');
     return true;
   };
 

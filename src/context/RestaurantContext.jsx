@@ -356,6 +356,7 @@ export const RestaurantProvider = ({ children }) => {
     const refreshEligible = async () => {
       try {
         if (selectedAllergies && selectedAllergies.length > 0) {
+          console.log('🔍 vw_company_card_eligible 取得開始:', selectedAllergies);
           const { data: eligibleRows, error: eligErr } = await supabase
             .from('vw_company_card_eligible')
             .select('product_id')
@@ -364,7 +365,9 @@ export const RestaurantProvider = ({ children }) => {
             console.warn('会社カード表示ビュー取得エラー:', eligErr);
             setEligibleProductIds(new Set());
           } else {
+            console.log('🔍 vw_company_card_eligible 取得結果:', eligibleRows);
             const ids = new Set((eligibleRows || []).map(r => r.product_id));
+            console.log('🔍 対象product_id:', Array.from(ids));
             setEligibleProductIds(ids);
           }
         } else {

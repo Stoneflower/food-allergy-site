@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { useRestaurant } from '../context/RestaurantContext';
 
 const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSearch, selectedTraceForSearch, allergyOptions }) => {
@@ -12,7 +12,7 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
   console.log('🔍 AllergySearchResults - getFilteredItems():', filteredItems?.length || 0, '件');
   console.log('🔍 AllergySearchResults - filteredItems:', filteredItems);
 
-  // アレルギー適合性チェック（Typesenseデータ用）
+  // アレルギー適合性チェック（会社カード表示用: directで除外）
   const checkAllergyCompatibility = (item, selectedAllergies) => {
     console.log('🔍 アレルギー適合性チェック開始:', {
       itemName: item.name || item.product_title,
@@ -53,6 +53,33 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
 
     console.log('🔍 アレルギー適合 - 商品を表示');
     return true;
+  };
+
+  // アレルギー除去（safe）/コンタミ（trace）/香料（fragrance）分類
+  const classifyAllergyStatus = (item, selectedAllergies) => {
+    const allergies = Array.isArray(item.product_allergies) ? item.product_allergies : [];
+    let hasDirect = false;
+    let hasTrace = false;
+    let hasFragrance = false;
+
+    const selectedSet = new Set(selectedAllergies || []);
+
+    allergies.forEach(a => {
+      if (!selectedSet.has(a.allergy_item_id)) return;
+      if (a.presence_type === 'direct') {
+        // 香料例外：notesに香料が入る場合は香料扱い
+        if (a.notes && a.notes.includes('香料')) {
+          hasFragrance = true;
+        } else {
+          hasDirect = true;
+        }
+      } else if (a.presence_type === 'trace') {
+        hasTrace = true;
+      }
+    });
+
+    const isSafe = !hasDirect && !hasTrace && !hasFragrance;
+    return { isSafe, hasTrace, hasFragrance };
   };
 
   // アレルギー情報を取得（Typesenseデータ用）
@@ -175,7 +202,7 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
           };
         }
         
-      // アレルギー適合性チェック
+      // アレルギー適合性チェック（会社カード表示条件）
       const isAllergyCompatible = checkAllergyCompatibility(item, selectedAllergies);
       
       if (isAllergyCompatible) {
@@ -192,14 +219,18 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
         console.log(`🔍 商品名デバッグ - item.name:`, item.name);
         console.log(`🔍 商品名デバッグ - 最終的なmenuName:`, menuName);
         
-        // アレルギー情報を取得
+        // アレルギー情報を取得（バッジ表示用）
         const contaminationInfo = getContaminationInfo(item);
-            
-            stores[storeName].menu_items.push({
+
+        // safe/trace/fragrance分類
+        const cls = classifyAllergyStatus(item, selectedAllergies);
+
+        stores[storeName].menu_items.push({
               name: menuName,
           display_name: menuName,
           product_allergies: item.product_allergies || [],
           contamination_info: contaminationInfo,
+          classify: cls,
               image_urls: [
             item?.source_url,
             item?.source_url2,
@@ -212,9 +243,13 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
       }
     });
     
-    // 会社カードはRestaurantContext側のeligible判定で担保されるため、
-    // 商品が0件でもカード自体は表示する（詳細は空の可能性あり）
-    const result = Object.values(stores);
+    // 会社カードはRestaurantContext側のeligible判定で担保される
+    const result = Object.values(stores).map(store => {
+      const safe = store.menu_items.filter(m => m.classify?.isSafe);
+      const trace = store.menu_items.filter(m => m.classify?.hasTrace);
+      const fragrance = store.menu_items.filter(m => m.classify?.hasFragrance);
+      return { ...store, safe_items: safe, trace_items: trace, fragrance_items: fragrance };
+    });
     console.log('groupedStores - final result:', result);
     console.log('groupedStores - stores with products:', result.length);
     console.log('groupedStores - stores with products names:', result.map(s => s.name));
@@ -223,6 +258,8 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
   };
 
   const stores = groupedStores();
+  const [expanded, setExpanded] = useState({});
+  const toggleStore = (name) => setExpanded(prev => ({ ...prev, [name]: !prev[name] }));
 
   if (!stores || stores.length === 0) {
     return (
@@ -234,58 +271,71 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
   }
 
   return (
-    <div className="space-y-6">
-      {stores.map((store, index) => (
-        <div key={index} className="bg-white rounded-lg shadow-md p-6">
-          <div className="mb-4">
-            <h3 className="text-xl font-bold text-gray-800">{store.name}</h3>
-          </div>
-          
-          <div className="space-y-3">
-            {store.menu_items.map((menuItem, menuIndex) => (
-              <div key={menuIndex} className="border border-gray-200 rounded-lg p-4">
-              <div className="flex items-center justify-between">
-                  <h4 className="font-medium text-gray-800">
-                    {menuItem.display_name || menuItem.name || '商品名不明'}
-                  </h4>
-                  <span className="text-xs text-gray-500">
-                    {menuItem.product_allergies?.length || 0} 件のアレルギー情報
-                  </span>
-                </div>
-                {/* デバッグ情報 */}
-                <div className="text-xs text-gray-400 mt-1">
-                  デバッグ: display_name="{menuItem.display_name}", name="{menuItem.name}"
+    <div className="space-y-4">
+      {stores.map((store, index) => {
+        const firstItem = store.menu_items?.[0];
+        // 画像/リンク 優先: products.source_url/source_url2 → fallback store_list_url（変換済み）
+        const imageUrls = Array.from(new Set((store.menu_items || []).flatMap(m => m.image_urls || []))).slice(0, 2);
+        const evidenceUrl = firstItem?.image_urls?.[0];
+        const storeListUrl = firstItem?.store_list_url || firstItem?.related_product?.store_list_url;
+        const isOpen = !!expanded[store.name];
+
+        return (
+          <div key={index} className="bg-white rounded-lg shadow p-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold text-gray-800 truncate">{store.name}</h3>
+              <button
+                className="text-sm text-blue-600 hover:underline"
+                onClick={() => toggleStore(store.name)}
+              >
+                {isOpen ? '閉じる' : '開く'}
+              </button>
             </div>
 
-                {menuItem.contamination_info && menuItem.contamination_info.length > 0 ? (
-                  <div className="mt-2">
-                    {menuItem.contamination_info.map((info, infoIndex) => (
-                      <span 
-                        key={infoIndex}
-                        className={`inline-block px-2 py-1 rounded-full text-xs mr-2 mb-1 ${
-                          info.includes('香料') 
-                            ? 'bg-yellow-100 text-yellow-800' 
-                            : 'bg-red-100 text-red-800'
-                        }`}
-                      >
-                        {info}
-                      </span>
+            {isOpen && (
+              <div className="mt-3 space-y-3">
+                {/* 単一リスト（コンパクト）。商品名下に黄色テキストを表示 */}
+                <div className="space-y-2">
+                  {(store.menu_items || []).map((menuItem, i) => (
+                    <div key={i} className="border border-gray-200 rounded p-2">
+                      <div className="text-sm text-gray-800 truncate">{menuItem.display_name || menuItem.name}</div>
+                      {menuItem.contamination_info?.length > 0 && (
+                        <div className="mt-1 space-x-1">
+                          {menuItem.contamination_info.map((info, infoIndex) => (
+                            <span key={infoIndex} className="inline-block text-xs text-yellow-700">
+                              {info}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {(!store.menu_items || store.menu_items.length === 0) && (
+                    <div className="text-xs text-gray-400">該当なし（directのみの可能性）</div>
+                  )}
+                </div>
+
+                {/* 画像・リンク（フッター） */}
+                <div className="mt-2 border-t pt-2">
+                  <div className="flex items-center gap-2 overflow-x-auto">
+                    {imageUrls.map((u, i) => (
+                      <img key={i} src={u} alt="evidence" className="h-12 w-12 object-cover rounded border" />
                     ))}
-                          </div>
-                ) : menuItem.product_allergies && menuItem.product_allergies.length > 0 ? (
-                  <div className="mt-2">
-                    <p className="text-sm text-gray-600">アレルギー情報あり（詳細なし）</p>
+                  </div>
+                  <div className="mt-2 space-x-3 text-xs">
+                    {imageUrls.length > 0 && (
+                      <a href={imageUrls[0]} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">商品画像（証拠）</a>
+                    )}
+                    {!imageUrls.length && storeListUrl && (
+                      <a href={storeListUrl} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">店舗エリアURL</a>
+                    )}
+                  </div>
                 </div>
-              ) : (
-                  <div className="mt-2">
-                    <p className="text-sm text-gray-500">アレルギー情報なし</p>
-                </div>
-                )}
-                </div>
-            ))}
+              </div>
+            )}
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 };

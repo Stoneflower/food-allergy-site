@@ -21,15 +21,6 @@ class SearchService {
       .from('products')
       .select(`
         *,
-        product_allergies(
-          allergy_item_id,
-          presence_type,
-          notes,
-          allergy_items(
-            id,
-            name
-          )
-        ),
         store_locations(
           id,
           branch_name,
@@ -56,11 +47,11 @@ class SearchService {
     //   console.log('🔍 エリアフィルター条件追加:', filters.area);
     // }
 
-    // カテゴリフィルタリング
-    if (filters.category && filters.category !== 'all') {
-      query = query.eq('category', filters.category);
-      console.log('🔍 カテゴリフィルター条件追加:', filters.category);
-    }
+    // カテゴリフィルタリング（一時的に無効化）
+    // if (filters.category && filters.category !== 'all') {
+    //   query = query.eq('category', filters.category);
+    //   console.log('🔍 カテゴリフィルター条件追加:', filters.category);
+    // }
 
     // 並び順とリミット
     query = query

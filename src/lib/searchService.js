@@ -18,37 +18,7 @@ class SearchService {
           allergy_items(*)
         ),
         product_allergies_matrix(
-          menu_name,
-          egg,
-          milk,
-          wheat,
-          buckwheat,
-          peanut,
-          shrimp,
-          crab,
-          walnut,
-          almond,
-          abalone,
-          squid,
-          salmon_roe,
-          orange,
-          cashew,
-          kiwi,
-          beef,
-          gelatin,
-          sesame,
-          salmon,
-          mackerel,
-          soybean,
-          chicken,
-          banana,
-          pork,
-          matsutake,
-          peach,
-          yam,
-          apple,
-          macadamia,
-          fragrance
+          menu_name
         ),
         store_locations(
           id,
@@ -59,12 +29,9 @@ class SearchService {
       `);
 
     if (searchTerm) {
-      // 全文検索インデックスを使用
-      query = query.textSearch('fts', searchTerm, {
-        type: 'websearch',
-        config: 'english'
-      });
-      console.log('🔍 全文検索条件追加:', searchTerm);
+      // 基本的なLIKE検索を使用（検索エンジン無効化）
+      query = query.or(`name.ilike.%${searchTerm}%,product_title.ilike.%${searchTerm}%`);
+      console.log('🔍 基本LIKE検索条件追加:', searchTerm);
     }
 
     // フィルタリング（段階的に適用してデバッグ）
@@ -101,39 +68,13 @@ class SearchService {
     return { data, error };
   }
 
-  // ハイブリッド検索（全文検索 + LIKE検索）
+  // ハイブリッド検索（基本検索のみ - 検索エンジン無効化）
   async hybridSearch(searchTerm, filters = {}) {
-    console.log('🔍 hybridSearch開始:', { searchTerm, filters });
+    console.log('🔍 hybridSearch開始（基本検索）:', { searchTerm, filters });
     
-    if (!searchTerm) {
-      console.log('🔍 キーワードなし、全文検索のみ実行');
-      return this.fullTextSearch('', filters);
-    }
-
-    try {
-      // 全文検索とLIKE検索の両方を実行
-      console.log('🔍 並列検索実行開始');
-      const [fullTextResults, likeResults] = await Promise.all([
-        this.fullTextSearch(searchTerm, filters),
-        this.likeSearch(searchTerm, filters)
-      ]);
-
-      console.log('🔍 並列検索完了:', {
-        fullTextCount: fullTextResults.data?.length || 0,
-        likeCount: likeResults.data?.length || 0
-      });
-
-      // 結果をマージして重複を除去
-      const mergedResults = this.mergeSearchResults(fullTextResults.data, likeResults.data);
-      console.log('🔍 マージ結果:', { mergedCount: mergedResults.length });
-      
-      return { data: mergedResults, error: fullTextResults.error || likeResults.error };
-    } catch (error) {
-      console.error('ハイブリッド検索エラー:', error);
-      // フォールバック: LIKE検索のみ実行
-      console.log('🔍 フォールバック: LIKE検索のみ実行');
-      return this.likeSearch(searchTerm, filters);
-    }
+    // 検索エンジン無効化: 基本的なfullTextSearchのみ実行
+    console.log('🔍 検索エンジン無効化 - 基本検索のみ実行');
+    return this.fullTextSearch(searchTerm, filters);
   }
 
   // LIKE検索（フォールバック用）
@@ -149,37 +90,7 @@ class SearchService {
           allergy_items(*)
         ),
         product_allergies_matrix(
-          menu_name,
-          egg,
-          milk,
-          wheat,
-          buckwheat,
-          peanut,
-          shrimp,
-          crab,
-          walnut,
-          almond,
-          abalone,
-          squid,
-          salmon_roe,
-          orange,
-          cashew,
-          kiwi,
-          beef,
-          gelatin,
-          sesame,
-          salmon,
-          mackerel,
-          soybean,
-          chicken,
-          banana,
-          pork,
-          matsutake,
-          peach,
-          yam,
-          apple,
-          macadamia,
-          fragrance
+          menu_name
         ),
         store_locations(
           id,
@@ -289,43 +200,6 @@ class SearchService {
       .from('products')
       .select(`
         *,
-        product_allergies(
-          *,
-          allergy_items(*)
-        ),
-        product_allergies_matrix(
-          menu_name,
-          egg,
-          milk,
-          wheat,
-          buckwheat,
-          peanut,
-          shrimp,
-          crab,
-          walnut,
-          almond,
-          abalone,
-          squid,
-          salmon_roe,
-          orange,
-          cashew,
-          kiwi,
-          beef,
-          gelatin,
-          sesame,
-          salmon,
-          mackerel,
-          soybean,
-          chicken,
-          banana,
-          pork,
-          matsutake,
-          peach,
-          yam,
-          apple,
-          macadamia,
-          fragrance
-        ),
         store_locations!inner(
           id,
           branch_name,

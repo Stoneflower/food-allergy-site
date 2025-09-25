@@ -1064,7 +1064,12 @@ const CsvExporter = ({ data, onBack }) => {
           //   - product_fragrance_allergies: 28品目の direct/none（選択された香料のみdirect）（JP）
           try {
             // 既存のアレルギー行を全削除（このCSV取込で上書き）
-            await supabase.from('product_allergies').delete().eq('product_id', pid).eq('country_code', 'JP');
+            // JPと旧データ（country_code NULL）を両方削除
+            await supabase
+              .from('product_allergies')
+              .delete()
+              .eq('product_id', pid)
+              .or('country_code.is.null,country_code.eq.JP');
 
             // アレルゲンごとに presence を集計: direct を優先（trace は別管理、none/unused は none）
             const presenceOrder = { direct: 2, trace: 1, none: 0, unused: 0 };
@@ -1155,7 +1160,9 @@ const CsvExporter = ({ data, onBack }) => {
 
             const filteredRows = rows.filter(r => typeof r.allergy_item_id_int === 'number');
             if (filteredRows.length > 0) {
-              const { error: insErr } = await supabase.from('product_allergies').insert(filteredRows);
+              const { error: insErr } = await supabase
+                .from('product_allergies')
+                .upsert(filteredRows, { onConflict: 'product_id,country_code,allergy_item_id' });
               if (insErr) {
                 console.error('❌ product_allergies 保存エラー:', insErr);
               } else {

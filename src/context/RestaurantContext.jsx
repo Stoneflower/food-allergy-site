@@ -428,9 +428,15 @@ export const RestaurantProvider = ({ children }) => {
     if (!selectedArea || selectedArea.trim() === '') {
       console.log('エリア入力が空: クリアせず全件から他条件のみ適用');
     } else if (selectedArea) {
+      console.log('🔍 エリアフィルター適用開始:', selectedArea);
+      console.log('🔍 エリアフィルター前のアイテム数:', items.length);
+      console.log('🔍 エリアフィルター前のアイテムサンプル:', items[0]?.area);
+      
       const isPrefectureNameInput = isPrefectureName(selectedArea);
+      console.log('🔍 都道府県名チェック:', isPrefectureNameInput);
       
       if (isPrefectureNameInput) {
+        console.log('🔍 都道府県名フィルター適用');
         items = items.filter(item => {
           const isPrefectureNameItem = PREFECTURES.some(pref => 
             item.name === pref || item.area === pref
@@ -438,14 +444,35 @@ export const RestaurantProvider = ({ children }) => {
           
           const areaMatch = isAreaMatch(item.area, selectedArea);
           
+          console.log('🔍 エリアマッチ詳細:', {
+            itemName: item.name,
+            itemArea: item.area,
+            selectedArea,
+            isPrefectureNameItem,
+            areaMatch,
+            result: areaMatch && !isPrefectureNameItem
+          });
+          
           return areaMatch && !isPrefectureNameItem;
         });
       } else {
-        items = items.filter(item =>
-          (item.area === 'すべて') ||
-          (item.area && item.area.toLowerCase().includes(selectedArea.toLowerCase()))
-        );
+        console.log('🔍 通常のエリアフィルター適用');
+        items = items.filter(item => {
+          const matches = (item.area === 'すべて') ||
+                         (item.area && item.area.toLowerCase().includes(selectedArea.toLowerCase()));
+          
+          console.log('🔍 通常エリアマッチ詳細:', {
+            itemName: item.name,
+            itemArea: item.area,
+            selectedArea,
+            matches
+          });
+          
+          return matches;
+        });
       }
+      
+      console.log('🔍 エリアフィルター後のアイテム数:', items.length);
     }
 
     console.log('🔍 getFilteredItems完了 - final result:', items.length);

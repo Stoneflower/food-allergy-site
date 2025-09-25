@@ -54,30 +54,43 @@ class SearchService {
 
   // ハイブリッド検索（全文検索 + LIKE検索）
   async hybridSearch(searchTerm, filters = {}) {
+    console.log('🔍 hybridSearch開始:', { searchTerm, filters });
+    
     if (!searchTerm) {
+      console.log('🔍 キーワードなし、全文検索のみ実行');
       return this.fullTextSearch('', filters);
     }
 
     try {
       // 全文検索とLIKE検索の両方を実行
+      console.log('🔍 並列検索実行開始');
       const [fullTextResults, likeResults] = await Promise.all([
         this.fullTextSearch(searchTerm, filters),
         this.likeSearch(searchTerm, filters)
       ]);
 
+      console.log('🔍 並列検索完了:', {
+        fullTextCount: fullTextResults.data?.length || 0,
+        likeCount: likeResults.data?.length || 0
+      });
+
       // 結果をマージして重複を除去
       const mergedResults = this.mergeSearchResults(fullTextResults.data, likeResults.data);
+      console.log('🔍 マージ結果:', { mergedCount: mergedResults.length });
       
       return { data: mergedResults, error: fullTextResults.error || likeResults.error };
     } catch (error) {
       console.error('ハイブリッド検索エラー:', error);
       // フォールバック: LIKE検索のみ実行
+      console.log('🔍 フォールバック: LIKE検索のみ実行');
       return this.likeSearch(searchTerm, filters);
     }
   }
 
   // LIKE検索（フォールバック用）
   async likeSearch(searchTerm, filters = {}) {
+    console.log('🔍 likeSearch開始:', { searchTerm, filters });
+    
     let query = this.supabase
       .from('products')
       .select(`
@@ -102,25 +115,30 @@ class SearchService {
         brand.ilike.%${searchTerm}%,
         description.ilike.%${searchTerm}%
       `);
+      console.log('🔍 キーワード検索条件追加:', searchTerm);
     }
 
     // フィルタリング
     if (filters.allergies?.length > 0) {
       query = query.in('product_allergies.allergy_item_id', filters.allergies);
+      console.log('🔍 アレルギーフィルター追加:', filters.allergies);
     }
 
     if (filters.area) {
       query = query.ilike('store_locations.address', `%${filters.area}%`);
+      console.log('🔍 エリアフィルター追加:', filters.area);
     }
 
     if (filters.category && filters.category !== 'all') {
       query = query.eq('category', filters.category);
+      console.log('🔍 カテゴリフィルター追加:', filters.category);
     }
 
     const { data, error } = await query
       .order('updated_at', { ascending: false })
       .limit(filters.limit || 50);
 
+    console.log('🔍 likeSearch結果:', { dataCount: data?.length || 0, error });
     return { data, error };
   }
 

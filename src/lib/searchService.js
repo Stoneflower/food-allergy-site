@@ -14,9 +14,8 @@ class SearchService {
       .select(`
         *,
         product_allergies(
-          allergy_item_id,
-          presence_type,
-          notes
+          *,
+          allergy_items(*)
         ),
         store_locations(
           id,
@@ -113,9 +112,8 @@ class SearchService {
       .select(`
         *,
         product_allergies(
-          allergy_item_id,
-          presence_type,
-          notes
+          *,
+          allergy_items(*)
         ),
         store_locations(
           id,
@@ -226,9 +224,8 @@ class SearchService {
       .select(`
         *,
         product_allergies(
-          allergy_item_id,
-          presence_type,
-          notes
+          *,
+          allergy_items(*)
         ),
         store_locations!inner(
           id,

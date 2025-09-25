@@ -21,6 +21,20 @@ class SearchService {
       .from('products')
       .select(`
         *,
+        product_allergies(
+          id,
+          allergy_item_id,
+          presence_type,
+          amount_level,
+          notes,
+          allergy_items(
+            id,
+            name,
+            name_en,
+            category,
+            icon
+          )
+        ),
         store_locations(
           id,
           branch_name,

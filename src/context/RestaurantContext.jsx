@@ -168,8 +168,8 @@ export const RestaurantProvider = ({ children }) => {
     try {
       const startTime = performance.now();
       
-      // 元の商品検索のみに戻す（緊急対応）
-      console.log('緊急対応: 商品検索のみ実行');
+      // SimpleProductDisplayと同じ方法で直接Supabaseから取得
+      console.log('🔍 SimpleProductDisplayと同じ方法で直接Supabaseから取得');
       console.log('🔍 検索パラメータ詳細:', {
         searchKeyword,
         selectedAllergies,
@@ -178,15 +178,33 @@ export const RestaurantProvider = ({ children }) => {
         limit: 200
       });
       
-      const { data, error } = await searchService.hybridSearch(
-        searchKeyword,
-        {
-          allergies: selectedAllergies,
-          area: selectedArea,
-          category: selectedCategory,
-          limit: 200
-        }
-      );
+      // 直接Supabaseから商品データを取得（SimpleProductDisplayと同じ方法）
+      const { data: productsData, error: productsError } = await supabase
+        .from('products')
+        .select(`
+          *,
+          product_allergies (
+            *,
+            allergy_items (name, icon, category)
+          )
+        `)
+        .limit(200);
+
+      if (productsError) {
+        console.error('❌ 商品データ取得エラー:', productsError);
+        throw productsError;
+      }
+
+      console.log('✅ 商品データ取得成功:', productsData?.length || 0, '件');
+      
+      // データを変換（searchServiceの形式に合わせる）
+      const data = productsData?.map(product => ({
+        ...product,
+        category: 'products',
+        area: '全国' // デフォルト値
+      })) || [];
+      
+      const error = null;
 
       const executionTime = performance.now() - startTime;
       

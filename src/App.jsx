@@ -18,6 +18,7 @@ import CsvConverter from './pages/CsvConverter';
 import AdminTools from './pages/AdminTools';
 import TranslationManagerPage from './pages/TranslationManagerPage';
 import ImageUploadDemo from './pages/ImageUploadDemo';
+import TestAllergyDataPage from './pages/TestAllergyDataPage';
 import { RestaurantProvider } from './context/RestaurantContext';
 import Footer from './components/Footer';
 import './App.css';
@@ -44,6 +45,7 @@ function App() {
             <Route path="/admin-tools" element={<AdminTools />} />
             <Route path="/translation-manager" element={<TranslationManagerPage />} />
             <Route path="/image-upload-demo" element={<ImageUploadDemo />} />
+            <Route path="/test-allergy-data" element={<TestAllergyDataPage />} />
             <Route path="/family" element={<Family />} />
             <Route path="/mypage" element={<MyPage />} />
           </Routes>

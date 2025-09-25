@@ -29,6 +29,7 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
   // アレルギー除去（safe）/コンタミ（trace）/香料（fragrance）分類
   const classifyAllergyStatus = (item, selectedAllergies) => {
     const allergies = Array.isArray(item.product_allergies) ? item.product_allergies : [];
+    const matrix = item.product_allergies_matrix?.[0]; // 最初のマトリクスデータ
     let hasDirect = false;
     let hasTrace = false;
     let hasFragrance = false;
@@ -36,27 +37,53 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
 
     const selectedSet = new Set(selectedAllergies || []);
 
-    allergies.forEach(a => {
-      if (!selectedSet.has(a.allergy_item_id)) return;
-      
-      if (a.presence_type === 'direct') {
-        // 香料例外：notesに香料が入る場合は香料扱い
-        if (a.notes && a.notes.includes('香料')) {
-          hasFragrance = true;
-    } else {
+    // product_allergies_matrixテーブルの情報を優先チェック
+    if (matrix && Object.keys(matrix).length > 0) {
+      console.log('🔍 classifyAllergyStatus - matrix使用:', matrix);
+      selectedAllergies.forEach(allergy => {
+        const matrixValue = matrix[allergy];
+        if (matrixValue === 'none') {
+          hasNone = true;
+          console.log(`🔍 classifyAllergyStatus - ${allergy}: none (matrix)`);
+        } else if (matrixValue === 'trace') {
+          hasTrace = true;
+          console.log(`🔍 classifyAllergyStatus - ${allergy}: trace (matrix)`);
+        } else if (matrixValue === 'direct') {
           hasDirect = true;
+          console.log(`🔍 classifyAllergyStatus - ${allergy}: direct (matrix)`);
         }
-      } else if (a.presence_type === 'trace') {
-        hasTrace = true;
-      } else if (a.presence_type === 'fragrance') {
-        hasFragrance = true;
-      } else if (a.presence_type === 'none') {
-        hasNone = true;
-      }
-    });
+      });
+    } else {
+      // product_allergies_matrixが空の場合は、product_allergiesテーブルをフォールバック
+      console.log('🔍 classifyAllergyStatus - product_allergies使用（フォールバック）');
+      allergies.forEach(a => {
+        if (!selectedSet.has(a.allergy_item_id)) return;
+        
+        if (a.presence_type === 'direct') {
+          // 香料例外：notesに香料が入る場合は香料扱い
+          if (a.notes && a.notes.includes('香料')) {
+            hasFragrance = true;
+            console.log(`🔍 classifyAllergyStatus - ${a.allergy_item_id}: fragrance (notes)`);
+          } else {
+            hasDirect = true;
+            console.log(`🔍 classifyAllergyStatus - ${a.allergy_item_id}: direct (product_allergies)`);
+          }
+        } else if (a.presence_type === 'trace') {
+          hasTrace = true;
+          console.log(`🔍 classifyAllergyStatus - ${a.allergy_item_id}: trace (product_allergies)`);
+        } else if (a.presence_type === 'fragrance') {
+          hasFragrance = true;
+          console.log(`🔍 classifyAllergyStatus - ${a.allergy_item_id}: fragrance (product_allergies)`);
+        } else if (a.presence_type === 'none') {
+          hasNone = true;
+          console.log(`🔍 classifyAllergyStatus - ${a.allergy_item_id}: none (product_allergies)`);
+        }
+      });
+    }
 
     // none/trace/fragranceのいずれかがあれば安全（direct以外）
     const isSafe = hasNone || hasTrace || hasFragrance;
+    console.log(`🔍 classifyAllergyStatus - 最終結果: isSafe=${isSafe}, hasNone=${hasNone}, hasTrace=${hasTrace}, hasFragrance=${hasFragrance}`);
     return { isSafe, hasTrace, hasFragrance, hasNone };
   };
 

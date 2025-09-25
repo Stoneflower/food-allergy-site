@@ -291,6 +291,12 @@ export const RestaurantProvider = ({ children }) => {
         if (item.product_allergies && item.product_allergies.length > 0) {
           console.log(`🔍 アイテム${index + 1}: ${item.name} - product_allergies[0]:`, item.product_allergies[0]);
         }
+        console.log(`🔍 アイテム${index + 1}: ${item.name} - product_allergies_matrix:`, item.product_allergies_matrix);
+        console.log(`🔍 アイテム${index + 1}: ${item.name} - product_allergies_matrix type:`, typeof item.product_allergies_matrix);
+        console.log(`🔍 アイテム${index + 1}: ${item.name} - product_allergies_matrix length:`, item.product_allergies_matrix?.length || 0);
+        if (item.product_allergies_matrix && item.product_allergies_matrix.length > 0) {
+          console.log(`🔍 アイテム${index + 1}: ${item.name} - product_allergies_matrix[0]:`, item.product_allergies_matrix[0]);
+        }
       });
       
       const error = null;
@@ -429,48 +435,95 @@ export const RestaurantProvider = ({ children }) => {
       }
       
       searchData.forEach(item => {
-        // 商品名の優先順位: menu_items.name > product_title > name
         const menuItems = item.menu_items || [];
-        const primaryMenuName = menuItems.length > 0 ? menuItems[0].name : null;
-        const displayName = primaryMenuName || item.product_title || item.name || '商品名不明';
+        console.log(`🔍 transformAndMergeData - ${item.name} のmenu_items数:`, menuItems.length);
         
-        const transformedItem = {
-          id: item.id,
-          name: item.name, // 会社名・店舗名（products.name）
-          product_name: displayName, // 商品名（menu_items.name優先）
-          image: item.source_url || item.source_url2 || item.image_url || 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400',
-          rating: 4.0,
-          reviewCount: 0,
-          price: '¥500～¥1,500',
-          area: item.store_locations?.[0]?.address || 'すべて',
-          cuisine: '商品',
-          category: normalizeCategory(item.category),
-          category_tokens: getCategoryTokens(item.category),
-          brand: item.brand || '',
-          allergyInfo: createDefaultAllergyInfo(),
-          allergyFree: [],
-          product_allergies: (() => {
-            console.log(`🔍 transformAndMergeData - ${displayName} の product_allergies 処理開始:`, item.product_allergies);
-            const result = processAllergies(item.product_allergies) || [];
-            console.log(`🔍 transformAndMergeData - ${displayName} の product_allergies 処理結果:`, result);
-            return result;
-          })(),
-          related_product: item,
-          description: item.description || item.product_title || item.name || '',
-          store_list_url: item.store_locations?.[0]?.store_list_url || null,
-          store_locations: item.store_locations || [],
-          menu_items: menuItems,
-          source: {
-            type: 'official',
-            contributor: '商品公式',
-            lastUpdated: new Date().toISOString().split('T')[0],
-            confidence: 85,
-            verified: true,
-            url: item.store_locations?.[0]?.source_url || ''
-          }
-        };
-        
-        transformedData.push(transformedItem);
+        // menu_itemsが存在する場合は、各menu_itemを個別のアイテムとして展開
+        if (menuItems.length > 0) {
+          menuItems.forEach((menuItem, index) => {
+            const transformedItem = {
+              id: `${item.id}_${menuItem.id}`, // 一意ID（product_id + menu_item_id）
+              product_id: item.id, // 元のproduct_idを保持
+              menu_item_id: menuItem.id, // menu_item_idを保持
+              name: item.name, // 会社名・店舗名（products.name）
+              product_name: menuItem.name, // 商品名（menu_items.name）
+              image: item.source_url || item.source_url2 || item.image_url || 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400',
+              rating: 4.0,
+              reviewCount: 0,
+              price: '¥500～¥1,500',
+              area: item.store_locations?.[0]?.address || 'すべて',
+              cuisine: '商品',
+              category: normalizeCategory(item.category),
+              category_tokens: getCategoryTokens(item.category),
+              brand: item.brand || '',
+              allergyInfo: createDefaultAllergyInfo(),
+              allergyFree: [],
+              product_allergies: (() => {
+                console.log(`🔍 transformAndMergeData - ${menuItem.name} の product_allergies 処理開始:`, item.product_allergies);
+                const result = processAllergies(item.product_allergies) || [];
+                console.log(`🔍 transformAndMergeData - ${menuItem.name} の product_allergies 処理結果:`, result);
+                return result;
+              })(),
+              related_product: item,
+              description: item.description || item.product_title || item.name || '',
+              store_list_url: item.store_locations?.[0]?.store_list_url || null,
+              store_locations: item.store_locations || [],
+              menu_items: [menuItem], // 単一のmenu_item
+              source: {
+                type: 'official',
+                contributor: '商品公式',
+                lastUpdated: new Date().toISOString().split('T')[0],
+                confidence: 85,
+                verified: true,
+                url: item.store_locations?.[0]?.source_url || ''
+              }
+            };
+            
+            transformedData.push(transformedItem);
+          });
+        } else {
+          // menu_itemsが存在しない場合は、従来通り1つのアイテムとして処理
+          const displayName = item.product_title || item.name || '商品名不明';
+          
+          const transformedItem = {
+            id: item.id,
+            product_id: item.id,
+            name: item.name, // 会社名・店舗名（products.name）
+            product_name: displayName, // 商品名（product_title優先）
+            image: item.source_url || item.source_url2 || item.image_url || 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400',
+            rating: 4.0,
+            reviewCount: 0,
+            price: '¥500～¥1,500',
+            area: item.store_locations?.[0]?.address || 'すべて',
+            cuisine: '商品',
+            category: normalizeCategory(item.category),
+            category_tokens: getCategoryTokens(item.category),
+            brand: item.brand || '',
+            allergyInfo: createDefaultAllergyInfo(),
+            allergyFree: [],
+            product_allergies: (() => {
+              console.log(`🔍 transformAndMergeData - ${displayName} の product_allergies 処理開始:`, item.product_allergies);
+              const result = processAllergies(item.product_allergies) || [];
+              console.log(`🔍 transformAndMergeData - ${displayName} の product_allergies 処理結果:`, result);
+              return result;
+            })(),
+            related_product: item,
+            description: item.description || item.product_title || item.name || '',
+            store_list_url: item.store_locations?.[0]?.store_list_url || null,
+            store_locations: item.store_locations || [],
+            menu_items: [],
+            source: {
+              type: 'official',
+              contributor: '商品公式',
+              lastUpdated: new Date().toISOString().split('T')[0],
+              confidence: 85,
+              verified: true,
+              url: item.store_locations?.[0]?.source_url || ''
+            }
+          };
+          
+          transformedData.push(transformedItem);
+        }
       });
       
       console.log('データ変換完了:', transformedData.length, '件');

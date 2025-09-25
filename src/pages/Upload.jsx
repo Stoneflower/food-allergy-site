@@ -129,6 +129,19 @@ const Upload = () => {
     }
   };
 
+  // 画像の順番入れ替え（indexの画像を上下へ）
+  const moveCapturedImage = (index, direction) => {
+    setCapturedImages(prev => {
+      const next = [...prev];
+      const newIndex = direction === 'up' ? index - 1 : index + 1;
+      if (newIndex < 0 || newIndex >= next.length) return prev;
+      const tmp = next[index];
+      next[index] = next[newIndex];
+      next[newIndex] = tmp;
+      return next;
+    });
+  };
+
   // 複数画像ファイル処理（上限2枚）
   const handleImageFiles = (files, isAppendMode = false) => {
     // 追加モードの場合、既存画像数と合わせて上限チェック
@@ -721,6 +734,22 @@ const Upload = () => {
                       <div className="absolute top-2 left-2 bg-blue-500 text-white rounded-full px-2 py-1 text-xs font-medium">
                         {index + 1}
                       </div>
+                      {capturedImages.length > 1 && (
+                        <div className="absolute top-2 right-2 flex gap-1">
+                          <button
+                            type="button"
+                            onClick={() => moveCapturedImage(index, 'up')}
+                            className="px-2 py-1 text-[11px] bg-white/80 border rounded hover:bg-white disabled:opacity-50"
+                            disabled={index === 0}
+                          >↑</button>
+                          <button
+                            type="button"
+                            onClick={() => moveCapturedImage(index, 'down')}
+                            className="px-2 py-1 text-[11px] bg-white/80 border rounded hover:bg-white disabled:opacity-50"
+                            disabled={index === capturedImages.length - 1}
+                          >↓</button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -862,6 +891,22 @@ const Upload = () => {
                         <div className="absolute top-1 left-1 bg-blue-500 text-white rounded-full px-2 py-1 text-xs font-medium">
                           {index + 1}
                         </div>
+                        {capturedImages.length > 1 && (
+                          <div className="absolute top-1 right-1 flex gap-1">
+                            <button
+                              type="button"
+                              onClick={() => moveCapturedImage(index, 'up')}
+                              className="px-2 py-1 text-[11px] bg-white/80 border rounded hover:bg-white disabled:opacity-50"
+                              disabled={index === 0}
+                            >↑</button>
+                            <button
+                              type="button"
+                              onClick={() => moveCapturedImage(index, 'down')}
+                              className="px-2 py-1 text-[11px] bg-white/80 border rounded hover:bg-white disabled:opacity-50"
+                              disabled={index === capturedImages.length - 1}
+                            >↓</button>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

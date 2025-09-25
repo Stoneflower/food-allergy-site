@@ -67,6 +67,16 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
     if (item.product_allergies_matrix.length > 0) {
       console.log(`🔍 getContaminationInfo - 最初の要素の詳細:`, item.product_allergies_matrix[0]);
       console.log(`🔍 getContaminationInfo - 最初の要素のキー:`, Object.keys(item.product_allergies_matrix[0]));
+      console.log(`🔍 getContaminationInfo - 最初の要素のJSON:`, JSON.stringify(item.product_allergies_matrix[0], null, 2));
+      
+      // 最初の3つの要素を詳しく確認
+      for (let i = 0; i < Math.min(3, item.product_allergies_matrix.length); i++) {
+        console.log(`🔍 getContaminationInfo - 要素${i}の詳細:`, {
+          element: item.product_allergies_matrix[i],
+          keys: Object.keys(item.product_allergies_matrix[i]),
+          values: Object.values(item.product_allergies_matrix[i])
+        });
+      }
     }
 
     const contaminationAllergies = [];

@@ -1040,22 +1040,32 @@ const CsvExporter = ({ data, onBack }) => {
                 .map(r => String(r?.raw_menu_name || '').trim())
                 .filter(n => n.length > 0);
               if (allNamesInOrder.length > 0) {
-                // 可能な限り全文保持（DB側の型制約を超えない前提。長すぎる場合のみ控えめにスライス）
+                // DBの列長制約に備えて、保守的に1024文字に制限
                 const joined = allNamesInOrder.join(' / ');
-                const safe = joined.length > 6000 ? joined.slice(0, 6000) : joined;
-                await supabase.from('products').update({ product_title: safe }).eq('id', pid);
-                console.log('✅ product_title を更新（全メニュー連結・重複保持）:', safe.substring(0, 120) + (safe.length > 120 ? '...' : ''));
+                const safe = joined.length > 1024 ? joined.slice(0, 1024) : joined;
+                const { error: ptErr } = await supabase.from('products').update({ product_title: safe }).eq('id', pid);
+                if (ptErr) {
+                  console.error('❌ product_title 更新失敗:', JSON.stringify(ptErr));
+                } else {
+                  console.log('✅ product_title を更新（全メニュー連結・重複保持）:', safe.substring(0, 120) + (safe.length > 120 ? '...' : ''));
+                }
               }
             }
           } catch (ePT) {
-            console.warn('product_title 更新失敗:', ePT);
+            console.warn('product_title 更新例外:', ePT?.message || ePT);
           }
 
-          // 2) heat_status を更新
+          // 2) heat_status を国別テーブルに保存（JP）
           try {
-            await supabase.from('products').update({ heat_status: heatStatus || 'none' }).eq('id', pid);
+            const hsValue = (heatStatus || 'none').trim();
+            const { error: hsErr } = await supabase
+              .from('product_heat_status')
+              .upsert({ product_id: pid, country_code: 'JP', heat_status: hsValue }, { onConflict: 'product_id,country_code' });
+            if (hsErr) {
+              console.warn('❌ heat_status(JP) 更新失敗:', JSON.stringify(hsErr));
+            }
           } catch (e) {
-            console.warn('heat_status 更新失敗:', e);
+            console.warn('heat_status(JP) 更新例外:', e?.message || e);
           }
 
           // 3) CSVの各行を集計して保存

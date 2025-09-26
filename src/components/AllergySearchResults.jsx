@@ -81,7 +81,8 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
       console.log('🔍 classifyAllergyStatus - matrix使用:', matrix);
       debugSelectedMatrixValues(item, selectedAllergies);
       selectedAllergies.forEach(allergy => {
-        const matrixValue = getMatrixValue(item, allergy);
+        const raw = getMatrixValue(item, allergy);
+        const matrixValue = (raw == null ? '' : String(raw)).trim().toLowerCase();
         if (matrixValue === 'none') {
           hasNone = true;
           console.log(`🔍 classifyAllergyStatus - ${allergy}: none (matrix)`);
@@ -165,7 +166,7 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
       const skip = new Set(['id','product_id','menu_item_id','menu_name']);
       keys.forEach(k => {
         if (skip.has(k)) return;
-        const value = matrix[k];
+        const value = (matrix[k] == null ? '' : String(matrix[k])).trim().toLowerCase();
         const displayName = mapAllergenKeyToName(k);
           if (value === 'trace') {
           contaminationAllergies.push(displayName);

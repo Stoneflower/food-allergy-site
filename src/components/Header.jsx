@@ -325,7 +325,7 @@ const Header = () => {
                       />
                       
                       {/* ドロップダウンメニュー */}
-                      <div className="absolute top-full left-0 bg-white border border-gray-200 rounded-b-lg shadow-2xl"
+                      <div className="absolute top-full left-0 bg-white border border-gray-200 rounded-b-lg shadow-2xl max-h-[80vh] overflow-y-auto overscroll-contain"
                            style={{ 
                              width: '700px', 
                              maxWidth: '95vw',

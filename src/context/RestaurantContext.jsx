@@ -402,41 +402,54 @@ export const RestaurantProvider = ({ children }) => {
     }
   };
 
-  // 選択アレルギーが変わったら、対象IDのみ再取得（軽量）
+  // 選択アレルギー変更時に、マトリクスのみで eligibleProductIds をローカル再計算
   useEffect(() => {
-    const refreshEligible = async () => {
-      try {
-        // 一時的にvw_company_card_eligibleフィルタリングを無効化
-        console.log('🔍 vw_company_card_eligibleフィルタリング一時無効化 - 全product_idを対象');
-        const ids = new Set((allItems || []).map(p => p.product_id));
-        console.log('🔍 全product_id:', Array.from(ids));
-        setEligibleProductIds(ids);
-        
-        // if (selectedAllergies && selectedAllergies.length > 0) {
-        //   console.log('🔍 vw_company_card_eligible 取得開始:', selectedAllergies);
-        //   const { data: eligibleRows, error: eligErr } = await supabase
-        //     .from('vw_company_card_eligible')
-        //     .select('product_id')
-        //     .in('allergy', selectedAllergies);
-        //   if (eligErr) {
-        //     console.warn('会社カード表示ビュー取得エラー:', eligErr);
-        //     setEligibleProductIds(new Set());
-        //   } else {
-        //     console.log('🔍 vw_company_card_eligible 取得結果:', eligibleRows);
-        //     const ids = new Set((eligibleRows || []).map(r => r.product_id));
-        //     console.log('🔍 対象product_id:', Array.from(ids));
-        //     setEligibleProductIds(ids);
-        //   }
-        // } else {
-        //   const ids = new Set((allItems || []).map(p => p.product_id));
-        //   setEligibleProductIds(ids);
-        // }
-      } catch (e) {
-        console.warn('会社カード表示対象ID再計算エラー:', e);
+    try {
+      if (!allItems || allItems.length === 0) {
         setEligibleProductIds(new Set());
+        return;
       }
-    };
-    refreshEligible();
+      if (!selectedAllergies || selectedAllergies.length === 0) {
+        const idsAll = new Set((allItems || []).map(p => p.product_id));
+        setEligibleProductIds(idsAll);
+        return;
+      }
+
+      // product_id 単位で「directが無く、none/trace/fragranceが少なくとも1つある」アイテムが存在するか集計
+      const productIdToEligible = new Map();
+
+      allItems.forEach(item => {
+        const productId = item.product_id || (item.id ? String(item.id).split('_')[0] : null);
+        if (!productId) return;
+        const matrix = item.product_allergies_matrix?.[0] || null;
+
+        let hasDirect = false;
+        let hasNonDirect = false;
+
+        if (matrix) {
+          selectedAllergies.forEach(slug => {
+            const key = slug === 'soy' ? 'soybean' : slug;
+            const v = matrix[key];
+            if (v === 'direct') hasDirect = true;
+            if (v === 'none' || v === 'trace' || v === 'fragrance') hasNonDirect = true;
+          });
+        } else if (Array.isArray(item.product_allergies)) {
+          const rel = item.product_allergies.filter(a => selectedAllergies.includes(a.allergy_item_id));
+          hasDirect = rel.some(a => a.presence_type === 'direct');
+          hasNonDirect = rel.some(a => a.presence_type === 'none' || a.presence_type === 'trace' || a.presence_type === 'fragrance');
+        }
+
+        const eligible = !hasDirect && hasNonDirect;
+        if (eligible) productIdToEligible.set(productId, true);
+      });
+
+      const ids = new Set(Array.from(productIdToEligible.keys()));
+      setEligibleProductIds(ids);
+      console.log('✅ eligibleProductIds(ローカル, matrix基準) 再計算:', Array.from(ids));
+    } catch (e) {
+      console.warn('会社カード表示対象ID(ローカル, matrix)計算エラー:', e);
+      setEligibleProductIds(new Set());
+    }
   }, [selectedAllergies, allItems]);
 
   // データ変換処理

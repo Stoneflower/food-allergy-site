@@ -483,8 +483,9 @@ export const RestaurantProvider = ({ children }) => {
         // menu_itemsが存在する場合は、各menu_itemを個別のアイテムとして展開
         if (menuItems.length > 0) {
           menuItems.forEach((menuItem, index) => {
-            const normalizedCategory = 'レストラン';
-            const categoryTokens = Array.from(new Set([...(getCategoryTokens(item.category) || []), 'レストラン']));
+            // products.category をそのまま正規化して利用
+            const normalizedCategory = normalizeCategory(item.category);
+            const categoryTokens = Array.from(new Set(getCategoryTokens(item.category) || []));
             // menu_item_id一致のマトリクス行を抽出
             const rows = Array.isArray(item.product_allergies_matrix) ? item.product_allergies_matrix : [];
             const matrixRow = (() => {

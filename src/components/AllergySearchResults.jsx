@@ -506,25 +506,30 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
                 {/* 画像・リンク（メニュー欄の最後） */}
                 <div className="mt-3 border-t pt-3">
                   {(() => {
-                    // 店内の全商品から products.source_url / source_url2 を収集
-                    const directImages = Array.from(new Set(
-                      (store.products || []).flatMap(p => [
-                        p?.related_product?.source_url,
-                        p?.related_product?.source_url2
-                      ].filter(Boolean))
-                    ));
-
+                    // 先頭商品の products.source_url / source_url2 を最優先で参照
+                    const fp = firstProduct || {};
+                    const rp = fp.related_product || {};
+                    const imageCandidates = [
+                      rp.source_url,
+                      rp.source_url2,
+                      fp.source_url,
+                      fp.source_url2,
+                      ...(Array.isArray(fp.image_urls) ? fp.image_urls : [])
+                    ].filter(Boolean);
+                    const directImages = Array.from(new Set(imageCandidates));
                     const hasAnyImage = directImages.length > 0;
-                    const rp = firstProduct?.related_product || {};
                     const firstLoc = (rp.store_locations || [])[0] || {};
 
                     console.log('🧩 image check:', {
+                      fpId: fp?.related_product?.id || fp?.id,
+                      source_url: rp.source_url || fp.source_url,
+                      source_url2: rp.source_url2 || fp.source_url2,
                       directImages,
                       hasAnyImage,
                       storeSource: firstLoc.source_url,
                       storeList: firstLoc.store_list_url
                     });
-                    
+
                     return (
                       <div className="mt-2 text-xs flex items-center gap-3">
                         {hasAnyImage ? (

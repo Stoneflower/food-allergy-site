@@ -411,13 +411,16 @@ export const RestaurantProvider = ({ children }) => {
         return;
       }
 
-      // product_id 単位で「directが無く、none/trace/fragranceが少なくとも1つある」アイテムが存在するか集計
-      // product_id単位で、紐づく全menu_item（= allItemsの該当要素）を統合して判定
-      const productIdToAggregates = new Map();
+      // product_id 単位で、「安全な menu_item が1つでもあるか」を判定
+      // 安全条件: 選択アレルギーの中で direct が一つも無く、かつ none/trace/fragrance のいずれかが少なくとも一つ含まれる
+      const productIdToSafe = new Map();
 
       allItems.forEach(item => {
         const productId = item.product_id || (item.id ? String(item.id).split('_')[0] : null);
         if (!productId) return;
+
+        let safeForThisItem = false;
+
         const rows = Array.isArray(item.product_allergies_matrix) ? item.product_allergies_matrix : [];
         const matrix = (() => {
           if (rows.length === 0) return null;
@@ -428,33 +431,35 @@ export const RestaurantProvider = ({ children }) => {
           return rows[0];
         })();
 
-        let agg = productIdToAggregates.get(productId);
-        if (!agg) {
-          agg = { hasDirect: false, hasNonDirect: false };
-          productIdToAggregates.set(productId, agg);
-        }
-
         if (matrix) {
+          let itemHasDirect = false;
+          let itemHasNonDirect = false;
           selectedAllergies.forEach(slug => {
             const key = slug === 'soy' ? 'soybean' : slug;
             const raw = matrix[key];
             const v = (raw == null ? 'none' : String(raw)).trim().toLowerCase();
-            if (v === 'direct') agg.hasDirect = true;
-            if (v === 'none' || v === 'trace' || v === 'fragrance') agg.hasNonDirect = true;
+            if (v === 'direct') itemHasDirect = true;
+            if (v === 'none' || v === 'trace' || v === 'fragrance') itemHasNonDirect = true;
           });
+          safeForThisItem = !itemHasDirect && itemHasNonDirect;
         } else if (Array.isArray(item.product_allergies)) {
           const rel = item.product_allergies.filter(a => selectedAllergies.includes(a.allergy_item_id));
-          if (rel.some(a => a.presence_type === 'direct')) agg.hasDirect = true;
-          if (rel.some(a => a.presence_type === 'none' || a.presence_type === 'trace' || a.presence_type === 'fragrance')) agg.hasNonDirect = true;
+          const hasDirect = rel.some(a => a.presence_type === 'direct');
+          const hasNonDirect = rel.some(a => a.presence_type === 'none' || a.presence_type === 'trace' || a.presence_type === 'fragrance');
+          safeForThisItem = !hasDirect && hasNonDirect;
         } else {
-          // matrixも旧配列も無い場合は、未記入=noneとして安全側に倒す
-          agg.hasNonDirect = true;
+          // どちらも無い場合は未記入=noneとして安全扱い
+          safeForThisItem = true;
+        }
+
+        if (safeForThisItem) {
+          productIdToSafe.set(productId, true);
         }
       });
 
       const ids = new Set();
-      productIdToAggregates.forEach((agg, productId) => {
-        if (!agg.hasDirect && agg.hasNonDirect) ids.add(productId);
+      productIdToSafe.forEach((isSafe, productId) => {
+        if (isSafe) ids.add(productId);
       });
       setEligibleProductIds(ids);
       console.log('✅ eligibleProductIds(集約, matrix基準) 再計算:', Array.from(ids));

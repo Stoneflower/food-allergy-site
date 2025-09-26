@@ -28,8 +28,18 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
 
   // アレルギー除去（safe）/コンタミ（trace）/香料（fragrance）分類
   // マトリクス参照のユーティリティ（soy→soybean 吸収）
+  const getMatrixRow = (item) => {
+    const rows = Array.isArray(item.product_allergies_matrix) ? item.product_allergies_matrix : [];
+    if (rows.length === 0) return null;
+    if (item.menu_item_id) {
+      const exact = rows.find(r => String(r.menu_item_id) === String(item.menu_item_id));
+      if (exact) return exact;
+    }
+    return rows[0];
+  };
+
   const getMatrixValue = (item, slug) => {
-    const matrix = item.product_allergies_matrix?.[0];
+    const matrix = getMatrixRow(item);
     if (!matrix || Object.keys(matrix).length === 0) return null;
     const key = slug === 'soy' ? 'soybean' : slug;
     return matrix[key] ?? null;
@@ -44,7 +54,7 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
 
   const classifyAllergyStatus = (item, selectedAllergies) => {
     const allergies = Array.isArray(item.product_allergies) ? item.product_allergies : [];
-    const matrix = item.product_allergies_matrix?.[0]; // 最初のマトリクスデータ
+    const matrix = getMatrixRow(item); // menu_item_id一致のマトリクス行
     let hasDirect = false;
     let hasTrace = false;
     let hasFragrance = false;
@@ -135,7 +145,7 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
     const contaminationAllergies = [];
     const fragranceAllergies = [];
 
-    const matrix = item.product_allergies_matrix?.[0];
+    const matrix = getMatrixRow(item);
     if (matrix && Object.keys(matrix).length > 0 && Array.isArray(selectedAllergies)) {
       // マトリクス優先で黄色ラベル（trace / fragrance）を作る
       debugSelectedMatrixValues(item, selectedAllergies);

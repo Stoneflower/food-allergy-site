@@ -392,7 +392,15 @@ export const RestaurantProvider = ({ children }) => {
       allItems.forEach(item => {
         const productId = item.product_id || (item.id ? String(item.id).split('_')[0] : null);
         if (!productId) return;
-        const matrix = item.product_allergies_matrix?.[0] || null;
+          const rows = Array.isArray(item.product_allergies_matrix) ? item.product_allergies_matrix : [];
+          const matrix = (() => {
+            if (rows.length === 0) return null;
+            if (item.menu_item_id) {
+              const exact = rows.find(r => String(r.menu_item_id) === String(item.menu_item_id));
+              if (exact) return exact;
+            }
+            return rows[0];
+          })();
 
         let hasDirect = false;
         let hasNonDirect = false;

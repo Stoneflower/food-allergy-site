@@ -799,7 +799,7 @@ export const RestaurantProvider = ({ children }) => {
       }
 
       if (allowed) {
-        items = items.filter(item => {
+      items = items.filter(item => {
           const tokens = Array.isArray(item.category_tokens) ? item.category_tokens : [];
           const rawCat = item.category;
           const normCat = typeof rawCat === 'string' ? rawCat.trim() : rawCat;

@@ -506,16 +506,20 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
                 {/* 画像・リンク（メニュー欄の最後） */}
                 <div className="mt-3 border-t pt-3">
                   {(() => {
-                    // 会社カード下の表示は firstProduct を基準に判定
+                    // 店内の全商品から products.source_url / source_url2 を収集
+                    const directImages = Array.from(new Set(
+                      (store.products || []).flatMap(p => [
+                        p?.related_product?.source_url,
+                        p?.related_product?.source_url2
+                      ].filter(Boolean))
+                    ));
+
+                    const hasAnyImage = directImages.length > 0;
                     const rp = firstProduct?.related_product || {};
-                    const hasImage1 = !!rp.source_url;
-                    const hasImage2 = !!rp.source_url2;
-                    const hasAnyImage = hasImage1 || hasImage2;
                     const firstLoc = (rp.store_locations || [])[0] || {};
 
                     console.log('🧩 image check:', {
-                      source_url: rp.source_url,
-                      source_url2: rp.source_url2,
+                      directImages,
                       hasAnyImage,
                       storeSource: firstLoc.source_url,
                       storeList: firstLoc.store_list_url
@@ -525,11 +529,11 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
                       <div className="mt-2 text-xs flex items-center gap-3">
                         {hasAnyImage ? (
                           <>
-                            {hasImage1 && (
-                              <a href={rp.source_url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">画像1</a>
+                            {directImages[0] && (
+                              <a href={directImages[0]} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">画像1</a>
                             )}
-                            {hasImage2 && (
-                              <a href={rp.source_url2} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">画像2</a>
+                            {directImages[1] && (
+                              <a href={directImages[1]} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">画像2</a>
                             )}
                           </>
                         ) : (

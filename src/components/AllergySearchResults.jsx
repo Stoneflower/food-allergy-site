@@ -78,7 +78,7 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
             item.product_name.includes('ドンキーフリー') ||
             item.product_name.includes('ビール')
           )) {
-            // hasDirect = false; (既にfalse)
+            hasNone = true; // 安全な商品として設定
             console.log(`🔍 classifyAllergyStatus - ${a.allergy_item_id}: none (乳成分なし商品の強制判定)`);
           } else if (a.allergy_item_id === 'milk' && (item.product_name?.includes('チーズ') || item.product_name?.includes('cheese'))) {
             // チーズ系商品の乳アレルギーを強制的にdirect扱い

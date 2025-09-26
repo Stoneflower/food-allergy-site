@@ -395,6 +395,25 @@ const CsvExporter = ({ data, onBack }) => {
     return 'none';
   };
 
+  // プレビューの日本語表示値をDB保存用の英語値に変換（再マッピング防止）
+  const mapPreviewLabelToEnglish = (value) => {
+    const v = String(value || '').trim();
+    switch (v) {
+      case 'ふくむ': return 'direct';
+      case 'コンタミ': return 'trace';
+      case '香料にふくむ': return 'fragrance';
+      case 'ふくまない': return 'none';
+      case '未使用': return 'none';
+      case 'direct':
+      case 'trace':
+      case 'fragrance':
+      case 'none':
+        return v;
+      default:
+        return null; // 不明時は後段のnormalizePresenceに委譲
+    }
+  };
+
   // 記号のみの行も商品名として許容するため、除外判定は行わない
   const isSymbolsOnly = () => false;
 
@@ -534,9 +553,10 @@ const CsvExporter = ({ data, onBack }) => {
       csvRow.push(''); // notes
       csvRow.push(menuName);
       standardAllergens.forEach(allergen => {
-        const value = row.converted[allergen.slug] || '';
-        // 含有量表示を正規化
-        const englishValue = normalizePresence(value, { menuName, allergenSlug: allergen.slug });
+        const value = row.converted?.[allergen.slug] ?? '';
+        // プレビュー最終値（日本語）を優先して英語へダイレクト変換
+        const directMapped = mapPreviewLabelToEnglish(value);
+        const englishValue = directMapped ?? normalizePresence(value, { menuName, allergenSlug: allergen.slug });
         
         // デバッグログ: CSV生成時の記号変換確認（すべての記号をログ出力）
         if (allergen.slug === 'milk' && value && value.trim() !== '') {

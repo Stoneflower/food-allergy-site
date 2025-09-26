@@ -427,6 +427,13 @@ const CsvConversionPreview = ({ csvData, rules, uploadedImages = [], onConversio
       return result;
     });
 
+    try {
+      // プレビュー最終データをローカルに保存（後段の保存処理でそのまま使用）
+      localStorage.setItem('finalPreviewData', JSON.stringify(finalData));
+    } catch (e) {
+      // noop
+    }
+
     onConversion(finalData);
   };
 

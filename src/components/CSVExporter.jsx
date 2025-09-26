@@ -271,7 +271,9 @@ const CsvExporter = ({ data, onBack }) => {
     if (raw == null) raw = '';
     let s = String(raw);
     // 1) Unicode正規化と不要文字除去
-    try { s = s.normalize('NFKC'); } catch (_) {}
+    if (typeof s.normalize === 'function') {
+      s = s.normalize('NFKC');
+    }
     s = s.replace(/\uFEFF/g, '')
          .replace(/\u3000/g, ' ')
          .replace(/[\r\n\t]+/g, ' ')
@@ -293,7 +295,7 @@ const CsvExporter = ({ data, onBack }) => {
     }
 
     // 5) 複合表記分割
-    const parts = s.split(/[\/／,、\|]+/).map(p => p.trim()).filter(Boolean);
+    const parts = s.split(/[／,、|/]+/).map(p => p.trim()).filter(Boolean);
     const mapOne = (p) => {
       const low = p.toLowerCase();
       if (['none','direct','trace','fragrance','unused'].includes(low)) {

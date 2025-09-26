@@ -200,7 +200,7 @@ export const RestaurantProvider = ({ children }) => {
       
       // 直接Supabaseから商品データを取得（menu_items, store_locationsも含める）
       const { data: productsData, error: productsError } = await supabase
-        .from('products')
+          .from('products')
         .select(`
           *,
           product_allergies (
@@ -358,7 +358,10 @@ export const RestaurantProvider = ({ children }) => {
         });
       });
       
+      console.log('🔍 setAllItems呼び出し前 - transformedData長さ:', transformedData.length);
+      console.log('🔍 setAllItems呼び出し前 - transformedDataサンプル:', transformedData[0]);
       setAllItems(transformedData);
+      console.log('🔍 setAllItems呼び出し完了');
 
       // 選択アレルギーに基づく会社カード表示対象IDの取得
       try {
@@ -454,18 +457,18 @@ export const RestaurantProvider = ({ children }) => {
           menuItems.forEach((menuItem, index) => {
             const normalizedCategory = 'レストラン';
             const categoryTokens = Array.from(new Set([...(getCategoryTokens(item.category) || []), 'レストラン']));
-            const transformedItem = {
+              const transformedItem = {
               id: `${item.id}_${menuItem.id}`, // 一意ID（product_id + menu_item_id）
               product_id: item.id, // 元のproduct_idを保持
               menu_item_id: menuItem.id, // menu_item_idを保持
               name: item.name, // 会社名・店舗名（products.name）
               product_name: menuItem.name, // 商品名（menu_items.name）
               image: item.source_url || item.source_url2 || item.image_url || 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400',
-              rating: 4.0,
-              reviewCount: 0,
-              price: '¥500～¥1,500',
+                rating: 4.0,
+                reviewCount: 0,
+                price: '¥500～¥1,500',
               area: item.store_locations?.[0]?.address || 'すべて',
-              cuisine: '商品',
+                cuisine: '商品',
               category: normalizedCategory,
               category_tokens: categoryTokens,
               brand: item.brand || '',
@@ -482,33 +485,33 @@ export const RestaurantProvider = ({ children }) => {
               store_list_url: item.store_locations?.[0]?.store_list_url || null,
               store_locations: item.store_locations || [],
               menu_items: [menuItem], // 単一のmenu_item
-              source: {
-                type: 'official',
-                contributor: '商品公式',
-                lastUpdated: new Date().toISOString().split('T')[0],
-                confidence: 85,
-                verified: true,
+                source: {
+                  type: 'official',
+                  contributor: '商品公式',
+                  lastUpdated: new Date().toISOString().split('T')[0],
+                  confidence: 85,
+                  verified: true,
                 url: item.store_locations?.[0]?.source_url || ''
-              }
-            };
-            
-            transformedData.push(transformedItem);
-          });
-        } else {
+                }
+              };
+              
+              transformedData.push(transformedItem);
+            });
+          } else {
           // menu_itemsが存在しない場合は、従来通り1つのアイテムとして処理
           const displayName = item.product_title || item.name || '商品名不明';
-          
-          const transformedItem = {
+            
+            const transformedItem = {
             id: item.id,
             product_id: item.id,
             name: item.name, // 会社名・店舗名（products.name）
             product_name: displayName, // 商品名（product_title優先）
             image: item.source_url || item.source_url2 || item.image_url || 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400',
-            rating: 4.0,
-            reviewCount: 0,
-            price: '¥500～¥1,500',
+              rating: 4.0,
+              reviewCount: 0,
+              price: '¥500～¥1,500',
             area: item.store_locations?.[0]?.address || 'すべて',
-            cuisine: '商品',
+              cuisine: '商品',
             category: normalizeCategory(item.category),
             category_tokens: getCategoryTokens(item.category),
             brand: item.brand || '',
@@ -525,27 +528,28 @@ export const RestaurantProvider = ({ children }) => {
             store_list_url: item.store_locations?.[0]?.store_list_url || null,
             store_locations: item.store_locations || [],
             menu_items: [],
-            source: {
-              type: 'official',
-              contributor: '商品公式',
-              lastUpdated: new Date().toISOString().split('T')[0],
-              confidence: 85,
-              verified: true,
+              source: {
+                type: 'official',
+                contributor: '商品公式',
+                lastUpdated: new Date().toISOString().split('T')[0],
+                confidence: 85,
+                verified: true,
               url: item.store_locations?.[0]?.source_url || ''
-            }
-          };
-          
-          transformedData.push(transformedItem);
-        }
-      });
+              }
+            };
+            
+            transformedData.push(transformedItem);
+          }
+        });
       
       console.log('データ変換完了:', transformedData.length, '件');
       return transformedData;
       
-      } catch (err) {
+    } catch (err) {
       console.error('データ変換エラー:', err);
+      console.error('エラー詳細:', err.stack);
       return [];
-      }
+    }
   };
 
   // アレルギー項目の取得と設定
@@ -632,6 +636,7 @@ export const RestaurantProvider = ({ children }) => {
 
   // 統合データ
   const allItemsData = allItems;
+  console.log('🔍 allItemsData現在の値:', allItemsData?.length || 0, '件');
 
   // お気に入り機能
   const toggleFavorite = (itemId, category) => {

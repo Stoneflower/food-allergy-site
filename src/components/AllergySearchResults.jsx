@@ -510,6 +510,7 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
                     const fp = firstProduct || {};
                     const rp = fp.related_product || {};
                     const imageCandidates = [
+                      // products.source_url / source_url2 は item 直下にも保持
                       rp.source_url,
                       rp.source_url2,
                       fp.source_url,
@@ -529,7 +530,7 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
                       storeSource: firstLoc.source_url,
                       storeList: firstLoc.store_list_url
                     });
-
+                    
                     return (
                       <div className="mt-2 text-xs flex items-center gap-3">
                         {hasAnyImage ? (

@@ -513,6 +513,9 @@ export const RestaurantProvider = ({ children }) => {
               // 商品名は matrix.menu_name を優先し、なければ menu_items.name
               product_name: (matrixRow && matrixRow.menu_name) ? matrixRow.menu_name : menuItem.name,
               image: item.source_url || item.source_url2 || item.image_url || 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400',
+              // 元productsの画像URLを保持（表示判定用）
+              source_url: item.source_url || null,
+              source_url2: item.source_url2 || null,
                 rating: 4.0,
                 reviewCount: 0,
                 price: '¥500～¥1,500',
@@ -580,6 +583,9 @@ export const RestaurantProvider = ({ children }) => {
             name: item.name, // 会社名・店舗名（products.name）
             product_name: displayName, // 商品名（product_title優先）
             image: item.source_url || item.source_url2 || item.image_url || 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400',
+            // 元productsの画像URLを保持（表示判定用）
+            source_url: item.source_url || null,
+            source_url2: item.source_url2 || null,
               rating: 4.0,
               reviewCount: 0,
               price: '¥500～¥1,500',

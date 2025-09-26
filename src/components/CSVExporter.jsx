@@ -325,7 +325,9 @@ const CsvExporter = ({ data, onBack }) => {
       const t = String(rawText || '').slice(0, 100);
       const sample = String(context?.menuName || '').slice(0, 120);
       unmappedBufferRef.current.push({ raw_text: t, sample_menu: sample });
-    } catch (_) {}
+    } catch (e) {
+      console.warn('bufferUnmapped error:', e?.message || e);
+    }
   };
 
   // 未マッピング記号の集計をSupabaseへ反映
@@ -1378,7 +1380,9 @@ const CsvExporter = ({ data, onBack }) => {
       // 未マッピング記号を集計して保存
       try {
         await flushUnmappedSuggestions();
-      } catch (_) {}
+      } catch (e) {
+        console.warn('flushUnmappedSuggestions error:', e?.message || e);
+      }
       setUploadStatus('completed');
       
       // 成功メッセージを表示してからアプリケーションのデータを再読み込み

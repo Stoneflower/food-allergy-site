@@ -146,15 +146,17 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
     const fragranceAllergies = [];
 
     const matrix = getMatrixRow(item);
-    if (matrix && Object.keys(matrix).length > 0 && Array.isArray(selectedAllergies)) {
+    if (matrix && Object.keys(matrix).length > 0) {
       // マトリクス優先で黄色ラベル（trace / fragrance）を作る
-      debugSelectedMatrixValues(item, selectedAllergies);
-      selectedAllergies.forEach((slug) => {
-        const value = getMatrixValue(item, slug);
-        const key = slug === 'soy' ? 'soybean' : slug;
-        const allergyInfo = allergyOptions.find(a => a.id === slug || a.id === key);
+      const keys = Object.keys(matrix);
+      const skip = new Set(['id','product_id','menu_item_id','menu_name']);
+      keys.forEach(k => {
+        if (skip.has(k)) return;
+        const value = matrix[k];
+        const slug = k === 'soybean' ? 'soy' : k; // 表示用に既存IDとの互換を確保
+        const allergyInfo = allergyOptions.find(a => a.id === k || a.id === slug);
         if (!allergyInfo) return;
-        if (value === 'trace') {
+          if (value === 'trace') {
           contaminationAllergies.push(allergyInfo.name);
           console.log(`コンタミネーション発見(matrix): ${allergyInfo.name}コンタミネーション`);
         } else if (value === 'fragrance') {
@@ -180,6 +182,12 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
         }
       });
     }
+
+    // 表示順はUIのアレルギー項目順（allergyOptions）に揃える
+    const orderMap = new Map((allergyOptions || []).map((a, idx) => [a.name, idx]));
+    const sortByOrder = (a, b) => (orderMap.get(a) ?? 999) - (orderMap.get(b) ?? 999);
+    contaminationAllergies.sort(sortByOrder);
+    fragranceAllergies.sort(sortByOrder);
 
     const result = [];
     if (contaminationAllergies.length > 0) result.push(`${contaminationAllergies.join('、')}コンタミネーション`);

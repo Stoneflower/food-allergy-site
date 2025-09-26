@@ -127,17 +127,28 @@ export const RestaurantProvider = ({ children }) => {
       'restaurants': 'レストラン',
       'supermarkets': 'スーパー', 
       'online': 'ネットショップ',
-      'products': '商品',
+      'products': 'テイクアウト',
       'takeout': 'テイクアウト'
     };
     
     // 既に日本語の場合はそのまま返す
-    if (['レストラン', 'スーパー', 'ネットショップ', '商品', 'テイクアウト'].includes(categoryText)) {
+    if (['レストラン', 'スーパー', 'ネットショップ', '商品', 'テイクアウト', 'スーパー/ネットショップ', 'すべて'].includes(categoryText)) {
       return categoryText;
     }
     
     // 英語の場合は日本語に変換
-    return categoryMap[categoryText] || '商品';
+    const lc = categoryText.toLowerCase().trim();
+    // 複合カテゴリ（supermarkets + online）
+    if (lc.includes('supermarket') && lc.includes('online')) {
+      return 'スーパー/ネットショップ';
+    }
+    if (lc.includes('supermarkets') && lc.includes('online')) {
+      return 'スーパー/ネットショップ';
+    }
+    if (lc.includes('supermarket/online') || lc.includes('supermarkets/online') || lc.includes('supermarket_online') || lc.includes('supermarkets_online')) {
+      return 'スーパー/ネットショップ';
+    }
+    return categoryMap[lc] || '商品';
   };
 
   // カテゴリトークンの生成（日本語統一）
@@ -161,6 +172,13 @@ export const RestaurantProvider = ({ children }) => {
     result.add(normalizedCategory);
     // 「スーパー/ネットショップ」は両方に属するトークンを付与
     if (normalizedCategory === 'スーパー/ネットショップ') {
+      result.add('スーパー');
+      result.add('ネットショップ');
+    }
+    // 「すべて」は全カテゴリにマッチするため、補助的に全トークンを付与
+    if (normalizedCategory === 'すべて') {
+      result.add('レストラン');
+      result.add('テイクアウト');
       result.add('スーパー');
       result.add('ネットショップ');
     }
@@ -520,6 +538,9 @@ export const RestaurantProvider = ({ children }) => {
               description: item.description || item.product_title || item.name || '',
               store_list_url: item.store_locations?.[0]?.store_list_url || null,
               store_locations: item.store_locations || [],
+              // 県名フィルタ最適化用の事前計算
+              location_addresses: (item.store_locations || []).map(sl => sl?.address).filter(Boolean),
+              has_all_address: (item.store_locations || []).some(sl => String(sl?.address || '').trim() === 'すべて'),
               menu_items: [menuItem], // 単一のmenu_item
                 source: {
                   type: 'official',
@@ -584,6 +605,9 @@ export const RestaurantProvider = ({ children }) => {
             description: item.description || item.product_title || item.name || '',
             store_list_url: item.store_locations?.[0]?.store_list_url || null,
             store_locations: item.store_locations || [],
+            // 県名フィルタ最適化用の事前計算
+            location_addresses: (item.store_locations || []).map(sl => sl?.address).filter(Boolean),
+            has_all_address: (item.store_locations || []).some(sl => String(sl?.address || '').trim() === 'すべて'),
             menu_items: [],
               source: {
                 type: 'official',
@@ -774,10 +798,12 @@ export const RestaurantProvider = ({ children }) => {
       }
 
       if (allowed) {
-        items = items.filter(item => {
+      items = items.filter(item => {
           const tokens = Array.isArray(item.category_tokens) ? item.category_tokens : [];
-          const categoryMatch = item.category && allowed.has(item.category);
-          const tokenMatch = tokens.some(t => allowed.has(t));
+          const normCat = item.category;
+          const isAll = normCat === 'すべて' || tokens.includes('すべて');
+          const categoryMatch = normCat && (allowed.has(normCat) || isAll || normCat === 'スーパー/ネットショップ');
+          const tokenMatch = tokens.some(t => allowed.has(t) || t === 'すべて' || t === 'スーパー/ネットショップ');
           // レストランのみ、menu_itemsがあればレストラン扱い
           const isRestaurantByMenu = normalizedSelectedCategory === 'レストラン' && Array.isArray(item.menu_items) && item.menu_items.length > 0;
           const matches = categoryMatch || tokenMatch || isRestaurantByMenu;
@@ -816,10 +842,9 @@ export const RestaurantProvider = ({ children }) => {
         const selectedPrefectures = PREFECTURES.filter(pref => rawTokens.some(t => pref.includes(t) || t.includes(pref)));
         console.log('🔍 都道府県名フィルター適用（厳格, store_locations.addressベース）', { input, rawTokens, selectedPrefectures });
         items = items.filter(item => {
-          const addresses = Array.isArray(item.store_locations)
-            ? item.store_locations.map(sl => sl?.address).filter(Boolean)
-            : [];
-          const hasAllFlag = addresses.some(addr => String(addr).trim() === 'すべて');
+          const addresses = Array.isArray(item.location_addresses) ? item.location_addresses :
+            (Array.isArray(item.store_locations) ? item.store_locations.map(sl => sl?.address).filter(Boolean) : []);
+          const hasAllFlag = !!item.has_all_address || addresses.some(addr => String(addr).trim() === 'すべて');
           const hasAnySelected = selectedPrefectures.length > 0
             ? addresses.some(addr => selectedPrefectures.some(pref => isAreaMatch(addr, pref)))
             : addresses.some(addr => isAreaMatch(addr, selectedArea));
@@ -834,7 +859,7 @@ export const RestaurantProvider = ({ children }) => {
           // 都道府県指定時: addressが"すべて"なら常に表示。そうでなければ選択都道府県のいずれかに一致する場合のみ表示
           return keep;
         });
-      } else {
+            } else {
         console.log('🔍 通常のエリアフィルター適用');
         items = items.filter(item => {
           const matches = (item.area === 'すべて') ||

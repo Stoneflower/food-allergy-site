@@ -62,6 +62,7 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
       // 選択されたアレルギーに対して、該当するアレルギー情報をチェック
       const relevantAllergies = allergies.filter(a => selectedSet.has(a.allergy_item_id));
       console.log(`🔍 選択アレルギー${selectedAllergies.join(',')}に関連するアレルギー情報:`, relevantAllergies.length, '件');
+      console.log(`🔍 relevantAllergies詳細:`, relevantAllergies);
       
       if (relevantAllergies.length === 0) {
         // 選択されたアレルギーの情報がない場合は、安全とみなす
@@ -69,7 +70,11 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
         console.log('🔍 選択アレルギーの情報なし - 安全とみなす');
       } else {
         relevantAllergies.forEach(a => {
-          if (a.presence_type === 'direct') {
+          // チーズ系商品の乳アレルギーを強制的にdirect扱い
+          if (a.allergy_item_id === 'milk' && (productName.includes('チーズ') || productName.includes('cheese'))) {
+            hasDirect = true;
+            console.log(`🔍 classifyAllergyStatus - ${a.allergy_item_id}: direct (チーズ系商品の強制判定)`);
+          } else if (a.presence_type === 'direct') {
             // 香料例外：notesに香料が入る場合は香料扱い
             if (a.notes && a.notes.includes('香料')) {
               hasFragrance = true;
@@ -212,6 +217,17 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
 
         // safe/trace/fragrance分類
         const cls = classifyAllergyStatus(item, selectedAllergies);
+
+        // デバッグ: 乳選択時の商品判定ログ
+        if (selectedAllergies && selectedAllergies.includes('milk')) {
+          console.log(`🔍 乳選択時デバッグ - 商品: ${productName}`, {
+            hasDirect: cls.hasDirect,
+            isSafe: cls.isSafe,
+            hasTrace: cls.hasTrace,
+            hasFragrance: cls.hasFragrance,
+            product_allergies: item.product_allergies?.filter(a => a.allergy_item_id === 'milk')
+          });
+        }
 
         // 会社カードが表示される場合、directを含む商品は除外し、none/trace/fragranceを表示
         if (!cls.hasDirect && (cls.isSafe || cls.hasTrace || cls.hasFragrance)) {

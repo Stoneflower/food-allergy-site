@@ -258,8 +258,22 @@ const CsvExporter = ({ data, onBack }) => {
   // 含有量表示を正規化
   const normalizePresence = (value) => {
     if (!value) return 'none';
-    const normalized = presenceMapping[value.trim()];
-    return normalized || value.trim();
+    const trimmed = value.trim();
+    const normalized = presenceMapping[trimmed];
+    const result = normalized || trimmed;
+    
+    // デバッグログ: 記号マッピングの動作確認
+    if (trimmed !== '' && (trimmed === '○' || trimmed === '●' || trimmed === '△' || trimmed === '×' || trimmed === '-')) {
+      console.log('🔍 記号マッピングデバッグ:', {
+        input: value,
+        trimmed,
+        normalized,
+        result,
+        hasMapping: presenceMapping.hasOwnProperty(trimmed)
+      });
+    }
+    
+    return result;
   };
 
   // 記号のみの行も商品名として許容するため、除外判定は行わない
@@ -404,6 +418,17 @@ const CsvExporter = ({ data, onBack }) => {
         const value = row.converted[allergen.slug] || '';
         // 含有量表示を正規化
         const englishValue = normalizePresence(value);
+        
+        // デバッグログ: CSV生成時の記号変換確認
+        if (allergen.slug === 'milk' && (value === '○' || value === '●' || value === '△' || value === '×')) {
+          console.log('🔍 CSV生成時記号変換デバッグ:', {
+            allergen: allergen.slug,
+            originalValue: value,
+            normalizedValue: englishValue,
+            menuName: menuName
+          });
+        }
+        
         csvRow.push(englishValue);
       });
       // 追加列
@@ -1106,6 +1131,18 @@ const CsvExporter = ({ data, onBack }) => {
                 const value = (raw || '').trim();
                 const mapped = normalizePresence(value); // 'direct' | 'trace' | 'none' | 'unused' など
                 const prev = aggregated.get(allergen.slug) || 'none';
+                
+                // デバッグログ: 乳アレルギーの変換を確認
+                if (allergen.slug === 'milk' && (value !== '' || mapped !== 'none')) {
+                  console.log('🔍 乳アレルギー変換デバッグ:', {
+                    raw,
+                    value,
+                    mapped,
+                    prev,
+                    willUpdate: (presenceOrder[mapped] || 0) > (presenceOrder[prev] || 0)
+                  });
+                }
+                
                 if ((presenceOrder[mapped] || 0) > (presenceOrder[prev] || 0)) {
                   aggregated.set(allergen.slug, mapped);
                 }
@@ -1172,6 +1209,16 @@ const CsvExporter = ({ data, onBack }) => {
             standardAllergens.forEach(allergen => {
               const agg = aggregated.get(allergen.slug) || 'none';
               const presence_type = agg === 'direct' ? 'direct' : 'none';
+              
+              // デバッグログ: 乳アレルギーの最終保存値を確認
+              if (allergen.slug === 'milk') {
+                console.log('🔍 乳アレルギー最終保存デバッグ:', {
+                  aggregated: agg,
+                  presence_type,
+                  product_id: pid
+                });
+              }
+              
               rows.push({
                 product_id: pid,
                 country_code: 'JP',

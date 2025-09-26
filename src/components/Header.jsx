@@ -84,6 +84,11 @@ const Header = () => {
 
   const handleSearch = (e) => {
     e.preventDefault();
+    const currentArea = (areaInputValue && areaInputValue.trim()) || (selectedArea && selectedArea.trim()) || '';
+    if (!currentArea) {
+      alert('県名を記入してください');
+      return;
+    }
     executeSearch(); // 検索実行
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     navigate('/search', { state: { scrollTo: isMobile ? 'results' : 'notice' } });
@@ -107,6 +112,11 @@ const Header = () => {
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
+      const currentArea = (areaInputValue && areaInputValue.trim()) || (selectedArea && selectedArea.trim()) || '';
+      if (!currentArea) {
+        alert('県名を記入してください');
+        return;
+      }
       executeSearch(); // 検索実行
       navigate('/search');
     }

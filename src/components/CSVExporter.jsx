@@ -176,7 +176,7 @@ const CsvExporter = ({ data, onBack }) => {
     { slug: 'shrimp', name: 'えび' },
     { slug: 'crab', name: 'かに' },
     { slug: 'walnut', name: 'くるみ' },
-    { slug: 'soy', name: '大豆' },
+    { slug: 'soy', name: '大豆(soybean)' },
     { slug: 'beef', name: '牛肉' },
     { slug: 'pork', name: '豚肉' },
     { slug: 'chicken', name: '鶏肉' },
@@ -206,6 +206,10 @@ const CsvExporter = ({ data, onBack }) => {
     'ごま': 'ごま',
     'ゴマ油': 'ごま',
     'ごま油': 'ごま',
+    // 大豆の表記統一
+    '大豆': '大豆(soybean)',
+    '大豆(soybean)': '大豆(soybean)',
+    'soybean': '大豆(soybean)',
     // まつたけとマカダミアナッツは別項目として保持
     'まつたけ': 'まつたけ',
     'マカダミアナッツ': 'マカダミアナッツ'
@@ -241,6 +245,11 @@ const CsvExporter = ({ data, onBack }) => {
     'コンタミネーション': 'trace',
     '混入の可能性': 'trace',
     '△': 'trace',         // 三角 → trace
+    
+    // 香料系
+    '香料': 'fragrance',
+    '香料含有': 'fragrance',
+    '香料使用': 'fragrance',
     
     // 未使用系
     '未使用': 'unused',

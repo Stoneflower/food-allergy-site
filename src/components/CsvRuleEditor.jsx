@@ -3,12 +3,49 @@ import { motion } from 'framer-motion';
 import { FiPlus, FiTrash2, FiEdit3, FiSave, FiRotateCcw } from 'react-icons/fi';
 
 const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
-  // デフォルトのallergenOrderを29項目に拡張し、29番目以降は「使用しない」に設定
+  // デフォルトのallergenOrderを指定された順序に設定
+  const defaultAllergenOrder = [
+    'egg',        // 1. 卵
+    'milk',       // 2. 乳
+    'wheat',      // 3. 小麦
+    'buckwheat',  // 4. そば
+    'peanut',     // 5. 落花生
+    'shrimp',     // 6. えび
+    'crab',       // 7. かに
+    'walnut',     // 8. くるみ
+    'soy',        // 9. 大豆
+    'beef',       // 10. 牛肉
+    'pork',       // 11. 豚肉
+    'chicken',    // 12. 鶏肉
+    'salmon',     // 13. さけ
+    'mackerel',   // 14. さば
+    'abalone',    // 15. あわび
+    'squid',      // 16. いか
+    'salmon_roe', // 17. いくら
+    'orange',     // 18. オレンジ
+    'kiwi',       // 19. キウイフルーツ
+    'peach',      // 20. もも
+    'apple',      // 21. りんご
+    'yam',        // 22. やまいも
+    'gelatin',    // 23. ゼラチン
+    'banana',     // 24. バナナ
+    'cashew',     // 25. カシューナッツ
+    'sesame',     // 26. ごま
+    'almond',     // 27. アーモンド
+    'matsutake',  // 28. まつたけ
+    'unused'      // 29. 使用しない
+  ];
+
   const defaultRules = {
     ...rules,
-    allergenOrder: rules.allergenOrder.slice(0, 28).concat(
-      Array.from({ length: Math.max(0, 29 - rules.allergenOrder.length) }, () => 'unused')
-    )
+    allergenOrder: defaultAllergenOrder,
+    outputLabels: {
+      direct: 'ふくむ',
+      none: 'ふくまない',
+      trace: 'コンタミ',
+      fragrance: '香料にふくむ',
+      unused: '未使用'
+    }
   };
   
   const [localRules, setLocalRules] = useState(defaultRules);
@@ -27,7 +64,7 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
     { slug: 'shrimp', name: 'えび' },
     { slug: 'crab', name: 'かに' },
     { slug: 'walnut', name: 'くるみ' },
-    { slug: 'soy', name: '大豆' },
+    { slug: 'soy', name: '大豆(soybean)' },
     { slug: 'beef', name: '牛肉' },
     { slug: 'pork', name: '豚肉' },
     { slug: 'chicken', name: '鶏肉' },
@@ -78,6 +115,10 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
             if (cell.includes('△') || cell.includes('●') || cell.includes('○') || cell.includes('◎') || cell.includes('※') || cell.includes('▲')) {
               console.log(`記号候補: 行${rowIndex + 1}, 列${cellIndex + 1}, セル内容: "${cell}"`);
             }
+            // △記号の特別なデバッグログ
+            if (cell.includes('△')) {
+              console.log(`🔍 △記号発見: 行${rowIndex + 1}, 列${cellIndex + 1}, セル内容: "${cell}"`);
+            }
             // すべてのセルの内容をログ出力（デバッグ用）
             if (cell.includes('※')) {
               console.log(`※記号発見: 行${rowIndex + 1}, 列${cellIndex + 1}, セル内容: "${cell}"`);
@@ -124,13 +165,18 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
         .sort((a, b) => a.columnIndex - b.columnIndex) // 列順でソート
         .map(a => a.slug);
       
-      // 29番目以降は「使用しない」に設定（ただし29番目は項目を選べるようにする）
-      const finalOrder = detectedOrder.slice(0, 28).concat(
-        Array.from({ length: Math.max(0, 29 - detectedOrder.length) }, () => 'unused')
-      );
+      // デフォルト順序をベースに、検出された項目を配置
+      const finalOrder = [...defaultAllergenOrder];
+      
+      // 検出された項目をデフォルト順序の位置に配置
+      detectedOrder.forEach((slug, index) => {
+        if (index < 28) { // 28番目まで
+          finalOrder[index] = slug;
+        }
+      });
       
       console.log('検出されたアレルギー順序:', detectedOrder);
-      console.log('最終的な順序（29番目以降は使用しない）:', finalOrder);
+      console.log('最終的な順序（デフォルト順序ベース）:', finalOrder);
       
       // 検出された順序でallergenOrderを更新
       setLocalRules(prev => ({
@@ -148,6 +194,7 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
         [symbol]: value
       }
     }));
+    console.log('🔍 記号マッピング変更:', symbol, '→', value);
   };
 
   const handleAllergenOrderChange = (index, newSlug) => {
@@ -157,13 +204,25 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
       ...prev,
       allergenOrder: newOrder
     }));
+    console.log('🔍 アレルギー項目順序変更:', index + 1, '番目 →', newSlug);
   };
 
   const handleAddManualSymbol = () => {
     if (newSymbolInput.trim() && !detectedSymbols.has(newSymbolInput.trim()) && !manualSymbols.has(newSymbolInput.trim())) {
       const newManualSymbols = new Set([...manualSymbols, newSymbolInput.trim()]);
       setManualSymbols(newManualSymbols);
+      
+      // 手動追加された記号をsymbolMappingsにも追加（デフォルト値: 'none'）
+      setLocalRules(prev => ({
+        ...prev,
+        symbolMappings: {
+          ...prev.symbolMappings,
+          [newSymbolInput.trim()]: 'none'
+        }
+      }));
+      
       setNewSymbolInput('');
+      console.log('🔍 手動記号追加:', newSymbolInput.trim(), '→ symbolMappingsに追加');
     }
   };
 
@@ -171,6 +230,18 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
     const newManualSymbols = new Set(manualSymbols);
     newManualSymbols.delete(symbol);
     setManualSymbols(newManualSymbols);
+    
+    // symbolMappingsからも削除
+    setLocalRules(prev => {
+      const newMappings = { ...prev.symbolMappings };
+      delete newMappings[symbol];
+      return {
+        ...prev,
+        symbolMappings: newMappings
+      };
+    });
+    
+    console.log('🔍 手動記号削除:', symbol, '→ symbolMappingsから削除');
   };
 
   // 表示する記号（検出された記号 + 手動追加記号）
@@ -220,16 +291,23 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
         direct: 'ふくむ',
         none: 'ふくまない',
         trace: 'コンタミ',
+        fragrance: '香料にふくむ',
         unused: '未使用'
       }
     };
-    console.log('保存するルール:', updatedRules);
+    console.log('🔍 保存するルール:', updatedRules);
+    console.log('🔍 記号マッピング:', updatedRules.symbolMappings);
+    console.log('🔍 アレルギー項目順序:', updatedRules.allergenOrder);
     onRulesChange(updatedRules);
     onNext();
   };
 
   const resetToDefaults = () => {
-    setLocalRules(rules);
+    setLocalRules({
+      ...rules,
+      allergenOrder: defaultAllergenOrder
+    });
+    console.log('🔍 デフォルトにリセット:', defaultAllergenOrder);
   };
 
   return (
@@ -371,6 +449,7 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
                 >
                   <option value="direct">ふくむ</option>
                   <option value="trace">コンタミ</option>
+                  <option value="fragrance">香料</option>
                   <option value="none">ふくまない</option>
                   <option value="unused">未使用</option>
                 </select>
@@ -427,6 +506,7 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 {type === 'direct' && 'ふくむ'}
                 {type === 'trace' && 'コンタミ'}
+                {type === 'fragrance' && '香料にふくむ'}
                 {type === 'none' && 'ふくまない'}
                 {type === 'unused' && '未使用'}
               </label>

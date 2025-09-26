@@ -21,7 +21,7 @@ const CsvConversionPreview = ({ csvData, rules, uploadedImages = [], onConversio
     { slug: 'shrimp', name: 'えび' },
     { slug: 'crab', name: 'かに' },
     { slug: 'walnut', name: 'くるみ' },
-    { slug: 'soy', name: '大豆' },
+    { slug: 'soy', name: '大豆(soybean)' },
     { slug: 'beef', name: '牛肉' },
     { slug: 'pork', name: '豚肉' },
     { slug: 'chicken', name: '鶏肉' },
@@ -77,6 +77,7 @@ const CsvConversionPreview = ({ csvData, rules, uploadedImages = [], onConversio
       direct: 'ふくむ',
       none: 'ふくまない',
       trace: 'コンタミ',
+      fragrance: '香料にふくむ',
       unused: '未使用'
     };
     
@@ -85,6 +86,7 @@ const CsvConversionPreview = ({ csvData, rules, uploadedImages = [], onConversio
       direct: 'ふくむ',
       none: 'ふくまない',
       trace: 'コンタミ',
+      fragrance: '香料にふくむ',
       unused: '未使用'
     };
     
@@ -92,6 +94,7 @@ const CsvConversionPreview = ({ csvData, rules, uploadedImages = [], onConversio
     console.log('direct:', outputLabels.direct);
     console.log('none:', outputLabels.none);
     console.log('trace:', outputLabels.trace);
+    console.log('fragrance:', outputLabels.fragrance);
     console.log('unused:', outputLabels.unused);
     console.log('使用するallSymbolMappings:', allSymbolMappings);
     
@@ -244,6 +247,7 @@ const CsvConversionPreview = ({ csvData, rules, uploadedImages = [], onConversio
                     case 'direct': outputValue = 'ふくむ'; break;
                     case 'none': outputValue = 'ふくまない'; break;
                     case 'trace': outputValue = 'コンタミ'; break;
+                    case 'fragrance': outputValue = '香料にふくむ'; break;
                     case 'unused': outputValue = '未使用'; break;
                     default: outputValue = mappedValue;
                   }

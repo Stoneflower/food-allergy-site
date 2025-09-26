@@ -523,11 +523,7 @@ const CsvConversionPreview = ({ csvData, rules, uploadedImages = [], onConversio
                               />
                             );
                           }
-                          return (
-                            <div className="w-8 h-8 bg-gray-200 rounded border flex items-center justify-center">
-                              <FiImage className="w-3 h-3 text-gray-400" />
-                            </div>
-                          );
+                          return null;
                         })()}
                       </div>
                       <div className="truncate">

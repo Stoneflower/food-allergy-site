@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import searchService from '../lib/searchService';
 
@@ -92,6 +92,7 @@ export const RestaurantProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [eligibleProductIds, setEligibleProductIds] = useState(new Set());
+  const isFetchingRef = useRef(false);
 
   // アレルギー項目の状態
   const [allergyOptions, setAllergyOptions] = useState(defaultAllergyOptions);
@@ -181,6 +182,11 @@ export const RestaurantProvider = ({ children }) => {
 
   // 新しい検索サービスを使用したデータ取得関数
   const fetchDataFromSupabase = async () => {
+    if (isFetchingRef.current) {
+      console.log('⚠️ すでに取得中のため、新規フェッチをスキップ');
+      return;
+    }
+    isFetchingRef.current = true;
     console.log('fetchDataFromSupabase開始...');
     setIsLoading(true);
     setError(null);
@@ -392,6 +398,7 @@ export const RestaurantProvider = ({ children }) => {
       setError(err.message);
     } finally {
       setIsLoading(false);
+      isFetchingRef.current = false;
     }
   };
 
@@ -634,17 +641,17 @@ export const RestaurantProvider = ({ children }) => {
     }
   };
 
-  // コンポーネントマウント時にデータを取得
+  // 初回のみ軽量データを取得（自動検索はしない）
   useEffect(() => {
-    console.log('useEffect実行開始');
+    console.log('useEffect初回実行開始');
     testSupabaseConnection().then(() => {
-      console.log('Supabase接続成功、データ取得開始');
+      console.log('Supabase接続成功、初期データ取得開始（アレルギー項目のみ）');
       fetchAllergyItems();
-      fetchDataFromSupabase();
+      // 自動検索はせず、ユーザーの「検索」操作（executeSearch）でのみ fetch 実行
     }).catch((error) => {
       console.error('Supabase接続エラー:', error);
     });
-  }, [searchKeyword, selectedArea, selectedCategory]); // selectedAllergiesを依存配列から削除
+  }, []);
 
   // 統合データ
   const allItemsData = allItems;

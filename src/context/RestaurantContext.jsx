@@ -801,13 +801,15 @@ export const RestaurantProvider = ({ children }) => {
       if (allowed) {
         items = items.filter(item => {
           const tokens = Array.isArray(item.category_tokens) ? item.category_tokens : [];
-          const normCat = item.category;
-          const isAll = normCat === 'すべて' || tokens.includes('すべて');
-          const categoryMatch = normCat && (allowed.has(normCat) || isAll);
+          const rawCat = item.category;
+          const normCat = typeof rawCat === 'string' ? rawCat.trim() : rawCat;
+          const normalizedCatNoSpace = typeof normCat === 'string' ? normCat.replace(/\s+/g, '') : normCat;
+          const isAll = normalizedCatNoSpace === 'すべて' || tokens.includes('すべて');
+          const categoryMatch = normalizedCatNoSpace && (allowed.has(normalizedCatNoSpace) || isAll);
           const tokenMatch = tokens.some(t => allowed.has(t) || t === 'すべて');
-          // レストラン判定の安全策: category未設定時のみmenu_itemsで補完。それ以外はcategory基準を厳守
+          // レストラン判定の安全策: category未設定(空/空白/全角空白のみ)時のみ menu_items で補完
           const isRestaurantByMenu = normalizedSelectedCategory === 'レストラン'
-            && (!normCat || normCat.trim() === '')
+            && (!normalizedCatNoSpace || normalizedCatNoSpace.length === 0)
             && Array.isArray(item.menu_items) && item.menu_items.length > 0;
           const matches = categoryMatch || tokenMatch || isRestaurantByMenu;
           return matches;

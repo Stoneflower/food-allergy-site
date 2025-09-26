@@ -512,43 +512,44 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
                 {/* 画像・リンク（メニュー欄の最後） */}
                 <div className="mt-3 border-t pt-3">
                   {(() => {
-                    // 画像URL（products.source_url/source_url2 のみ）を収集
-                    const directImageUrls = Array.from(new Set((store.products || []).flatMap(p => [
-                      p?.related_product?.source_url,
-                      p?.related_product?.source_url2
-                    ].filter(Boolean))));
-                    // store_locations リンクを収集
-                    const uniqueStoreUrls = Array.from(new Set((store.products || []).flatMap(p => {
-                      const locations = p?.related_product?.store_locations || [];
-                      return locations.flatMap(sl => [sl.source_url, sl.store_list_url].filter(Boolean));
-                    })));
-                    
-                    // 表示ルール
-                    const hasProofImages = directImageUrls.length > 0;
-                    
+                    // 会社カード下の表示は firstProduct を基準に判定
+                    const rp = firstProduct?.related_product || {};
+                    const hasImage1 = !!rp.source_url;
+                    const hasImage2 = !!rp.source_url2;
+                    const hasAnyImage = hasImage1 || hasImage2;
+                    const firstLoc = (rp.store_locations || [])[0] || {};
+
+                    console.log('🧩 image check:', {
+                      source_url: rp.source_url,
+                      source_url2: rp.source_url2,
+                      hasAnyImage,
+                      storeSource: firstLoc.source_url,
+                      storeList: firstLoc.store_list_url
+                    });
+
                     return (
-                      <>
-                        {hasProofImages ? (
-                          <div className="mt-2 space-x-3 text-xs">
-                            {directImageUrls[0] && (
-                              <a href={directImageUrls[0]} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">画像1</a>
+                      <div className="mt-2 text-xs flex items-center gap-3">
+                        {hasAnyImage ? (
+                          <>
+                            {hasImage1 && (
+                              <a href={rp.source_url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">画像1</a>
                             )}
-                            {directImageUrls[1] && (
-                              <a href={directImageUrls[1]} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">画像2</a>
+                            {hasImage2 && (
+                              <a href={rp.source_url2} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">画像2</a>
                             )}
-                          </div>
+                          </>
                         ) : (
-                          <div className="mt-2 space-x-3 text-xs flex items-center gap-2">
-                            <span className="inline-block text-gray-400" title="画像なし">🖼️</span>
-                            {uniqueStoreUrls[0] && (
-                              <a href={uniqueStoreUrls[0]} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">情報元URL</a>
+                          <>
+                            <span className="text-gray-400" title="画像なし">🖼️</span>
+                            {firstLoc.source_url && (
+                              <a href={firstLoc.source_url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">情報元URL</a>
                             )}
-                            {uniqueStoreUrls[1] && (
-                              <a href={uniqueStoreUrls[1]} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">店舗エリアURL</a>
+                            {firstLoc.store_list_url && (
+                              <a href={firstLoc.store_list_url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">店舗エリアURL</a>
                             )}
-                            </div>
-                          )}
-                      </>
+                          </>
+                        )}
+                      </div>
                     );
                   })()}
                 </div>

@@ -533,9 +533,33 @@ const Upload = () => {
         uniqContam.forEach(slug => applyPresence(slug, 'trace'));
         uniqFragrance.forEach(slug => applyPresence(slug, 'fragrance'));
 
+        // menu_item_id が NOT NULL + FK のため、製品全体既定用のダミー menu_item を用意
+        let defaultMenuItemId = null;
+        {
+          const DEFAULT_NAME = '__default__';
+          const { data: foundDefault, error: findErr } = await supabase
+            .from('menu_items')
+            .select('id')
+            .eq('product_id', productId)
+            .eq('name', DEFAULT_NAME)
+            .maybeSingle();
+          if (findErr) throw findErr;
+          if (foundDefault?.id) {
+            defaultMenuItemId = foundDefault.id;
+          } else {
+            const { data: insDefault, error: insDefErr } = await supabase
+              .from('menu_items')
+              .insert([{ product_id: productId, name: DEFAULT_NAME }])
+              .select('id')
+              .single();
+            if (insDefErr) throw insDefErr;
+            defaultMenuItemId = insDefault.id;
+          }
+        }
+
         const rowToUpsert = {
           product_id: productId,
-          menu_item_id: null,
+          menu_item_id: defaultMenuItemId,
           menu_name: null,
           ...baseRow
         };
@@ -546,7 +570,7 @@ const Upload = () => {
           .from('product_allergies_matrix')
           .select('id')
           .eq('product_id', productId)
-          .is('menu_item_id', null)
+          .eq('menu_item_id', defaultMenuItemId)
           .maybeSingle();
         if (selErr) throw selErr;
         if (existingRow?.id) {

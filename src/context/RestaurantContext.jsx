@@ -437,7 +437,8 @@ export const RestaurantProvider = ({ children }) => {
         if (matrix) {
           selectedAllergies.forEach(slug => {
             const key = slug === 'soy' ? 'soybean' : slug;
-            const v = matrix[key];
+            const raw = matrix[key];
+            const v = (raw == null ? 'none' : String(raw)).trim().toLowerCase();
             if (v === 'direct') agg.hasDirect = true;
             if (v === 'none' || v === 'trace' || v === 'fragrance') agg.hasNonDirect = true;
           });
@@ -445,6 +446,9 @@ export const RestaurantProvider = ({ children }) => {
           const rel = item.product_allergies.filter(a => selectedAllergies.includes(a.allergy_item_id));
           if (rel.some(a => a.presence_type === 'direct')) agg.hasDirect = true;
           if (rel.some(a => a.presence_type === 'none' || a.presence_type === 'trace' || a.presence_type === 'fragrance')) agg.hasNonDirect = true;
+        } else {
+          // matrixも旧配列も無い場合は、未記入=noneとして安全側に倒す
+          agg.hasNonDirect = true;
         }
       });
 

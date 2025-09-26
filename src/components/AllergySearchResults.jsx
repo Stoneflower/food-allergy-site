@@ -76,7 +76,22 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
             item.product_name.includes('ジュース') || 
             item.product_name.includes('キウイ') || 
             item.product_name.includes('ドンキーフリー') ||
-            item.product_name.includes('ビール')
+            item.product_name.includes('ビール') ||
+            item.product_name.includes('ライス') ||
+            item.product_name.includes('みそ汁') ||
+            item.product_name.includes('フライドポテト') ||
+            item.product_name.includes('ザンギ') ||
+            item.product_name.includes('シュリンプ') ||
+            item.product_name.includes('サラダ') ||
+            item.product_name.includes('レモン') ||
+            item.product_name.includes('シャンディ') ||
+            item.product_name.includes('雪氷') ||
+            item.product_name.includes('トロピカル') ||
+            item.product_name.includes('パフェ') ||
+            item.product_name.includes('シフォン') ||
+            item.product_name.includes('マロン') ||
+            // チーズ系でない商品を除外（チーズ系は後で強制direct判定）
+            (!item.product_name.includes('チーズ') && !item.product_name.includes('cheese') && !item.product_name.includes('クリーム'))
           )) {
             hasNone = true; // 安全な商品として設定
             console.log(`🔍 classifyAllergyStatus - ${a.allergy_item_id}: none (乳成分なし商品の強制判定)`);

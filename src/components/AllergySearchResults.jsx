@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { FixedSizeList as List } from 'react-window';
+import * as ReactWindow from 'react-window';
+const List = (ReactWindow && (ReactWindow.FixedSizeList || ReactWindow.VariableSizeList)) || null;
 import { useRestaurant } from '../context/RestaurantContext';
 
 const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSearch, selectedTraceForSearch, allergyOptions }) => {
@@ -436,7 +437,7 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
                 <div className="space-y-2">
                   {(!store.products || store.products.length === 0) ? (
                     <div className="text-xs text-gray-400">該当なし（directのみの可能性）</div>
-                  ) : (
+                  ) : List ? (
                     <List
                       height={Math.min(store.products.length, 8) * 60}
                       itemCount={store.products.length}
@@ -466,6 +467,27 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
                         );
                       }}
                     </List>
+                  ) : (
+                    // フォールバック（仮想化不可時）
+                    (store.products || []).map((product, i) => (
+                      <div key={i} className="border border-gray-200 rounded p-2">
+                        <div className="text-sm text-gray-800 truncate flex items-center gap-1">
+                          <span>{product.display_name || product.name}</span>
+                          {Array.isArray(product.image_urls) && product.image_urls.length > 0 && (
+                            <span title="証拠画像あり" className="inline-block text-blue-500">🖼️</span>
+                          )}
+                        </div>
+                        {product.contamination_info?.length > 0 && (
+                          <div className="mt-1 space-x-1">
+                            {product.contamination_info.map((info, infoIndex) => (
+                              <span key={infoIndex} className="inline-block text-xs text-yellow-700 bg-yellow-100 px-1 rounded">
+                                {info}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))
                   )}
                 </div>
 

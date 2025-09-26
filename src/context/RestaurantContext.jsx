@@ -509,7 +509,8 @@ export const RestaurantProvider = ({ children }) => {
               product_id: item.id, // 元のproduct_idを保持
               menu_item_id: menuItem.id, // menu_item_idを保持
               name: item.name, // 会社名・店舗名（products.name）
-              product_name: menuItem.name, // 商品名（menu_items.name）
+              // 商品名は matrix.menu_name を優先し、なければ menu_items.name
+              product_name: (matrixRow && matrixRow.menu_name) ? matrixRow.menu_name : menuItem.name,
               image: item.source_url || item.source_url2 || item.image_url || 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400',
                 rating: 4.0,
                 reviewCount: 0,

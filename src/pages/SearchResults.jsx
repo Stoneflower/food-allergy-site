@@ -582,7 +582,7 @@ const SearchResults = () => {
           )}
 
           {/* Results */}
-          <div className="flex-1">
+          <div className="flex-1" data-testid="search-results">
             <AllergySearchResults 
               items={sortedItems} 
               selectedAllergies={selectedAllergies}

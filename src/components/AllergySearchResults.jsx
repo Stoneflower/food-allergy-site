@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { FixedSizeList as List } from 'react-window';
 import { useRestaurant } from '../context/RestaurantContext';
 
 const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSearch, selectedTraceForSearch, allergyOptions }) => {
@@ -68,6 +69,7 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
   const classifyAllergyStatus = (item, selectedAllergies) => {
     const allergies = Array.isArray(item.product_allergies) ? item.product_allergies : [];
     const matrix = getMatrixRow(item); // menu_item_id一致のマトリクス行
+    const presence = item && item.presenceBySlug ? item.presenceBySlug : null;
     let hasDirect = false;
     let hasTrace = false;
     let hasFragrance = false;
@@ -75,9 +77,29 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
 
     const selectedSet = new Set(selectedAllergies || []);
 
-    // product_allergies_matrixテーブルの情報を優先チェック
-    console.log('🔍 classifyAllergyStatus - matrix存在チェック:', !!matrix, matrix ? Object.keys(matrix) : 'なし');
-    if (matrix && Object.keys(matrix).length > 0) {
+    // presenceBySlug（事前計算）を最優先、その次にmatrix、最後にproduct_allergies
+    if (presence && Object.keys(presence).length > 0) {
+      console.log('🔍 classifyAllergyStatus - presence使用:', presence);
+      selectedAllergies.forEach(allergy => {
+        const key = allergy === 'soy' ? 'soy' : allergy;
+        const v = (presence[key] == null ? '' : String(presence[key])).trim().toLowerCase();
+        if (v === 'none') {
+          hasNone = true;
+          console.log(`🔍 classifyAllergyStatus - ${allergy}: none (presence)`);
+        } else if (v === 'trace') {
+          hasTrace = true;
+          console.log(`🔍 classifyAllergyStatus - ${allergy}: trace (presence)`);
+        } else if (v === 'fragrance') {
+          hasFragrance = true;
+          console.log(`🔍 classifyAllergyStatus - ${allergy}: fragrance (presence)`);
+        } else if (v === 'direct') {
+          hasDirect = true;
+          console.log(`🔍 classifyAllergyStatus - ${allergy}: direct (presence)`);
+        }
+      });
+    } else if (matrix && Object.keys(matrix).length > 0) {
+      // product_allergies_matrixテーブルの情報を優先チェック
+      console.log('🔍 classifyAllergyStatus - matrix存在チェック:', !!matrix, matrix ? Object.keys(matrix) : 'なし');
       console.log('🔍 classifyAllergyStatus - matrix使用:', matrix);
       debugSelectedMatrixValues(item, selectedAllergies);
       selectedAllergies.forEach(allergy => {
@@ -160,7 +182,25 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
     const fragranceAllergies = [];
 
     const matrix = getMatrixRow(item);
-    if (matrix && Object.keys(matrix).length > 0) {
+    const presence = item && item.presenceBySlug ? item.presenceBySlug : null;
+    if (presence && Object.keys(presence).length > 0) {
+      const keys = Object.keys(presence);
+      const skip = new Set(['id','product_id','menu_item_id','menu_name']);
+      keys.forEach(k => {
+        if (skip.has(k)) return;
+        const value = (presence[k] == null ? '' : String(presence[k])).trim().toLowerCase();
+        const displayName = mapAllergenKeyToName(k === 'soy' ? 'soybean' : k);
+        if (value === 'trace') {
+          contaminationAllergies.push(displayName);
+          console.log(`コンタミネーション発見(presence): ${displayName}コンタミネーション`);
+        } else if (value === 'fragrance') {
+          fragranceAllergies.push(displayName);
+          console.log(`香料含有発見(presence): ${displayName}香料に含む`);
+        }
+      });
+      console.log('🟨 trace収集一覧:', contaminationAllergies);
+      console.log('🟨 fragrance収集一覧:', fragranceAllergies);
+    } else if (matrix && Object.keys(matrix).length > 0) {
       // マトリクス優先で黄色ラベル（trace / fragrance）を作る
       const keys = Object.keys(matrix);
       const skip = new Set(['id','product_id','menu_item_id','menu_name']);
@@ -313,22 +353,31 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
   const [expanded, setExpanded] = useState({});
   const toggleStore = (name) => setExpanded(prev => ({ ...prev, [name]: !prev[name] }));
 
+  // アレルギー未選択時のガイダンス表示
+  if (!selectedAllergies || selectedAllergies.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-gray-700">アレルギーを選択してください</p>
+      </div>
+    );
+  }
+
   if (!stores || stores.length === 0) {
     if (isLoading) {
       // ローディング中は「店舗がありません」を出さず、スケルトンを表示
-      return (
+    return (
         <div className="space-y-3">
           {Array.from({ length: 6 }).map((_, idx) => (
             <div key={idx} className="bg-white rounded-lg shadow p-4 animate-pulse">
-              <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between">
                 <div className="h-4 w-40 bg-gray-200 rounded" />
                 <div className="h-4 w-12 bg-gray-200 rounded" />
               </div>
               <div className="mt-3 h-10 bg-gray-100 rounded" />
-            </div>
+                            </div>
           ))}
-        </div>
-      );
+                        </div>
+                      );
     }
     return (
       <div className="text-center py-8">
@@ -385,23 +434,38 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
               <div className="mt-3 space-y-3">
                 {/* 単一リスト（コンパクト）。商品名下に黄色テキストを表示 */}
                 <div className="space-y-2">
-                  {(store.products || []).map((product, i) => (
-                    <div key={i} className="border border-gray-200 rounded p-2">
-                      <div className="text-sm text-gray-800 truncate">{product.display_name || product.name}</div>
-                      {product.contamination_info?.length > 0 && (
-                        <div className="mt-1 space-x-1">
-                          {product.contamination_info.map((info, infoIndex) => (
-                            <span key={infoIndex} className="inline-block text-xs text-yellow-700 bg-yellow-100 px-1 rounded">
-                              {info}
-                            </span>
+                  {(!store.products || store.products.length === 0) ? (
+                    <div className="text-xs text-gray-400">該当なし（directのみの可能性）</div>
+                  ) : (
+                    <List
+                      height={Math.min(store.products.length, 8) * 60}
+                      itemCount={store.products.length}
+                      itemSize={56}
+                      width={'100%'}
+                    >
+                      {({ index, style }) => {
+                        const product = store.products[index];
+                        return (
+                          <div style={style} className="border border-gray-200 rounded p-2">
+                            <div className="text-sm text-gray-800 truncate flex items-center gap-1">
+                              <span>{product.display_name || product.name}</span>
+                              {Array.isArray(product.image_urls) && product.image_urls.length > 0 && (
+                                <span title="証拠画像あり" className="inline-block text-blue-500">🖼️</span>
+                              )}
+                            </div>
+                            {product.contamination_info?.length > 0 && (
+                              <div className="mt-1 space-x-1">
+                                {product.contamination_info.map((info, infoIndex) => (
+                                  <span key={infoIndex} className="inline-block text-xs text-yellow-700 bg-yellow-100 px-1 rounded">
+                                    {info}
+                                  </span>
                       ))}
                     </div>
-                  )}
-
+                            )}
                           </div>
-                  ))}
-                  {(!store.products || store.products.length === 0) && (
-                    <div className="text-xs text-gray-400">該当なし（directのみの可能性）</div>
+                        );
+                      }}
+                    </List>
                   )}
                 </div>
 
@@ -430,29 +494,33 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
                     const uniqueImages = Array.from(new Set(allImages));
                     const uniqueStoreUrls = Array.from(new Set(allStoreUrls));
                     
-                    // 表示用URL配列（商品画像優先、なければstore_locations）
-                    const displayUrls = uniqueImages.length > 0 ? uniqueImages : uniqueStoreUrls;
+                    // 仕様:
+                    // - 商品画像が1つでもあれば: 画像サムネイルのみ表示（一次情報リンクは非表示）
+                    // - 商品画像がなければ: store_locations のリンクを表示
+                    const hasProofImages = uniqueImages.length > 0;
+                    const displayUrls = hasProofImages ? uniqueImages : uniqueStoreUrls;
                     
                     return (
                       <>
-                        <div className="flex items-center gap-2 overflow-x-auto">
-                          {displayUrls.slice(0, 2).map((url, idx) => (
-                            <img key={idx} src={url} alt="evidence" className="h-12 w-12 object-cover rounded border" />
-                          ))}
+                        {hasProofImages ? (
+                          <div className="flex items-center gap-2 overflow-x-auto">
+                            {displayUrls.slice(0, 2).map((url, idx) => (
+                              <img key={idx} src={url} alt="evidence" className="h-12 w-12 object-cover rounded border" />
+                            ))}
                           </div>
-                        <div className="mt-2 space-x-3 text-xs">
-                          {displayUrls.length > 0 && (
-                            <a href={displayUrls[0]} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">
-                              {uniqueImages.length > 0 ? '商品画像' : 'アレルギー情報元'}
-                            </a>
+                        ) : (
+                          <div className="mt-2 space-x-3 text-xs">
+                            {displayUrls.length > 0 && (
+                              <a href={displayUrls[0]} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">アレルギー情報元</a>
+                            )}
+                            {displayUrls.length > 1 && (
+                              <a href={displayUrls[1]} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">店舗エリアURL</a>
+                            )}
+                            {displayUrls.length === 0 && (
+                              <span className="text-gray-400">画像・リンクなし</span>
+                            )}
+                            </div>
                           )}
-                          {displayUrls.length > 1 && (
-                            <a href={displayUrls[1]} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">店舗エリアURL</a>
-                          )}
-                          {displayUrls.length === 0 && (
-                            <span className="text-gray-400">画像・リンクなし</span>
-                          )}
-                        </div>
                       </>
                     );
                   })()}

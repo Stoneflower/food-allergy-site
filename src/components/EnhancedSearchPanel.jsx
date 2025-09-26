@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import { useRestaurant } from '../context/RestaurantContext';
@@ -25,6 +25,7 @@ const EnhancedSearchPanel = ({ onSearchResults, onLoading }) => {
   const [showFilters, setShowFilters] = useState(false);
   const [prefectures, setPrefectures] = useState([]);
   const [menuCategories, setMenuCategories] = useState([]);
+  const allergyDebounceRef = useRef(null);
 
   // アレルギー項目の定義
   const allergyItems = [
@@ -155,15 +156,25 @@ const EnhancedSearchPanel = ({ onSearchResults, onLoading }) => {
       const next = prev.includes(allergyId)
         ? prev.filter(id => id !== allergyId)
         : [...prev, allergyId];
-      // コンテキストにも即時反映（ローカル再フィルタを有効化）
+      // デバウンスしてContextへ反映（連続操作の過剰再計算を抑制）
       try {
-        setCtxSelectedAllergies(next);
+        if (allergyDebounceRef.current) clearTimeout(allergyDebounceRef.current);
+        allergyDebounceRef.current = setTimeout(() => {
+          setCtxSelectedAllergies(next);
+        }, 350);
       } catch (e) {
         console.warn('setCtxSelectedAllergies error:', e);
       }
       return next;
     });
   };
+
+  // アンマウント時にデバウンスタイマーをクリア
+  useEffect(() => {
+    return () => {
+      if (allergyDebounceRef.current) clearTimeout(allergyDebounceRef.current);
+    };
+  }, []);
 
   // エンターキーで検索
   const handleKeyPress = (e) => {

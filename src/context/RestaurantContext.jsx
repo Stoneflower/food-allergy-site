@@ -93,6 +93,7 @@ export const RestaurantProvider = ({ children }) => {
   const [error, setError] = useState(null);
   const [eligibleProductIds, setEligibleProductIds] = useState(new Set());
   const isFetchingRef = useRef(false);
+  const [hasLoadedAll, setHasLoadedAll] = useState(false);
 
   // アレルギー項目の状態
   const [allergyOptions, setAllergyOptions] = useState(defaultAllergyOptions);
@@ -175,9 +176,15 @@ export const RestaurantProvider = ({ children }) => {
     setSelectedArea(areaInputValue.trim());
     console.log('検索実行完了:', areaInputValue.trim());
     
-    // 手動でデータ取得を実行
-    console.log('手動でfetchDataFromSupabaseを実行');
-    fetchDataFromSupabase();
+    // 初回のみデータ取得。それ以降はローカルフィルタのみ
+    if (!hasLoadedAll) {
+      console.log('初回のためfetchDataFromSupabaseを実行');
+      fetchDataFromSupabase();
+    } else {
+      console.log('既に全件ロード済み。ローカルフィルタのみ実行');
+      // ローカル再計算を促すため、eligibleProductIdsを再計算する依存（selectedAllergies/allItems）の更新に任せる
+      // 明示的にsetAllItemsを触らずとも、表示側はgetFilteredItemsで再描画される
+    }
   };
 
   // 新しい検索サービスを使用したデータ取得関数
@@ -208,7 +215,7 @@ export const RestaurantProvider = ({ children }) => {
       const matrixSelect = `*`;
 
       let query = supabase
-        .from('products')
+          .from('products')
         .select(`
           id,
           name,
@@ -364,6 +371,7 @@ export const RestaurantProvider = ({ children }) => {
     } finally {
       setIsLoading(false);
       isFetchingRef.current = false;
+      setHasLoadedAll(true);
     }
   };
 
@@ -454,6 +462,25 @@ export const RestaurantProvider = ({ children }) => {
           menuItems.forEach((menuItem, index) => {
             const normalizedCategory = 'レストラン';
             const categoryTokens = Array.from(new Set([...(getCategoryTokens(item.category) || []), 'レストラン']));
+            // menu_item_id一致のマトリクス行を抽出
+            const rows = Array.isArray(item.product_allergies_matrix) ? item.product_allergies_matrix : [];
+            const matrixRow = (() => {
+              if (rows.length === 0) return null;
+              const exact = rows.find(r => String(r.menu_item_id) === String(menuItem.id));
+              return exact || rows[0];
+            })();
+            // presence事前計算
+            const presenceBySlug = (() => {
+              const result = {};
+              const entries = Object.entries(matrixRow || {});
+              entries.forEach(([key, val]) => {
+                if (['id','product_id','menu_item_id','menu_name'].includes(key)) return;
+                const slug = key === 'soybean' ? 'soy' : key;
+                const v = (val == null ? '' : String(val)).trim().toLowerCase();
+                if (v) result[slug] = v;
+              });
+              return result;
+            })();
               const transformedItem = {
               id: `${item.id}_${menuItem.id}`, // 一意ID（product_id + menu_item_id）
               product_id: item.id, // 元のproduct_idを保持
@@ -471,6 +498,7 @@ export const RestaurantProvider = ({ children }) => {
               brand: item.brand || '',
               allergyInfo: createDefaultAllergyInfo(),
               allergyFree: [],
+              presenceBySlug,
               product_allergies: (() => {
                 console.log(`🔍 transformAndMergeData - ${menuItem.name} の product_allergies 処理開始:`, item.product_allergies);
                 const result = processAllergies(item.product_allergies) || [];
@@ -503,6 +531,20 @@ export const RestaurantProvider = ({ children }) => {
           } else {
           // menu_itemsが存在しない場合は、従来通り1つのアイテムとして処理
           const displayName = item.product_title || item.name || '商品名不明';
+          // マトリクス先頭行からpresenceを作成
+          const rows = Array.isArray(item.product_allergies_matrix) ? item.product_allergies_matrix : [];
+          const matrixRow = rows[0] || null;
+          const presenceBySlug = (() => {
+            const result = {};
+            const entries = Object.entries(matrixRow || {});
+            entries.forEach(([key, val]) => {
+              if (['id','product_id','menu_item_id','menu_name'].includes(key)) return;
+              const slug = key === 'soybean' ? 'soy' : key;
+              const v = (val == null ? '' : String(val)).trim().toLowerCase();
+              if (v) result[slug] = v;
+            });
+            return result;
+          })();
             
             const transformedItem = {
             id: item.id,
@@ -520,6 +562,7 @@ export const RestaurantProvider = ({ children }) => {
             brand: item.brand || '',
             allergyInfo: createDefaultAllergyInfo(),
             allergyFree: [],
+            presenceBySlug,
             product_allergies: (() => {
               console.log(`🔍 transformAndMergeData - ${displayName} の product_allergies 処理開始:`, item.product_allergies);
               const result = processAllergies(item.product_allergies) || [];

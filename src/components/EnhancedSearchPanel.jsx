@@ -9,10 +9,10 @@ const { FiSearch, FiMapPin, FiFilter, FiX, FiChevronDown } = FiIcons;
 
 const EnhancedSearchPanel = ({ onSearchResults, onLoading }) => {
   const {
-    setSearchKeyword,
-    setSelectedCategory,
-    setAreaInputValue,
-    setSelectedAllergies,
+    setSearchKeyword: setCtxSearchKeyword,
+    setSelectedCategory: setCtxSelectedCategory,
+    setAreaInputValue: setCtxAreaInputValue,
+    setSelectedAllergies: setCtxSelectedAllergies,
     executeSearch,
   } = useRestaurant();
   const [searchQuery, setSearchQuery] = useState('');
@@ -134,10 +134,10 @@ const EnhancedSearchPanel = ({ onSearchResults, onLoading }) => {
     if (onLoading) onLoading(true);
     setIsLoading(true);
     try {
-      setSearchKeyword(searchQuery);
-      setSelectedCategory(selectedCategory);
-      setAreaInputValue(areaInputValue);
-      setSelectedAllergies(selectedAllergies);
+      setCtxSearchKeyword(searchQuery);
+      setCtxSelectedCategory(selectedCategory);
+      setCtxAreaInputValue(areaInputValue);
+      setCtxSelectedAllergies(selectedAllergies);
       await executeSearch();
       if (onSearchResults) onSearchResults(null); // 表示側はContextのgetFilteredItemsを使用
     } catch (e) {

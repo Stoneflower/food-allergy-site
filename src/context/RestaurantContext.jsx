@@ -755,34 +755,35 @@ export const RestaurantProvider = ({ children }) => {
         'products': 'テイクアウト',
         'takeout': 'テイクアウト'
       };
-      
       const normalizedSelectedCategory = categoryMap[selectedCategory] || selectedCategory;
       console.log('🔍 正規化されたカテゴリ:', normalizedSelectedCategory);
-      
-      items = items.filter(item => {
-        const isRestaurantByMenu = normalizedSelectedCategory === 'レストラン' && Array.isArray(item.menu_items) && item.menu_items.length > 0;
-        const matches = isRestaurantByMenu || item.category === normalizedSelectedCategory || 
-                       (Array.isArray(item.category_tokens) && item.category_tokens.includes(normalizedSelectedCategory));
-        
-        // デバッグログを追加
-        if (item.name === 'びっくりドンキー' || item.name === 'スシロー') {
-          console.log('🔍 カテゴリフィルターデバッグ - 会社:', item.name, {
-            normalizedSelectedCategory,
-            itemCategory: item.category,
-            categoryTokens: item.category_tokens,
-            menuItemsLength: item.menu_items?.length || 0,
-            isRestaurantByMenu,
-            categoryMatch: item.category === normalizedSelectedCategory,
-            tokenMatch: Array.isArray(item.category_tokens) && item.category_tokens.includes(normalizedSelectedCategory),
-            matches
-          });
-        }
-        
-        if (matches) {
-          console.log('🔍 マッチしたアイテム:', item.name, 'カテゴリ:', item.category, 'トークン:', item.category_tokens, 'menu_items:', item.menu_items?.length || 0);
-        }
-        return matches;
-      });
+
+      // 要件に基づく許容カテゴリ集合
+      let allowed = new Set();
+      if (normalizedSelectedCategory === 'レストラン') {
+        allowed = new Set(['レストラン', 'すべて']);
+      } else if (normalizedSelectedCategory === 'スーパー') {
+        allowed = new Set(['スーパー', 'ネットショップ', 'すべて']);
+      } else if (normalizedSelectedCategory === 'ネットショップ') {
+        allowed = new Set(['スーパー', 'ネットショップ', 'すべて']);
+      } else if (normalizedSelectedCategory === 'テイクアウト') {
+        allowed = new Set(['テイクアウト', 'すべて']);
+      } else {
+        // 不明値は念のため全件通過
+        allowed = null;
+      }
+
+      if (allowed) {
+        items = items.filter(item => {
+          const tokens = Array.isArray(item.category_tokens) ? item.category_tokens : [];
+          const categoryMatch = item.category && allowed.has(item.category);
+          const tokenMatch = tokens.some(t => allowed.has(t));
+          // レストランのみ、menu_itemsがあればレストラン扱い
+          const isRestaurantByMenu = normalizedSelectedCategory === 'レストラン' && Array.isArray(item.menu_items) && item.menu_items.length > 0;
+          const matches = categoryMatch || tokenMatch || isRestaurantByMenu;
+          return matches;
+        });
+      }
       console.log('🔍 カテゴリフィルター後:', items.length, '件');
     }
 
@@ -809,22 +810,29 @@ export const RestaurantProvider = ({ children }) => {
       console.log('🔍 都道府県名チェック:', isPrefectureNameInput);
       
       if (isPrefectureNameInput) {
-        console.log('🔍 都道府県名フィルター適用（厳格：store_locations.adress必須、"すべて"は常に表示）');
+        // 入力から都道府県名を抽出（カンマ/スペース/読点区切りにも対応）
+        const input = selectedArea.trim();
+        const rawTokens = input.split(/[、,\s]+/).filter(Boolean);
+        const selectedPrefectures = PREFECTURES.filter(pref => rawTokens.some(t => pref.includes(t) || t.includes(pref)));
+        console.log('🔍 都道府県名フィルター適用（厳格, store_locations.addressベース）', { input, rawTokens, selectedPrefectures });
         items = items.filter(item => {
           const addresses = Array.isArray(item.store_locations)
             ? item.store_locations.map(sl => sl?.address).filter(Boolean)
             : [];
           const hasAllFlag = addresses.some(addr => String(addr).trim() === 'すべて');
-          const hasDirectMatch = addresses.some(addr => isAreaMatch(addr, selectedArea));
+          const hasAnySelected = selectedPrefectures.length > 0
+            ? addresses.some(addr => selectedPrefectures.some(pref => isAreaMatch(addr, pref)))
+            : addresses.some(addr => isAreaMatch(addr, selectedArea));
+          const keep = hasAllFlag || hasAnySelected;
           console.log('🔍 都道府県マッチ詳細（厳格）:', {
             itemName: item.name,
-            selectedArea,
             addresses,
             hasAllFlag,
-            hasDirectMatch
+            hasAnySelected,
+            keep
           });
-          // 都道府県指定時: adressが"すべて"なら常に表示。そうでなければ該当都道府県を含む場合のみ表示
-          return hasAllFlag || hasDirectMatch;
+          // 都道府県指定時: addressが"すべて"なら常に表示。そうでなければ選択都道府県のいずれかに一致する場合のみ表示
+          return keep;
         });
       } else {
         console.log('🔍 通常のエリアフィルター適用');

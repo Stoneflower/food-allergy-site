@@ -1263,51 +1263,9 @@ const CsvExporter = ({ data, onBack }) => {
 
           // 4) product_allergies_matrixの作成（表形式でわかりやすく）
           try {
-            console.log('🔄 product_allergies_matrix作成開始');
-            
-            // 既存のproduct_allergies_matrixを削除
-            const { error: deleteMatrixError } = await supabase
-              .from('product_allergies_matrix')
-              .delete()
-              .eq('product_id', pid);
-            
-            if (deleteMatrixError) {
-              console.error('❌ product_allergies_matrix削除エラー:', deleteMatrixError);
-            } else {
-              console.log('✅ product_allergies_matrix削除完了');
-            }
-            
-            // 新しいproduct_allergies_matrixを作成
-            const matrixRows = [];
-            (Array.isArray(stagingData) ? stagingData : []).forEach((row, index) => {
-              const menuName = row.raw_menu_name || `メニュー${index + 1}`;
-              const matrixRow = {
-                product_id: pid,
-                menu_item_id: index + 1, // 仮のID
-                menu_name: menuName
-              };
-              
-              // 各アレルゲンの値を設定
-              standardAllergens.forEach(allergen => {
-                const value = row[allergen.slug] || 'none';
-                const matrixColumn = allergen.slug === 'soy' ? 'soybean' : allergen.slug;
-                matrixRow[matrixColumn] = value;
-              });
-              
-              matrixRows.push(matrixRow);
-            });
-            
-            if (matrixRows.length > 0) {
-              const { error: insertMatrixError } = await supabase
-                .from('product_allergies_matrix')
-                .insert(matrixRows);
-              
-              if (insertMatrixError) {
-                console.error('❌ product_allergies_matrix挿入エラー:', insertMatrixError);
-              } else {
-                console.log('✅ product_allergies_matrix作成完了:', matrixRows.length, '件');
-              }
-            }
+            console.log('🔄 product_allergies_matrix更新（実ID使用）開始');
+            await updateProductAllergiesMatrix(pid, jobId);
+            console.log('✅ product_allergies_matrix更新完了');
           } catch (matrixErr) {
             console.error('❌ product_allergies_matrix作成エラー:', matrixErr);
           }

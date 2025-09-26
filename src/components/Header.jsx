@@ -376,7 +376,7 @@ const Header = () => {
                           </div>
 
                           {/* 推奨20品目（特定原材料に準ずるもの） */}
-                          <div className="max-h-48 overflow-y-auto">
+                          <div className="max-h-[60vh] overflow-y-auto pr-2">
                             <h5 className="text-xs font-semibold text-orange-800 mb-2">
                               表示が推奨される20品目（特定原材料に準ずるもの）
                             </h5>

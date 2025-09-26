@@ -787,9 +787,9 @@ export const RestaurantProvider = ({ children }) => {
       if (normalizedSelectedCategory === 'レストラン') {
         allowed = new Set(['レストラン', 'すべて']);
       } else if (normalizedSelectedCategory === 'スーパー') {
-        allowed = new Set(['スーパー', 'ネットショップ', 'すべて']);
+        allowed = new Set(['スーパー', 'ネットショップ', 'スーパー/ネットショップ', 'すべて']);
       } else if (normalizedSelectedCategory === 'ネットショップ') {
-        allowed = new Set(['スーパー', 'ネットショップ', 'すべて']);
+        allowed = new Set(['スーパー', 'ネットショップ', 'スーパー/ネットショップ', 'すべて']);
       } else if (normalizedSelectedCategory === 'テイクアウト') {
         allowed = new Set(['テイクアウト', 'すべて']);
       } else {
@@ -802,8 +802,8 @@ export const RestaurantProvider = ({ children }) => {
           const tokens = Array.isArray(item.category_tokens) ? item.category_tokens : [];
           const normCat = item.category;
           const isAll = normCat === 'すべて' || tokens.includes('すべて');
-          const categoryMatch = normCat && (allowed.has(normCat) || isAll || normCat === 'スーパー/ネットショップ');
-          const tokenMatch = tokens.some(t => allowed.has(t) || t === 'すべて' || t === 'スーパー/ネットショップ');
+          const categoryMatch = normCat && (allowed.has(normCat) || isAll);
+          const tokenMatch = tokens.some(t => allowed.has(t) || t === 'すべて');
           // レストランのみ、menu_itemsがあればレストラン扱い
           const isRestaurantByMenu = normalizedSelectedCategory === 'レストラン' && Array.isArray(item.menu_items) && item.menu_items.length > 0;
           const matches = categoryMatch || tokenMatch || isRestaurantByMenu;

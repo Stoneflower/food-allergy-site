@@ -468,9 +468,6 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
                           <div style={style} className="border border-gray-200 rounded p-2">
                             <div className="text-sm text-gray-800 truncate flex items-center gap-1">
                               <span>{product.display_name || product.name}</span>
-                              {Array.isArray(product.image_urls) && product.image_urls.length > 0 && (
-                                <span title="証拠画像あり" className="inline-block text-blue-500">🖼️</span>
-                              )}
                             </div>
                             {product.contamination_info?.length > 0 && (
                               <div className="mt-1 space-x-1">
@@ -491,9 +488,6 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
                       <div key={i} className="border border-gray-200 rounded p-2">
                         <div className="text-sm text-gray-800 truncate flex items-center gap-1">
                           <span>{product.display_name || product.name}</span>
-                          {Array.isArray(product.image_urls) && product.image_urls.length > 0 && (
-                            <span title="証拠画像あり" className="inline-block text-blue-500">🖼️</span>
-                          )}
                         </div>
                         {product.contamination_info?.length > 0 && (
                           <div className="mt-1 space-x-1">
@@ -526,7 +520,7 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
                       storeSource: firstLoc.source_url,
                       storeList: firstLoc.store_list_url
                     });
-
+                    
                     return (
                       <div className="mt-2 text-xs flex items-center gap-3">
                         {hasAnyImage ? (
@@ -540,7 +534,6 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
                           </>
                         ) : (
                           <>
-                            <span className="text-gray-400" title="画像なし">🖼️</span>
                             {firstLoc.source_url && (
                               <a href={firstLoc.source_url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">情報元URL</a>
                             )}

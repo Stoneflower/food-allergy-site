@@ -379,7 +379,7 @@ export const RestaurantProvider = ({ children }) => {
           }
         } else {
           // アレルギー未選択時は全件対象
-          const ids = new Set((transformedData || []).map(p => p.id));
+          const ids = new Set((transformedData || []).map(p => p.product_id));
           setEligibleProductIds(ids);
         }
       } catch (e) {
@@ -401,7 +401,7 @@ export const RestaurantProvider = ({ children }) => {
       try {
         // 一時的にvw_company_card_eligibleフィルタリングを無効化
         console.log('🔍 vw_company_card_eligibleフィルタリング一時無効化 - 全product_idを対象');
-        const ids = new Set((allItems || []).map(p => p.id));
+        const ids = new Set((allItems || []).map(p => p.product_id));
         console.log('🔍 全product_id:', Array.from(ids));
         setEligibleProductIds(ids);
         
@@ -421,7 +421,7 @@ export const RestaurantProvider = ({ children }) => {
         //     setEligibleProductIds(ids);
         //   }
         // } else {
-        //   const ids = new Set((allItems || []).map(p => p.id));
+        //   const ids = new Set((allItems || []).map(p => p.product_id));
         //   setEligibleProductIds(ids);
         // }
       } catch (e) {

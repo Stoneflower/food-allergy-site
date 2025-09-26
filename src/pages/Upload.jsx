@@ -541,10 +541,26 @@ const Upload = () => {
         };
 
         console.log('🔄 matrixへ統一保存行:', rowToUpsert);
-        const { error: matrixErr } = await supabase
+        // 42P10対策: 複合ユニーク制約がない環境でも動くよう、手動UPSERT
+        const { data: existingRow, error: selErr } = await supabase
           .from('product_allergies_matrix')
-          .upsert([rowToUpsert], { onConflict: 'product_id,menu_item_id' });
-        if (matrixErr) throw matrixErr;
+          .select('id')
+          .eq('product_id', productId)
+          .is('menu_item_id', null)
+          .maybeSingle();
+        if (selErr) throw selErr;
+        if (existingRow?.id) {
+          const { error: updErr } = await supabase
+            .from('product_allergies_matrix')
+            .update(rowToUpsert)
+            .eq('id', existingRow.id);
+          if (updErr) throw updErr;
+        } else {
+          const { error: insErr } = await supabase
+            .from('product_allergies_matrix')
+            .insert([rowToUpsert]);
+          if (insErr) throw insErr;
+        }
       }
 
       // 画像アップロードに失敗・未実施の場合も保存は継続し、後から追加できるUIを出す

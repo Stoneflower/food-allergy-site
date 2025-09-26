@@ -156,7 +156,11 @@ const EnhancedSearchPanel = ({ onSearchResults, onLoading }) => {
         ? prev.filter(id => id !== allergyId)
         : [...prev, allergyId];
       // コンテキストにも即時反映（ローカル再フィルタを有効化）
-      try { setCtxSelectedAllergies(next); } catch (_) {}
+      try {
+        setCtxSelectedAllergies(next);
+      } catch (e) {
+        console.warn('setCtxSelectedAllergies error:', e);
+      }
       return next;
     });
   };

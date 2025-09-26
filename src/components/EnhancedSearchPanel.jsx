@@ -28,7 +28,7 @@ const EnhancedSearchPanel = ({ onSearchResults, onLoading }) => {
     { id: 'shrimp', name: 'えび', icon: '🦐' },
     { id: 'crab', name: 'かに', icon: '🦀' },
     { id: 'walnut', name: 'くるみ', icon: '🌰' },
-    { id: 'soybean', name: '大豆(soybean)', icon: '🟤' },
+    { id: 'soybean', name: '大豆', icon: '🟤' },
     { id: 'beef', name: '牛肉', icon: '🥩' },
     { id: 'pork', name: '豚肉', icon: '🥓' },
     { id: 'chicken', name: '鶏肉', icon: '🍗' },

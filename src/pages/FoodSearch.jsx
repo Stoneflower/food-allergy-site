@@ -55,7 +55,7 @@ const FoodSearch = () => {
       category: 'dairy',
       lastUpdated: '2024年1月18日',
       allergens: [
-        { allergen_name: '大豆(soybean)', amount_category: '含有', source: '原材料', heat_sensitive: false }
+        { allergen_name: '大豆', amount_category: '含有', source: '原材料', heat_sensitive: false }
       ]
     },
     {
@@ -104,7 +104,7 @@ const FoodSearch = () => {
       category: 'all',
       lastUpdated: '2024年1月16日',
       allergens: [
-        { allergen_name: '大豆(soybean)', amount_category: '微量', source: '原材料', heat_sensitive: false }
+        { allergen_name: '大豆', amount_category: '微量', source: '原材料', heat_sensitive: false }
       ]
     },
     {
@@ -140,7 +140,7 @@ const FoodSearch = () => {
     egg: '卵',
     milk: '乳',
     wheat: '小麦',
-    soy: '大豆(soybean)',
+    soy: '大豆',
     nuts: 'ナッツ',
     seafood: '魚介',
     sesame: 'ごま',

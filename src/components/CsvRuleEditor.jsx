@@ -64,7 +64,7 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
     { slug: 'shrimp', name: 'えび' },
     { slug: 'crab', name: 'かに' },
     { slug: 'walnut', name: 'くるみ' },
-    { slug: 'soy', name: '大豆(soybean)' },
+    { slug: 'soy', name: '大豆' },
     { slug: 'beef', name: '牛肉' },
     { slug: 'pork', name: '豚肉' },
     { slug: 'chicken', name: '鶏肉' },

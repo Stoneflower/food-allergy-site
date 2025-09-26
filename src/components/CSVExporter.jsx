@@ -176,7 +176,7 @@ const CsvExporter = ({ data, onBack }) => {
     { slug: 'shrimp', name: 'えび' },
     { slug: 'crab', name: 'かに' },
     { slug: 'walnut', name: 'くるみ' },
-    { slug: 'soy', name: '大豆(soybean)' },
+    { slug: 'soy', name: '大豆' },
     { slug: 'beef', name: '牛肉' },
     { slug: 'pork', name: '豚肉' },
     { slug: 'chicken', name: '鶏肉' },
@@ -207,9 +207,9 @@ const CsvExporter = ({ data, onBack }) => {
     'ゴマ油': 'ごま',
     'ごま油': 'ごま',
     // 大豆の表記統一
-    '大豆': '大豆(soybean)',
-    '大豆(soybean)': '大豆(soybean)',
-    'soybean': '大豆(soybean)',
+    '大豆': '大豆',
+    '大豆(soybean)': '大豆',
+    'soybean': '大豆',
     // まつたけとマカダミアナッツは別項目として保持
     'まつたけ': 'まつたけ',
     'マカダミアナッツ': 'マカダミアナッツ'

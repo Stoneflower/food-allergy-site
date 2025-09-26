@@ -204,14 +204,8 @@ export const RestaurantProvider = ({ children }) => {
         limit: 200
       });
       
-      // 直接Supabaseから商品データを取得（必要最小限に絞る）
-      // 選択アレルギー列のみ取得（未選択時は主要8品目のみ）
-      const selected = (selectedAllergies && selectedAllergies.length > 0)
-        ? selectedAllergies.map(a => (a === 'soy' ? 'soybean' : a))
-        : ['egg','milk','wheat','buckwheat','peanut','shrimp','crab','walnut'];
-      const uniqueCols = Array.from(new Set(selected));
-      const matrixCols = uniqueCols.join(', ');
-      const matrixSelect = `id, product_id, menu_name, ${matrixCols}, menu_item_id`;
+      // 直接Supabaseから商品データを取得（28品目すべて取得：選択追加時の取りこぼしを防止）
+      const matrixSelect = `*`;
 
       let query = supabase
         .from('products')

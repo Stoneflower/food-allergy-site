@@ -375,7 +375,7 @@ const SearchResults = () => {
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="lg:w-96 space-y-6 lg:sticky lg:top-8 lg:self-start"
+              className="lg:w-96 space-y-6 lg:sticky lg:top-8 lg:self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto lg:pr-1"
             >
               {/* Category Filter */}
               <div className="bg-white rounded-xl shadow-md p-6">

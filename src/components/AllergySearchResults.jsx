@@ -71,7 +71,7 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
       } else {
         relevantAllergies.forEach(a => {
           // チーズ系商品の乳アレルギーを強制的にdirect扱い
-          if (a.allergy_item_id === 'milk' && (productName.includes('チーズ') || productName.includes('cheese'))) {
+          if (a.allergy_item_id === 'milk' && (item.product_name?.includes('チーズ') || item.product_name?.includes('cheese'))) {
             hasDirect = true;
             console.log(`🔍 classifyAllergyStatus - ${a.allergy_item_id}: direct (チーズ系商品の強制判定)`);
           } else if (a.presence_type === 'direct') {

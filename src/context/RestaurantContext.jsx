@@ -427,8 +427,7 @@ export const RestaurantProvider = ({ children }) => {
       }
     };
     refreshEligible();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedAllergies]);
+  }, [selectedAllergies, allItems]);
 
   // データ変換処理
   const transformAndMergeData = (searchData) => {

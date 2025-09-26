@@ -269,7 +269,7 @@ const CsvExporter = ({ data, onBack }) => {
         trimmed,
         normalized,
         result,
-        hasMapping: presenceMapping.hasOwnProperty(trimmed)
+        hasMapping: Object.prototype.hasOwnProperty.call(presenceMapping, trimmed)
       });
     }
     

@@ -799,14 +799,16 @@ export const RestaurantProvider = ({ children }) => {
       }
 
       if (allowed) {
-      items = items.filter(item => {
+        items = items.filter(item => {
           const tokens = Array.isArray(item.category_tokens) ? item.category_tokens : [];
           const normCat = item.category;
           const isAll = normCat === 'すべて' || tokens.includes('すべて');
           const categoryMatch = normCat && (allowed.has(normCat) || isAll);
           const tokenMatch = tokens.some(t => allowed.has(t) || t === 'すべて');
-          // レストランのみ、menu_itemsがあればレストラン扱い
-          const isRestaurantByMenu = normalizedSelectedCategory === 'レストラン' && Array.isArray(item.menu_items) && item.menu_items.length > 0;
+          // レストラン判定の安全策: category未設定時のみmenu_itemsで補完。それ以外はcategory基準を厳守
+          const isRestaurantByMenu = normalizedSelectedCategory === 'レストラン'
+            && (!normCat || normCat.trim() === '')
+            && Array.isArray(item.menu_items) && item.menu_items.length > 0;
           const matches = categoryMatch || tokenMatch || isRestaurantByMenu;
           return matches;
         });

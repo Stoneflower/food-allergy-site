@@ -512,42 +512,29 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
                 {/* 画像・リンク（メニュー欄の最後） */}
                 <div className="mt-3 border-t pt-3">
                   {(() => {
-                    // 全商品から画像・リンクを収集
-                    const allImages = [];
-                    const allStoreUrls = [];
+                    // 画像URL（products.source_url/source_url2 のみ）を収集
+                    const directImageUrls = Array.from(new Set((store.products || []).flatMap(p => [
+                      p?.related_product?.source_url,
+                      p?.related_product?.source_url2
+                    ].filter(Boolean))));
+                    // store_locations リンクを収集
+                    const uniqueStoreUrls = Array.from(new Set((store.products || []).flatMap(p => {
+                      const locations = p?.related_product?.store_locations || [];
+                      return locations.flatMap(sl => [sl.source_url, sl.store_list_url].filter(Boolean));
+                    })));
                     
-                    store.products.forEach(product => {
-                      // products.source_url / source_url2 を商品画像として収集
-                      if (product.image_urls && product.image_urls.length > 0) {
-                        allImages.push(...product.image_urls);
-                      }
-                      
-                      // store_locations から URL を収集
-                      const locations = product?.related_product?.store_locations || [];
-                      locations.forEach(sl => {
-                        if (sl.source_url) allStoreUrls.push(sl.source_url);
-                        if (sl.store_list_url) allStoreUrls.push(sl.store_list_url);
-                      });
-                    });
-                    
-                    // 重複除去
-                    const uniqueImages = Array.from(new Set(allImages));
-                    const uniqueStoreUrls = Array.from(new Set(allStoreUrls));
-                    
-                    // 仕様:
-                    // - 商品画像が1つでもあれば: 画像リンクのみ表示（一次情報リンクは非表示）
-                    // - 商品画像がなければ: 情報元URL/店舗エリアURLのみ表示（画像なしアイコンを併記）
-                    const hasProofImages = uniqueImages.length > 0;
+                    // 表示ルール
+                    const hasProofImages = directImageUrls.length > 0;
                     
                     return (
                       <>
                         {hasProofImages ? (
                           <div className="mt-2 space-x-3 text-xs">
-                            {uniqueImages[0] && (
-                              <a href={uniqueImages[0]} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">画像1</a>
+                            {directImageUrls[0] && (
+                              <a href={directImageUrls[0]} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">画像1</a>
                             )}
-                            {uniqueImages[1] && (
-                              <a href={uniqueImages[1]} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">画像2</a>
+                            {directImageUrls[1] && (
+                              <a href={directImageUrls[1]} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">画像2</a>
                             )}
                           </div>
                         ) : (
@@ -559,8 +546,8 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
                             {uniqueStoreUrls[1] && (
                               <a href={uniqueStoreUrls[1]} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">店舗エリアURL</a>
                             )}
-                          </div>
-                        )}
+                            </div>
+                          )}
                       </>
                     );
                   })()}

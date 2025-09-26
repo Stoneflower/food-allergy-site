@@ -262,15 +262,22 @@ const CsvExporter = ({ data, onBack }) => {
     const normalized = presenceMapping[trimmed];
     const result = normalized || trimmed;
     
-    // デバッグログ: 記号マッピングの動作確認
-    if (trimmed !== '' && (trimmed === '○' || trimmed === '●' || trimmed === '△' || trimmed === '×' || trimmed === '-')) {
+    // デバッグログ: 記号マッピングの動作確認（すべての記号をログ出力）
+    if (trimmed !== '' && trimmed !== 'none' && trimmed !== 'direct' && trimmed !== 'trace') {
       console.log('🔍 記号マッピングデバッグ:', {
         input: value,
         trimmed,
         normalized,
         result,
-        hasMapping: Object.prototype.hasOwnProperty.call(presenceMapping, trimmed)
+        hasMapping: Object.prototype.hasOwnProperty.call(presenceMapping, trimmed),
+        allMappings: Object.keys(presenceMapping)
       });
+    }
+    
+    // 緊急修正: 未マッピングの値はnoneとして扱う（directの誤判定を防ぐ）
+    if (!normalized && trimmed !== '') {
+      console.log('⚠️ 未マッピング記号をnoneとして処理:', trimmed);
+      return 'none';
     }
     
     return result;
@@ -419,13 +426,14 @@ const CsvExporter = ({ data, onBack }) => {
         // 含有量表示を正規化
         const englishValue = normalizePresence(value);
         
-        // デバッグログ: CSV生成時の記号変換確認
-        if (allergen.slug === 'milk' && (value === '○' || value === '●' || value === '△' || value === '×')) {
+        // デバッグログ: CSV生成時の記号変換確認（すべての記号をログ出力）
+        if (allergen.slug === 'milk' && value && value.trim() !== '') {
           console.log('🔍 CSV生成時記号変換デバッグ:', {
             allergen: allergen.slug,
             originalValue: value,
             normalizedValue: englishValue,
-            menuName: menuName
+            menuName: menuName,
+            hasMapping: Object.prototype.hasOwnProperty.call(presenceMapping, value.trim())
           });
         }
         
@@ -1127,16 +1135,13 @@ const CsvExporter = ({ data, onBack }) => {
 
             (Array.isArray(stagingData) ? stagingData : []).forEach(row => {
               standardAllergens.forEach(allergen => {
-                const raw = row[allergen.slug];
-                const value = (raw || '').trim();
-                const mapped = normalizePresence(value); // 'direct' | 'trace' | 'none' | 'unused' など
+                // stagingDataは既にnormalizePresenceで変換済みなので、そのまま使用
+                const mapped = row[allergen.slug] || 'none';
                 const prev = aggregated.get(allergen.slug) || 'none';
                 
                 // デバッグログ: 乳アレルギーの変換を確認
-                if (allergen.slug === 'milk' && (value !== '' || mapped !== 'none')) {
-                  console.log('🔍 乳アレルギー変換デバッグ:', {
-                    raw,
-                    value,
+                if (allergen.slug === 'milk' && mapped !== 'none') {
+                  console.log('🔍 乳アレルギー集計デバッグ:', {
                     mapped,
                     prev,
                     willUpdate: (presenceOrder[mapped] || 0) > (presenceOrder[prev] || 0)
@@ -1245,6 +1250,56 @@ const CsvExporter = ({ data, onBack }) => {
             }
           } catch (saveErr) {
             console.error('❌ product_allergies 保存処理エラー:', saveErr);
+          }
+
+          // 4) product_allergies_matrixの作成（表形式でわかりやすく）
+          try {
+            console.log('🔄 product_allergies_matrix作成開始');
+            
+            // 既存のproduct_allergies_matrixを削除
+            const { error: deleteMatrixError } = await supabase
+              .from('product_allergies_matrix')
+              .delete()
+              .eq('product_id', pid);
+            
+            if (deleteMatrixError) {
+              console.error('❌ product_allergies_matrix削除エラー:', deleteMatrixError);
+            } else {
+              console.log('✅ product_allergies_matrix削除完了');
+            }
+            
+            // 新しいproduct_allergies_matrixを作成
+            const matrixRows = [];
+            (Array.isArray(stagingData) ? stagingData : []).forEach((row, index) => {
+              const menuName = row.raw_menu_name || `メニュー${index + 1}`;
+              const matrixRow = {
+                product_id: pid,
+                menu_item_id: index + 1, // 仮のID
+                menu_name: menuName
+              };
+              
+              // 各アレルゲンの値を設定
+              standardAllergens.forEach(allergen => {
+                const value = row[allergen.slug] || 'none';
+                matrixRow[allergen.slug] = value;
+              });
+              
+              matrixRows.push(matrixRow);
+            });
+            
+            if (matrixRows.length > 0) {
+              const { error: insertMatrixError } = await supabase
+                .from('product_allergies_matrix')
+                .insert(matrixRows);
+              
+              if (insertMatrixError) {
+                console.error('❌ product_allergies_matrix挿入エラー:', insertMatrixError);
+              } else {
+                console.log('✅ product_allergies_matrix作成完了:', matrixRows.length, '件');
+              }
+            }
+          } catch (matrixErr) {
+            console.error('❌ product_allergies_matrix作成エラー:', matrixErr);
           }
         }
       } catch (finalUpdateError) {

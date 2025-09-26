@@ -480,6 +480,12 @@ export const RestaurantProvider = ({ children }) => {
                 console.log(`🔍 transformAndMergeData - ${menuItem.name} の product_allergies 処理結果:`, result);
                 return result;
               })(),
+              product_allergies_matrix: (() => {
+                console.log(`🔍 transformAndMergeData - ${menuItem.name} の product_allergies_matrix 処理開始:`, item.product_allergies_matrix);
+                const result = item.product_allergies_matrix || [];
+                console.log(`🔍 transformAndMergeData - ${menuItem.name} の product_allergies_matrix 処理結果:`, result);
+                return result;
+              })(),
               related_product: item,
               description: item.description || item.product_title || item.name || '',
               store_list_url: item.store_locations?.[0]?.store_list_url || null,
@@ -521,6 +527,12 @@ export const RestaurantProvider = ({ children }) => {
               console.log(`🔍 transformAndMergeData - ${displayName} の product_allergies 処理開始:`, item.product_allergies);
               const result = processAllergies(item.product_allergies) || [];
               console.log(`🔍 transformAndMergeData - ${displayName} の product_allergies 処理結果:`, result);
+              return result;
+            })(),
+            product_allergies_matrix: (() => {
+              console.log(`🔍 transformAndMergeData - ${displayName} の product_allergies_matrix 処理開始:`, item.product_allergies_matrix);
+              const result = item.product_allergies_matrix || [];
+              console.log(`🔍 transformAndMergeData - ${displayName} の product_allergies_matrix 処理結果:`, result);
               return result;
             })(),
             related_product: item,

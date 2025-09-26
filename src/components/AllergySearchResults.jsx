@@ -70,6 +70,8 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
         console.log('🔍 選択アレルギーの情報なし - 安全とみなす');
       } else {
         relevantAllergies.forEach(a => {
+          console.log(`🔍 アレルギー判定 - ${a.allergy_item_id}: ${a.presence_type}`);
+          
           // CSVのアレルギー表の情報のみを使用（強制判定は削除）
           if (a.presence_type === 'direct') {
             // 香料例外：notesに香料が入る場合は香料扱い
@@ -95,9 +97,10 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
     }
 
     // none/trace/fragranceのいずれかがあれば安全（direct以外）
-    const isSafe = hasNone || hasTrace || hasFragrance;
-    console.log(`🔍 classifyAllergyStatus - 最終結果: isSafe=${isSafe}, hasNone=${hasNone}, hasTrace=${hasTrace}, hasFragrance=${hasFragrance}, hasDirect=${hasDirect}`);
-    return { isSafe, hasTrace, hasFragrance, hasNone, hasDirect };
+        const isSafe = hasNone || hasTrace || hasFragrance;
+        console.log(`🔍 classifyAllergyStatus - 最終結果: isSafe=${isSafe}, hasNone=${hasNone}, hasTrace=${hasTrace}, hasFragrance=${hasFragrance}, hasDirect=${hasDirect}`);
+        console.log(`🔍 商品表示判定: ${!hasDirect && (isSafe || hasTrace || hasFragrance) ? '表示' : '除外'}`);
+        return { isSafe, hasTrace, hasFragrance, hasNone, hasDirect };
   };
 
   // アレルギー情報を取得（選択したアレルギーのみ表示）

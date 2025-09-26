@@ -1290,7 +1290,8 @@ const CsvExporter = ({ data, onBack }) => {
               // 各アレルゲンの値を設定
               standardAllergens.forEach(allergen => {
                 const value = row[allergen.slug] || 'none';
-                matrixRow[allergen.slug] = value;
+                const matrixColumn = allergen.slug === 'soy' ? 'soybean' : allergen.slug;
+                matrixRow[matrixColumn] = value;
               });
               
               matrixRows.push(matrixRow);

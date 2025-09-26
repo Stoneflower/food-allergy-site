@@ -42,7 +42,8 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
     if (matrix && Object.keys(matrix).length > 0) {
       console.log('🔍 classifyAllergyStatus - matrix使用:', matrix);
       selectedAllergies.forEach(allergy => {
-        const matrixValue = matrix[allergy];
+        const key = allergy === 'soy' ? 'soybean' : allergy;
+        const matrixValue = matrix[key];
         if (matrixValue === 'none') {
           hasNone = true;
           console.log(`🔍 classifyAllergyStatus - ${allergy}: none (matrix)`);

@@ -42,7 +42,7 @@ class SearchService {
           shrimp,
           crab,
           walnut,
-          soy,
+          soybean,
           beef,
           pork,
           chicken,
@@ -60,7 +60,9 @@ class SearchService {
           banana,
           cashew,
           almond,
-          matsutake
+          matsutake,
+          sesame,
+          macadamia
         ),
         store_locations(
           id,

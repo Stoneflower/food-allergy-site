@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { FiDownload, FiCheckCircle, FiArrowLeft, FiFileText, FiUpload } from 'react-icons/fi';
 import Papa from 'papaparse';
@@ -22,6 +22,8 @@ const CsvExporter = ({ data, onBack }) => {
   const [fragranceOpen, setFragranceOpen] = useState(false);
 
   const { allergyOptions } = useRestaurant();
+  // 未マッピング記号を後でSupabaseへ集計保存するためのバッファ
+  const unmappedBufferRef = useRef([]);
   const fragranceSelected = useMemo(() => {
     const raw = (fragranceCsv || '').trim();
     if (!raw || raw.toLowerCase() === 'none') return [];
@@ -215,7 +217,7 @@ const CsvExporter = ({ data, onBack }) => {
     'マカダミアナッツ': 'マカダミアナッツ'
   };
 
-  // 含有量表示の正規化マッピング
+  // 含有量表示の正規化マッピング（英語キーも受理）
   const presenceMapping = {
     // 空欄・ハイフン系（会社によって異なる表記）
     '': 'none',           // 空欄 → none
@@ -244,7 +246,7 @@ const CsvExporter = ({ data, onBack }) => {
     'コンタミ': 'trace',
     'コンタミネーション': 'trace',
     '混入の可能性': 'trace',
-    '△': 'trace',         // 三角 → trace
+    '△': 'trace',         // 三角 → trace（デフォルト。ルール編集で上書き可能）
     
     // 香料系
     '香料': 'fragrance',
@@ -254,7 +256,117 @@ const CsvExporter = ({ data, onBack }) => {
     // 未使用系
     '未使用': 'unused',
     '未記載': 'unused',
-    '記載なし': 'unused'
+    '記載なし': 'unused',
+
+    // 既に正規化済み英語値も受理
+    'none': 'none',
+    'direct': 'direct',
+    'trace': 'trace',
+    'fragrance': 'fragrance',
+    'unused': 'none' // 保存時はnoneへ統一
+  };
+
+  // 記号・文字列を正規化し、direct/trace/fragrance/none のいずれかにマップ
+  const canonicalizeAndMapSymbol = (raw) => {
+    if (raw == null) raw = '';
+    let s = String(raw);
+    // 1) Unicode正規化と不要文字除去
+    try { s = s.normalize('NFKC'); } catch (_) {}
+    s = s.replace(/\uFEFF/g, '')
+         .replace(/\u3000/g, ' ')
+         .replace(/[\r\n\t]+/g, ' ')
+         .trim()
+         .replace(/\s+/g, ' ');
+    // 2) ハイフン類統一
+    s = s.replace(/[\u2010-\u2015\u2212\u30FC\uFF0D–—−]/g, '-');
+    // 3) 記号統一
+    s = s.replace(/[〇○]/g, '○');
+    s = s.replace(/[✕✖×]/g, '×');
+
+    // 4) 括弧内注記優先
+    const paren = s.match(/[（(]([^）)]+)[）)]/);
+    if (paren) {
+      const inner = paren[1].trim();
+      if (/香|fragrance/i.test(inner)) return 'fragrance';
+      if (/コンタミ|trace/i.test(inner)) return 'trace';
+      if (/未使用|不使用|記載なし/i.test(inner)) return 'none';
+    }
+
+    // 5) 複合表記分割
+    const parts = s.split(/[\/／,、\|]+/).map(p => p.trim()).filter(Boolean);
+    const mapOne = (p) => {
+      const low = p.toLowerCase();
+      if (['none','direct','trace','fragrance','unused'].includes(low)) {
+        return low === 'unused' ? 'none' : low;
+      }
+      if (Object.prototype.hasOwnProperty.call(presenceMapping, p)) return presenceMapping[p];
+      if (Object.prototype.hasOwnProperty.call(presenceMapping, low)) return presenceMapping[low];
+      if (/^[○●◎]$/.test(p)) return 'direct';
+      if (/※/.test(p) || /コンタミ/.test(p)) return 'trace';
+      if (/香|fragrance/.test(p)) return 'fragrance';
+      if (/未使用|不使用|記載なし/.test(p)) return 'none';
+      if (/^(-|×)$/.test(p)) return 'none';
+      return null;
+    };
+    const mappedParts = parts.length > 0 ? parts.map(mapOne) : [mapOne(s)];
+    // 6) 優先度決定
+    const priority = ['direct','trace','fragrance','none'];
+    for (const k of priority) {
+      if (mappedParts.includes(k)) return k;
+    }
+    return null;
+  };
+
+  // 未マッピング記号をバッファに追加（後でSupabaseへ集計保存）
+  const bufferUnmapped = (rawText, context) => {
+    try {
+      const t = String(rawText || '').slice(0, 100);
+      const sample = String(context?.menuName || '').slice(0, 120);
+      unmappedBufferRef.current.push({ raw_text: t, sample_menu: sample });
+    } catch (_) {}
+  };
+
+  // 未マッピング記号の集計をSupabaseへ反映
+  const flushUnmappedSuggestions = async () => {
+    const buf = unmappedBufferRef.current || [];
+    if (!buf.length) return;
+    // 集計
+    const grouped = buf.reduce((acc, it) => {
+      const key = it.raw_text || '';
+      if (!key) return acc;
+      if (!acc[key]) acc[key] = { occurrences: 0, sample_menu: it.sample_menu };
+      acc[key].occurrences += 1;
+      return acc;
+    }, {});
+    const entries = Object.entries(grouped);
+    for (const [raw_text, info] of entries) {
+      try {
+        const { data: existing, error: selErr } = await supabase
+          .from('symbol_mapping_suggestions')
+          .select('id, occurrences')
+          .eq('raw_text', raw_text)
+          .eq('resolved', false)
+          .maybeSingle();
+        if (selErr) {
+          console.warn('symbol_mapping_suggestions select error:', selErr);
+          continue;
+        }
+        if (existing?.id) {
+          await supabase
+            .from('symbol_mapping_suggestions')
+            .update({ occurrences: (existing.occurrences || 0) + info.occurrences })
+            .eq('id', existing.id);
+        } else {
+          await supabase
+            .from('symbol_mapping_suggestions')
+            .insert({ raw_text, occurrences: info.occurrences, sample_menu: info.sample_menu });
+        }
+      } catch (e) {
+        console.warn('symbol_mapping_suggestions upsert warn:', e?.message || e);
+      }
+    }
+    // 送信後にバッファをクリア
+    unmappedBufferRef.current = [];
   };
 
   // アレルギー項目名を正規化
@@ -264,32 +376,19 @@ const CsvExporter = ({ data, onBack }) => {
     return normalized || name.trim();
   };
 
-  // 含有量表示を正規化
-  const normalizePresence = (value) => {
-    if (!value) return 'none';
-    const trimmed = value.trim();
-    const normalized = presenceMapping[trimmed];
-    const result = normalized || trimmed;
-    
-    // デバッグログ: 記号マッピングの動作確認（すべての記号をログ出力）
-    if (trimmed !== '' && trimmed !== 'none' && trimmed !== 'direct' && trimmed !== 'trace') {
-      console.log('🔍 記号マッピングデバッグ:', {
-        input: value,
-        trimmed,
-        normalized,
-        result,
-        hasMapping: Object.prototype.hasOwnProperty.call(presenceMapping, trimmed),
-        allMappings: Object.keys(presenceMapping)
-      });
+  // 含有量表示を正規化（英語・日本語・記号の揺れを吸収）
+  const normalizePresence = (value, context) => {
+    const mapped = canonicalizeAndMapSymbol(value);
+    if (mapped) {
+      // 既正規化値は警告を出さず、そのまま採用（unusedは保存時none）
+      return mapped === 'unused' ? 'none' : mapped;
     }
-    
-    // 緊急修正: 未マッピングの値はnoneとして扱う（directの誤判定を防ぐ）
-    if (!normalized && trimmed !== '') {
+    const trimmed = String(value || '').trim();
+    if (trimmed) {
       console.log('⚠️ 未マッピング記号をnoneとして処理:', trimmed);
-      return 'none';
+      bufferUnmapped(trimmed, context);
     }
-    
-    return result;
+    return 'none';
   };
 
   // 記号のみの行も商品名として許容するため、除外判定は行わない
@@ -433,7 +532,7 @@ const CsvExporter = ({ data, onBack }) => {
       standardAllergens.forEach(allergen => {
         const value = row.converted[allergen.slug] || '';
         // 含有量表示を正規化
-        const englishValue = normalizePresence(value);
+        const englishValue = normalizePresence(value, { menuName, allergenSlug: allergen.slug });
         
         // デバッグログ: CSV生成時の記号変換確認（すべての記号をログ出力）
         if (allergen.slug === 'milk' && value && value.trim() !== '') {
@@ -667,8 +766,8 @@ const CsvExporter = ({ data, onBack }) => {
           // アレルギー情報を追加（正規化適用）
           standardAllergens.forEach((allergen, index) => {
             const value = row[11 + index] || '';
-            // 含有量表示を正規化
-            stagingRow[allergen.slug] = normalizePresence(value);
+            // 含有量表示を正規化（メニュー名文脈付き）
+            stagingRow[allergen.slug] = normalizePresence(value, { menuName: finalMenuName, allergenSlug: allergen.slug });
           });
           
           return stagingRow;
@@ -1274,6 +1373,10 @@ const CsvExporter = ({ data, onBack }) => {
         console.error('❌ 最終更新エラー:', finalUpdateError);
       }
       
+      // 未マッピング記号を集計して保存
+      try {
+        await flushUnmappedSuggestions();
+      } catch (_) {}
       setUploadStatus('completed');
       
       // 成功メッセージを表示してからアプリケーションのデータを再読み込み

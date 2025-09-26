@@ -1,12 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { supabase } from '../lib/supabase';
+import { useRestaurant } from '../context/RestaurantContext';
 import SafeIcon from '../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
 
 const { FiSearch, FiMapPin, FiFilter, FiX, FiChevronDown } = FiIcons;
 
 const EnhancedSearchPanel = ({ onSearchResults, onLoading }) => {
+  const {
+    setSearchKeyword,
+    setSelectedCategory,
+    setAreaInputValue,
+    setSelectedAllergies,
+    executeSearch,
+  } = useRestaurant();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   // エリア入力（検索ボタン方式）
@@ -125,79 +133,16 @@ const EnhancedSearchPanel = ({ onSearchResults, onLoading }) => {
   const handleSearch = async () => {
     if (onLoading) onLoading(true);
     setIsLoading(true);
-
     try {
-      let query = supabase
-        .from('products')
-        .select(`
-          *,
-          menu_items (
-            *,
-            menu_item_allergies (
-              *,
-              allergy_items (name, icon)
-            )
-          ),
-          store_locations (*)
-        `);
-
-      // カテゴリフィルター
-      if (selectedCategory !== 'all') {
-        query = query.eq('category', selectedCategory);
-      }
-
-      // エリアフィルター（検索ボタン方式）
-      if (areaInputValue) {
-        query = query.eq('store_locations.address', areaInputValue);
-      }
-
-      // キーワード検索
-      if (searchQuery) {
-        query = query.or(`name.ilike.%${searchQuery}%,brand.ilike.%${searchQuery}%`);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-
-      // アレルギーフィルター
-      let filteredData = data || [];
-      if (selectedAllergies.length > 0) {
-        filteredData = filteredData.filter(product => {
-          return product.menu_items.some(menuItem => {
-            return selectedAllergies.every(allergyId => {
-              return menuItem.menu_item_allergies.some(allergy => 
-                allergy.allergy_item_id === allergyId && 
-                (allergy.presence_type === 'none' || allergy.presence_type === 'trace')
-              );
-            });
-          });
-        });
-      }
-
-      // メニューカテゴリフィルター
-      if (selectedMenuCategory !== 'all') {
-        filteredData = filteredData.filter(product => {
-          return product.menu_items.some(menuItem => {
-            const name = menuItem.name.toLowerCase();
-            switch (selectedMenuCategory) {
-              case 'rice':
-                return name.includes('ごはん') || name.includes('ライス') || name.includes('丼');
-              case 'noodles':
-                return name.includes('麺') || name.includes('ラーメン') || name.includes('うどん') || name.includes('そば');
-              case 'dessert':
-                return name.includes('デザート') || name.includes('ケーキ') || name.includes('アイス');
-              default:
-                return true;
-            }
-          });
-        });
-      }
-
-      if (onSearchResults) onSearchResults(filteredData);
-    } catch (error) {
-      console.error('検索エラー:', error);
-      if (onSearchResults) onSearchResults([]);
+      setSearchKeyword(searchQuery);
+      setSelectedCategory(selectedCategory);
+      setAreaInputValue(areaInputValue);
+      setSelectedAllergies(selectedAllergies);
+      await executeSearch();
+      if (onSearchResults) onSearchResults(null); // 表示側はContextのgetFilteredItemsを使用
+    } catch (e) {
+      console.error('検索エラー:', e);
+      if (onSearchResults) onSearchResults(null);
     } finally {
       setIsLoading(false);
       if (onLoading) onLoading(false);

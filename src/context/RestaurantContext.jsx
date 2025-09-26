@@ -429,7 +429,8 @@ export const RestaurantProvider = ({ children }) => {
         if (matrix) {
           selectedAllergies.forEach(slug => {
             const key = slug === 'soy' ? 'soybean' : slug;
-            const v = matrix[key];
+            const raw = matrix[key];
+            const v = (raw == null || raw === '') ? 'none' : raw;
             if (v === 'direct') hasDirect = true;
             if (v === 'none' || v === 'trace' || v === 'fragrance') hasNonDirect = true;
           });

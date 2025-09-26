@@ -144,7 +144,7 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
         const key = slug === 'soy' ? 'soybean' : slug;
         const allergyInfo = allergyOptions.find(a => a.id === slug || a.id === key);
         if (!allergyInfo) return;
-          if (value === 'trace') {
+        if (value === 'trace') {
           contaminationAllergies.push(allergyInfo.name);
           console.log(`コンタミネーション発見(matrix): ${allergyInfo.name}コンタミネーション`);
         } else if (value === 'fragrance') {

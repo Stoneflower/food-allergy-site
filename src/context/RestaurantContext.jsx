@@ -232,7 +232,7 @@ export const RestaurantProvider = ({ children }) => {
           image_url,
           product_allergies_matrix (${matrixSelect}),
           menu_items (id, name, product_id),
-          store_locations (id, branch_name, adress, source_url, store_list_url)
+          store_locations (id, branch_name, address, source_url, store_list_url)
         `)
         .limit(200);
 
@@ -496,7 +496,7 @@ export const RestaurantProvider = ({ children }) => {
                 rating: 4.0,
                 reviewCount: 0,
                 price: '¥500～¥1,500',
-              area: item.store_locations?.[0]?.adress || 'すべて',
+              area: item.store_locations?.[0]?.address || 'すべて',
                 cuisine: '商品',
               category: normalizedCategory,
               category_tokens: categoryTokens,
@@ -560,7 +560,7 @@ export const RestaurantProvider = ({ children }) => {
               rating: 4.0,
               reviewCount: 0,
               price: '¥500～¥1,500',
-            area: item.store_locations?.[0]?.adress || 'すべて',
+            area: item.store_locations?.[0]?.address || 'すべて',
               cuisine: '商品',
             category: normalizeCategory(item.category),
             category_tokens: getCategoryTokens(item.category),
@@ -812,7 +812,7 @@ export const RestaurantProvider = ({ children }) => {
         console.log('🔍 都道府県名フィルター適用（厳格：store_locations.adress必須、"すべて"は常に表示）');
         items = items.filter(item => {
           const addresses = Array.isArray(item.store_locations)
-            ? item.store_locations.map(sl => sl?.adress).filter(Boolean)
+            ? item.store_locations.map(sl => sl?.address).filter(Boolean)
             : [];
           const hasAllFlag = addresses.some(addr => String(addr).trim() === 'すべて');
           const hasDirectMatch = addresses.some(addr => isAreaMatch(addr, selectedArea));

@@ -391,7 +391,7 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
             <div className="space-y-1">
               {detectedAllergens.map((allergen, index) => (
                 <div key={index} className="text-sm text-green-800">
-                  {allergen.name} ({allergen.slug})
+                  {allergen.name}
                 </div>
               ))}
             </div>
@@ -473,7 +473,7 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {localRules.allergenOrder.map((slug, index) => {
             const allergen = standardAllergens.find(a => a.slug === slug);
-            const displayName = slug === 'unused' ? '使用しない' : (allergen ? `${allergen.name} (${allergen.slug})` : slug);
+            const displayName = slug === 'unused' ? '使用しない' : (allergen ? allergen.name : slug);
             return (
               <div key={index} className="flex items-center space-x-2">
                 <span className="w-8 text-sm text-gray-500">{index + 1}</span>
@@ -485,7 +485,7 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
                   <option value="unused">使用しない</option>
                   {standardAllergens.map(allergen => (
                     <option key={allergen.slug} value={allergen.slug}>
-                      {allergen.name} ({allergen.slug})
+                      {allergen.name}
                     </option>
                   ))}
                 </select>

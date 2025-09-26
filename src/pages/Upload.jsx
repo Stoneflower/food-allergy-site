@@ -560,7 +560,8 @@ const Upload = () => {
         const rowToUpsert = {
           product_id: productId,
           menu_item_id: defaultMenuItemId,
-          menu_name: null,
+          // 画像アップロード画面で入力された商品名をmenu_nameへ保存
+          menu_name: (productTitleToSave || editedInfo?.productName || null),
           ...baseRow
         };
 

@@ -159,6 +159,11 @@ export const RestaurantProvider = ({ children }) => {
     // 英語→日本語変換
     const normalizedCategory = normalizeCategory(categoryText);
     result.add(normalizedCategory);
+    // 「スーパー/ネットショップ」は両方に属するトークンを付与
+    if (normalizedCategory === 'スーパー/ネットショップ') {
+      result.add('スーパー');
+      result.add('ネットショップ');
+    }
     
     return Array.from(result);
   };
@@ -227,7 +232,7 @@ export const RestaurantProvider = ({ children }) => {
           image_url,
           product_allergies_matrix (${matrixSelect}),
           menu_items (id, name, product_id),
-          store_locations (id, branch_name, address, source_url, store_list_url)
+          store_locations (id, branch_name, adress, source_url, store_list_url)
         `)
         .limit(200);
 
@@ -491,7 +496,7 @@ export const RestaurantProvider = ({ children }) => {
                 rating: 4.0,
                 reviewCount: 0,
                 price: '¥500～¥1,500',
-              area: item.store_locations?.[0]?.address || 'すべて',
+              area: item.store_locations?.[0]?.adress || 'すべて',
                 cuisine: '商品',
               category: normalizedCategory,
               category_tokens: categoryTokens,
@@ -555,7 +560,7 @@ export const RestaurantProvider = ({ children }) => {
               rating: 4.0,
               reviewCount: 0,
               price: '¥500～¥1,500',
-            area: item.store_locations?.[0]?.address || 'すべて',
+            area: item.store_locations?.[0]?.adress || 'すべて',
               cuisine: '商品',
             category: normalizeCategory(item.category),
             category_tokens: getCategoryTokens(item.category),
@@ -747,7 +752,7 @@ export const RestaurantProvider = ({ children }) => {
         'restaurants': 'レストラン',
         'supermarkets': 'スーパー', 
         'online': 'ネットショップ',
-        'products': '商品',
+        'products': 'テイクアウト',
         'takeout': 'テイクアウト'
       };
       
@@ -804,40 +809,22 @@ export const RestaurantProvider = ({ children }) => {
       console.log('🔍 都道府県名チェック:', isPrefectureNameInput);
       
       if (isPrefectureNameInput) {
-        console.log('🔍 都道府県名フィルター適用（緩和版）');
+        console.log('🔍 都道府県名フィルター適用（厳格：store_locations.adress必須、"すべて"は常に表示）');
         items = items.filter(item => {
-          const isPrefectureNameItem = PREFECTURES.some(pref => 
-            item.name === pref || item.area === pref
-          );
-          
-          const areaMatch = isAreaMatch(item.area, selectedArea);
-          
-          // エリアフィルターを大幅に緩和
-          const isAreaAll = item.area === 'すべて' || item.area === '全国' || !item.area;
-          
-          // レストランチェーンは全国展開が多いため、エリアフィルターを緩和
-          const isRestaurantChain = item.category === 'レストラン' || item.category === 'restaurants';
-          
-          // 柔軟なマッチング：レストランはエリアフィルターを大幅に緩和
-          const flexibleMatch = areaMatch || isAreaAll || 
-            (item.area && item.area.toLowerCase().includes(selectedArea.toLowerCase())) ||
-            (selectedArea && item.area && selectedArea.toLowerCase().includes(item.area.toLowerCase())) ||
-            isRestaurantChain; // レストランチェーンはエリア制限を完全に緩和
-          
-          console.log('🔍 エリアマッチ詳細（緩和版）:', {
+          const addresses = Array.isArray(item.store_locations)
+            ? item.store_locations.map(sl => sl?.adress).filter(Boolean)
+            : [];
+          const hasAllFlag = addresses.some(addr => String(addr).trim() === 'すべて');
+          const hasDirectMatch = addresses.some(addr => isAreaMatch(addr, selectedArea));
+          console.log('🔍 都道府県マッチ詳細（厳格）:', {
             itemName: item.name,
-            itemArea: item.area,
             selectedArea,
-            isPrefectureNameItem,
-            areaMatch,
-            isAreaAll,
-            isRestaurantChain,
-            flexibleMatch,
-            result: flexibleMatch && (!isPrefectureNameItem || isRestaurantChain)
+            addresses,
+            hasAllFlag,
+            hasDirectMatch
           });
-          
-          // レストランチェーンの場合は都道府県名チェックをスキップ
-          return flexibleMatch && (!isPrefectureNameItem || isRestaurantChain);
+          // 都道府県指定時: adressが"すべて"なら常に表示。そうでなければ該当都道府県を含む場合のみ表示
+          return hasAllFlag || hasDirectMatch;
         });
       } else {
         console.log('🔍 通常のエリアフィルター適用');

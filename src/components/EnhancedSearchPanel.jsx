@@ -63,9 +63,9 @@ const EnhancedSearchPanel = ({ onSearchResults, onLoading }) => {
   const categories = [
     { id: 'all', name: 'すべて', icon: '🔍' },
     { id: 'restaurants', name: 'レストラン', icon: '🍽️' },
-    { id: 'products', name: '商品', icon: '📦' },
+    { id: 'products', name: 'テイクアウト', icon: '🛒' },
     { id: 'supermarkets', name: 'スーパー', icon: '🏪' },
-    { id: 'online', name: 'オンライン', icon: '💻' }
+    { id: 'online', name: 'ネットショップ', icon: '💻' }
   ];
 
   // メニューカテゴリの定義

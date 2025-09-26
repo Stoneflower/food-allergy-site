@@ -204,68 +204,39 @@ export const RestaurantProvider = ({ children }) => {
         limit: 200
       });
       
-      // 直接Supabaseから商品データを取得（menu_items, store_locationsも含める）
-      const { data: productsData, error: productsError } = await supabase
-          .from('products')
+      // 直接Supabaseから商品データを取得（必要最小限に絞る）
+      // 選択アレルギー列のみ取得（未選択時は主要8品目のみ）
+      const selected = (selectedAllergies && selectedAllergies.length > 0)
+        ? selectedAllergies.map(a => (a === 'soy' ? 'soybean' : a))
+        : ['egg','milk','wheat','buckwheat','peanut','shrimp','crab','walnut'];
+      const uniqueCols = Array.from(new Set(selected));
+      const matrixCols = uniqueCols.join(', ');
+      const matrixSelect = `id, product_id, menu_name, ${matrixCols}, menu_item_id`;
+
+      let query = supabase
+        .from('products')
         .select(`
-          *,
-          product_allergies (
-            id,
-            product_id,
-            allergy_item_id,
-            presence_type,
-            amount_level,
-            notes
-          ),
-          product_allergies_matrix (
-            id,
-            product_id,
-            menu_name,
-            egg,
-            milk,
-            wheat,
-            buckwheat,
-            peanut,
-            shrimp,
-            crab,
-            walnut,
-            almond,
-            abalone,
-            squid,
-            salmon_roe,
-            orange,
-            cashew,
-            kiwi,
-            beef,
-            gelatin,
-            sesame,
-            salmon,
-            mackerel,
-            soybean,
-            chicken,
-            banana,
-            pork,
-            matsutake,
-            peach,
-            yam,
-            apple,
-            macadamia,
-            menu_item_id
-          ),
-          menu_items (
-            id,
-            name,
-            product_id
-          ),
-          store_locations (
-            id,
-            branch_name,
-            address,
-            source_url,
-            store_list_url
-          )
+          id,
+          name,
+          brand,
+          category,
+          description,
+          source_url,
+          source_url2,
+          image_url,
+          product_allergies_matrix (${matrixSelect}),
+          menu_items (id, name, product_id),
+          store_locations (id, branch_name, address, source_url, store_list_url)
         `)
         .limit(200);
+
+      // キーワードのみ軽くサーバ絞り込み（カテゴリ/エリアはクライアント側で緩和ロジック適用）
+      if (searchKeyword && searchKeyword.trim() !== '') {
+        const kw = searchKeyword.trim();
+        query = query.or(`name.ilike.%${kw}%,brand.ilike.%${kw}%`);
+      }
+
+      const { data: productsData, error: productsError } = await query;
 
       if (productsError) {
         console.error('❌ 商品データ取得エラー:', productsError);

@@ -7,7 +7,7 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
   console.log('🔍 AllergySearchResults - selectedAllergies props:', selectedAllergies);
   console.log('🔍 AllergySearchResults - selectedAllergies length:', selectedAllergies?.length || 0);
 
-  const { getFilteredItems } = useRestaurant();
+  const { getFilteredItems, isLoading } = useRestaurant();
   const filteredItems = getFilteredItems();
   console.log('🔍 AllergySearchResults - getFilteredItems():', filteredItems?.length || 0, '件');
   console.log('🔍 AllergySearchResults - filteredItems:', filteredItems);
@@ -36,6 +36,19 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
       if (exact) return exact;
     }
     return rows[0];
+  };
+
+  const mapAllergenKeyToName = (key) => {
+    const slug = key === 'soybean' ? 'soy' : key;
+    const found = allergyOptions?.find(a => a.id === key || a.id === slug);
+    if (found && found.name) return found.name;
+    const fallbackDict = {
+      egg: '卵', milk: '乳', wheat: '小麦', buckwheat: 'そば', peanut: '落花生', shrimp: 'えび', crab: 'かに', walnut: 'くるみ',
+      almond: 'アーモンド', abalone: 'あわび', squid: 'いか', salmon_roe: 'いくら', orange: 'オレンジ', cashew: 'カシューナッツ', kiwi: 'キウイフルーツ',
+      beef: '牛肉', gelatin: 'ゼラチン', sesame: 'ごま', salmon: 'さけ', mackerel: 'さば', soybean: '大豆', chicken: '鶏肉', banana: 'バナナ',
+      pork: '豚肉', matsutake: 'まつたけ', peach: 'もも', yam: 'やまいも', apple: 'りんご', macadamia: 'マカダミア'
+    };
+    return fallbackDict[key] || fallbackDict[slug] || key;
   };
 
   const getMatrixValue = (item, slug) => {
@@ -153,17 +166,17 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
       keys.forEach(k => {
         if (skip.has(k)) return;
         const value = matrix[k];
-        const slug = k === 'soybean' ? 'soy' : k; // 表示用に既存IDとの互換を確保
-        const allergyInfo = allergyOptions.find(a => a.id === k || a.id === slug);
-        if (!allergyInfo) return;
+        const displayName = mapAllergenKeyToName(k);
           if (value === 'trace') {
-          contaminationAllergies.push(allergyInfo.name);
-          console.log(`コンタミネーション発見(matrix): ${allergyInfo.name}コンタミネーション`);
+          contaminationAllergies.push(displayName);
+          console.log(`コンタミネーション発見(matrix): ${displayName}コンタミネーション`);
         } else if (value === 'fragrance') {
-          fragranceAllergies.push(allergyInfo.name);
-          console.log(`香料含有発見(matrix): ${allergyInfo.name}香料に含む`);
+          fragranceAllergies.push(displayName);
+          console.log(`香料含有発見(matrix): ${displayName}香料に含む`);
         }
       });
+      console.log('🟨 trace収集一覧:', contaminationAllergies);
+      console.log('🟨 fragrance収集一覧:', fragranceAllergies);
     } else {
       // フォールバック: product_allergies配列から黄色ラベルを作る
       const list = Array.isArray(item.product_allergies) ? item.product_allergies : [];
@@ -300,6 +313,22 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
   const toggleStore = (name) => setExpanded(prev => ({ ...prev, [name]: !prev[name] }));
 
   if (!stores || stores.length === 0) {
+    if (isLoading) {
+      // ローディング中は「店舗がありません」を出さず、スケルトンを表示
+      return (
+        <div className="space-y-3">
+          {Array.from({ length: 6 }).map((_, idx) => (
+            <div key={idx} className="bg-white rounded-lg shadow p-4 animate-pulse">
+              <div className="flex items-center justify-between">
+                <div className="h-4 w-40 bg-gray-200 rounded" />
+                <div className="h-4 w-12 bg-gray-200 rounded" />
+              </div>
+              <div className="mt-3 h-10 bg-gray-100 rounded" />
+            </div>
+          ))}
+        </div>
+      );
+    }
     return (
       <div className="text-center py-8">
         <p className="text-gray-500">店舗が見つかりませんでした</p>

@@ -151,11 +151,14 @@ const EnhancedSearchPanel = ({ onSearchResults, onLoading }) => {
 
   // アレルギーの選択/解除
   const toggleAllergy = (allergyId) => {
-    setSelectedAllergies(prev => 
-      prev.includes(allergyId)
+    setSelectedAllergies(prev => {
+      const next = prev.includes(allergyId)
         ? prev.filter(id => id !== allergyId)
-        : [...prev, allergyId]
-    );
+        : [...prev, allergyId];
+      // コンテキストにも即時反映（ローカル再フィルタを有効化）
+      try { setCtxSelectedAllergies(next); } catch (_) {}
+      return next;
+    });
   };
 
   // エンターキーで検索

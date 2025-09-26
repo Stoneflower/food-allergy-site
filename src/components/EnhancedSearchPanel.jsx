@@ -26,6 +26,7 @@ const EnhancedSearchPanel = ({ onSearchResults, onLoading }) => {
   const [prefectures, setPrefectures] = useState([]);
   const [menuCategories, setMenuCategories] = useState([]);
   const allergyDebounceRef = useRef(null);
+  const areaDebounceRef = useRef(null);
 
   // アレルギー項目の定義
   const allergyItems = [
@@ -173,6 +174,7 @@ const EnhancedSearchPanel = ({ onSearchResults, onLoading }) => {
   useEffect(() => {
     return () => {
       if (allergyDebounceRef.current) clearTimeout(allergyDebounceRef.current);
+      if (areaDebounceRef.current) clearTimeout(areaDebounceRef.current);
     };
   }, []);
 
@@ -234,7 +236,18 @@ const EnhancedSearchPanel = ({ onSearchResults, onLoading }) => {
           <input
             type="text"
             value={areaInputValue}
-            onChange={(e) => setAreaInputValue(e.target.value)}
+            onChange={(e) => {
+              const v = e.target.value;
+              setAreaInputValue(v);
+              try {
+                if (areaDebounceRef.current) clearTimeout(areaDebounceRef.current);
+                areaDebounceRef.current = setTimeout(() => {
+                  setCtxAreaInputValue(v);
+                }, 350);
+              } catch (err) {
+                console.warn('setCtxAreaInputValue error:', err);
+              }
+            }}
             placeholder="都道府県名を入力（例：兵庫県、大阪、東京）"
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
           />

@@ -498,18 +498,8 @@ const Upload = () => {
         }
       }
 
-      // アレルギー情報を全置き換え（重複エラーを完全に回避）
+      // 画像由来アレルギーもCSVと同じ product_allergies_matrix に統一保存
       if (productId) {
-        // 既存のアレルギー情報を全て削除
-        const { error: delAllErr } = await supabase
-          .from('product_allergies')
-          .delete()
-          .eq('product_id', productId);
-        if (delAllErr) console.warn('product_allergies 既存全削除で警告:', delAllErr);
-
-        // 新しいアレルギー情報を挿入（重複排除してから作成）
-        const allergyRows = [];
-
         // 重複排除
         const uniqFragrance = Array.isArray(fragranceAllergens)
           ? Array.from(new Set(fragranceAllergens.filter(Boolean)))
@@ -521,69 +511,40 @@ const Upload = () => {
           ? Array.from(new Set(contaminationAllergens.filter(Boolean)))
           : [];
 
-        // 香料に含まれるアレルギー成分（presence_type='direct' として保存）
-        if (uniqFragrance.length > 0) {
-          for (const allergyIdString of uniqFragrance) {
-            const allergyIdInt = await convertAllergyIdToInt(allergyIdString);
-            if (allergyIdInt) {
-              allergyRows.push({
-                product_id: productId,
-                allergy_item_id: allergyIdString, // 文字列IDも設定
-                allergy_item_id_int: allergyIdInt,
-                presence_type: 'direct',
-                amount_level: 'unknown',
-                notes: '[fragrance] 香料由来'
-              });
-            }
-          }
-        }
+        // 28品目（列名はmatrixのスキーマに合わせる）
+        const standardSlugs = [
+          'egg','milk','wheat','buckwheat','peanut','shrimp','crab','walnut','almond','abalone','squid','salmon_roe','orange','cashew','kiwi','beef','gelatin','sesame','salmon','mackerel','soybean','chicken','banana','pork','matsutake','peach','yam','apple','macadamia'
+        ];
 
-        // 通常のアレルギー選択（presence_type='direct'）
-        if (uniqDirect.length > 0) {
-          for (const allergyIdString of uniqDirect) {
-            const allergyIdInt = await convertAllergyIdToInt(allergyIdString);
-            if (allergyIdInt) {
-              allergyRows.push({
-                product_id: productId,
-                allergy_item_id: allergyIdString, // 文字列IDも設定
-                allergy_item_id_int: allergyIdInt,
-                presence_type: 'direct',
-                amount_level: 'unknown',
-                notes: null
-              });
-            }
-          }
-        }
+        // 基本はnone
+        const baseRow = standardSlugs.reduce((acc, key) => { acc[key] = 'none'; return acc; }, {});
 
-        // コンタミネーション（presence_type='trace'）
-        if (uniqContam.length > 0) {
-          for (const allergyIdString of uniqContam) {
-            const allergyIdInt = await convertAllergyIdToInt(allergyIdString);
-            if (allergyIdInt) {
-              allergyRows.push({
-                product_id: productId,
-                allergy_item_id: allergyIdString,
-                allergy_item_id_int: allergyIdInt,
-                presence_type: 'trace',
-                amount_level: 'unknown',
-                notes: '[contamination] 可能性あり'
-              });
-            }
-          }
-        }
+        const applyPresence = (slug, presence) => {
+          if (!slug) return;
+          const key = slug === 'soy' ? 'soybean' : slug;
+          if (!(key in baseRow)) return;
+          // 優先度: direct > trace > fragrance > none
+          const current = baseRow[key];
+          const rank = { direct: 3, trace: 2, fragrance: 1, none: 0 };
+          if (rank[presence] > rank[current]) baseRow[key] = presence;
+        };
 
-        // アレルギー情報を一括UPSERT（重複無視）
-        if (allergyRows.length > 0) {
-          console.log('挿入予定のアレルギー情報(uniq):', allergyRows);
-          const { error: upsertErr } = await supabase
-            .from('product_allergies')
-            .upsert(allergyRows, {
-              onConflict: 'product_id,allergy_item_id_int,presence_type',
-              ignoreDuplicates: true
-            });
-          if (upsertErr) throw upsertErr;
-          console.log('アレルギー情報UPSERT成功');
-        }
+        uniqDirect.forEach(slug => applyPresence(slug, 'direct'));
+        uniqContam.forEach(slug => applyPresence(slug, 'trace'));
+        uniqFragrance.forEach(slug => applyPresence(slug, 'fragrance'));
+
+        const rowToUpsert = {
+          product_id: productId,
+          menu_item_id: null,
+          menu_name: null,
+          ...baseRow
+        };
+
+        console.log('🔄 matrixへ統一保存行:', rowToUpsert);
+        const { error: matrixErr } = await supabase
+          .from('product_allergies_matrix')
+          .upsert([rowToUpsert], { onConflict: 'product_id,menu_item_id' });
+        if (matrixErr) throw matrixErr;
       }
 
       // 画像アップロードに失敗・未実施の場合も保存は継続し、後から追加できるUIを出す

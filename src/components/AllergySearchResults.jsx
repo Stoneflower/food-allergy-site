@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import * as ReactWindow from 'react-window';
 const List = (ReactWindow && (ReactWindow.FixedSizeList || ReactWindow.VariableSizeList)) || null;
 import { useRestaurant } from '../context/RestaurantContext';
@@ -354,6 +354,24 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
   const [expanded, setExpanded] = useState({});
   const toggleStore = (name) => setExpanded(prev => ({ ...prev, [name]: !prev[name] }));
 
+  // フローティング「上へ戻る」ボタン
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  useEffect(() => {
+    const onScroll = () => {
+      setShowScrollTop(window.scrollY > 300);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+  const scrollToTop = () => {
+    try {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (_) {
+      window.scrollTo(0, 0);
+    }
+  };
+
   // アレルギー未選択時のガイダンス表示
   if (!selectedAllergies || selectedAllergies.length === 0) {
     return (
@@ -517,32 +535,32 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
                     const uniqueStoreUrls = Array.from(new Set(allStoreUrls));
                     
                     // 仕様:
-                    // - 商品画像が1つでもあれば: 画像サムネイルのみ表示（一次情報リンクは非表示）
-                    // - 商品画像がなければ: store_locations のリンクを表示
+                    // - 商品画像が1つでもあれば: 画像リンクのみ表示（一次情報リンクは非表示）
+                    // - 商品画像がなければ: 情報元URL/店舗エリアURLのみ表示（画像なしアイコンを併記）
                     const hasProofImages = uniqueImages.length > 0;
-                    const displayUrls = hasProofImages ? uniqueImages : uniqueStoreUrls;
                     
                     return (
                       <>
                         {hasProofImages ? (
-                          <div className="flex items-center gap-2 overflow-x-auto">
-                            {displayUrls.slice(0, 2).map((url, idx) => (
-                              <img key={idx} src={url} alt="evidence" className="h-12 w-12 object-cover rounded border" />
-                            ))}
+                          <div className="mt-2 space-x-3 text-xs">
+                            {uniqueImages[0] && (
+                              <a href={uniqueImages[0]} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">画像1</a>
+                            )}
+                            {uniqueImages[1] && (
+                              <a href={uniqueImages[1]} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">画像2</a>
+                            )}
                           </div>
                         ) : (
-                          <div className="mt-2 space-x-3 text-xs">
-                            {displayUrls.length > 0 && (
-                              <a href={displayUrls[0]} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">アレルギー情報元</a>
+                          <div className="mt-2 space-x-3 text-xs flex items-center gap-2">
+                            <span className="inline-block text-gray-400" title="画像なし">🖼️</span>
+                            {uniqueStoreUrls[0] && (
+                              <a href={uniqueStoreUrls[0]} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">情報元URL</a>
                             )}
-                            {displayUrls.length > 1 && (
-                              <a href={displayUrls[1]} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">店舗エリアURL</a>
+                            {uniqueStoreUrls[1] && (
+                              <a href={uniqueStoreUrls[1]} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">店舗エリアURL</a>
                             )}
-                            {displayUrls.length === 0 && (
-                              <span className="text-gray-400">画像・リンクなし</span>
-                            )}
-                            </div>
-                          )}
+                          </div>
+                        )}
                       </>
                     );
                   })()}
@@ -552,6 +570,16 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
                 </div>
         );
       })}
+      {showScrollTop && (
+        <button
+          onClick={scrollToTop}
+          aria-label="ページ上部へ"
+          className="fixed bottom-6 right-6 z-50 rounded-full bg-orange-500 text-white shadow-lg hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-400 w-12 h-12 flex items-center justify-center"
+          title="上へ戻る"
+        >
+          ↑
+        </button>
+      )}
     </div>
   );
 };

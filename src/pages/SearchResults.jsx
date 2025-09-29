@@ -558,7 +558,13 @@ const SearchResults = () => {
                     
                     // 実際の検索を実行（ヘッダーと同一の実行ロジック）
                     try {
-                      executeSearch();
+                      executeSearch({
+                        areaInputValue: currentPrefecture,
+                        selectedArea: currentPrefecture,
+                        selectedCategory,
+                        selectedAllergies,
+                        searchKeyword: ''
+                      });
                     } catch (err) {
                       console.warn('executeSearch 実行中にエラー:', err);
                     }

@@ -187,10 +187,16 @@ export const RestaurantProvider = ({ children }) => {
   };
 
   // 検索実行関数
-  const executeSearch = () => {
-    console.log('検索実行:', { areaInputValue, selectedArea, searchKeyword, selectedCategory });
-    // 左パネルでの即時更新に対応: areaInputValue がまだ反映前でも selectedArea を参照
-    const currentArea = (areaInputValue && areaInputValue.trim()) || (selectedArea && selectedArea.trim()) || '';
+  const executeSearch = (overrides = {}) => {
+    const o = overrides || {};
+    const nextKeyword = typeof o.searchKeyword === 'string' ? o.searchKeyword : searchKeyword;
+    const nextCategory = typeof o.selectedCategory === 'string' ? o.selectedCategory : selectedCategory;
+    const nextAllergies = Array.isArray(o.selectedAllergies) ? o.selectedAllergies : selectedAllergies;
+    const nextAreaInput = typeof o.areaInputValue === 'string' ? o.areaInputValue : areaInputValue;
+    const nextSelectedArea = typeof o.selectedArea === 'string' ? o.selectedArea : selectedArea;
+    console.log('検索実行:', { areaInputValue: nextAreaInput, selectedArea: nextSelectedArea, searchKeyword: nextKeyword, selectedCategory: nextCategory, selectedAllergiesCount: nextAllergies?.length || 0 });
+    // 左パネルでの即時更新に対応: 入力欄 or selectedArea を参照
+    const currentArea = (nextAreaInput && nextAreaInput.trim()) || (nextSelectedArea && nextSelectedArea.trim()) || '';
     if (!currentArea) {
       console.log('エリア入力が空のため、検索を実行しません');
       setSelectedArea('');
@@ -199,9 +205,12 @@ export const RestaurantProvider = ({ children }) => {
     // 双方向に同期
     setSelectedArea(currentArea);
     if (currentArea !== areaInputValue) {
-      // 表示欄とロジックのずれを避ける
       setAreaInputValue(currentArea);
     }
+    // 直前で受け取った条件も反映（レース条件回避）
+    if (nextKeyword !== searchKeyword) setSearchKeyword(nextKeyword);
+    if (nextCategory !== selectedCategory) setSelectedCategory(nextCategory);
+    if (Array.isArray(nextAllergies) && nextAllergies !== selectedAllergies) setSelectedAllergies(nextAllergies);
     console.log('検索実行完了:', currentArea);
     
     // 初回のみデータ取得。それ以降はローカルフィルタのみ
@@ -452,7 +461,7 @@ export const RestaurantProvider = ({ children }) => {
           const hasDirect = rel.some(a => a.presence_type === 'direct');
           const hasNonDirect = rel.some(a => a.presence_type === 'none' || a.presence_type === 'trace' || a.presence_type === 'fragrance');
           safeForThisItem = !hasDirect && hasNonDirect;
-        } else {
+                } else {
           // どちらも無い場合は未記入=noneとして安全扱い
           safeForThisItem = true;
         }

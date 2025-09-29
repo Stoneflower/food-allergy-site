@@ -350,7 +350,7 @@ export const RestaurantProvider = ({ children }) => {
       await new Promise((resolve) => {
         if (typeof requestAnimationFrame === 'function') {
           requestAnimationFrame(() => resolve());
-        } else {
+      } else {
           setTimeout(resolve, 0);
         }
       });

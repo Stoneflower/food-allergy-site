@@ -36,7 +36,7 @@ const SearchResults = () => {
     safetyLevel: 'all'
   });
 
-  const { getFilteredItems, selectedAllergies, selectedFragranceForSearch, selectedTraceForSearch, searchKeyword, selectedArea, selectedCategory, setSelectedCategory, setSelectedArea, categories, allergyOptions, executeSearch } = useRestaurant();
+  const { getFilteredItems, selectedAllergies, selectedFragranceForSearch, selectedTraceForSearch, searchKeyword, selectedArea, selectedCategory, setSelectedCategory, setSelectedArea, setAreaInputValue, categories, allergyOptions, executeSearch } = useRestaurant();
   const location = useLocation();
 
   // 遷移時スクロール制御（PCは重要情報バー／スマホは結果の直上）
@@ -542,13 +542,18 @@ const SearchResults = () => {
                     console.log('検索ボタンがクリックされました');
                     console.log('選択された都道府県:', currentPrefecture);
                     
-                    // 入力された都道府県をコンテキストに反映
+                    // 入力された都道府県をコンテキストに反映（Headerと同様にareaInputValueも更新）
                     if (inputPrefecture && inputPrefecture.trim() && inputPrefecture.trim() !== selectedArea) {
                       console.log('inputPrefectureをselectedAreaに設定:', inputPrefecture);
                       setSelectedArea(inputPrefecture.trim());
+                      setAreaInputValue(inputPrefecture.trim());
                     } else if (!selectedArea && inputPrefecture) {
                       console.log('selectedAreaが空でinputPrefectureがある場合の設定:', inputPrefecture);
                       setSelectedArea(inputPrefecture.trim());
+                      setAreaInputValue(inputPrefecture.trim());
+                    } else if (currentPrefecture) {
+                      // 既にselectedAreaに値がある場合でも、areaInputValueを揃える
+                      setAreaInputValue(currentPrefecture);
                     }
                     
                     // 実際の検索を実行（ヘッダーと同一の実行ロジック）

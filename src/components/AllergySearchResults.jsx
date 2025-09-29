@@ -4,19 +4,21 @@ const List = (ReactWindow && (ReactWindow.FixedSizeList || ReactWindow.VariableS
 import { useRestaurant } from '../context/RestaurantContext';
 
 const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSearch, selectedTraceForSearch, allergyOptions }) => {
-  console.log('🔍 AllergySearchResults - items props:', items?.length || 0, '件');
-  console.log('🔍 AllergySearchResults - items propsサンプル:', items?.[0]);
-  console.log('🔍 AllergySearchResults - selectedAllergies props:', selectedAllergies);
-  console.log('🔍 AllergySearchResults - selectedAllergies length:', selectedAllergies?.length || 0);
+  const isDev = typeof import.meta !== 'undefined' ? import.meta.env?.DEV === true : false;
+  const devLog = (...args) => { if (isDev) console.log(...args); };
+  devLog('🔍 AllergySearchResults - items props:', items?.length || 0, '件');
+  devLog('🔍 AllergySearchResults - items propsサンプル:', items?.[0]);
+  devLog('🔍 AllergySearchResults - selectedAllergies props:', selectedAllergies);
+  devLog('🔍 AllergySearchResults - selectedAllergies length:', selectedAllergies?.length || 0);
 
   const { getFilteredItems, isLoading } = useRestaurant();
   const filteredItems = getFilteredItems();
-  console.log('🔍 AllergySearchResults - getFilteredItems():', filteredItems?.length || 0, '件');
-  console.log('🔍 AllergySearchResults - filteredItems:', filteredItems);
+  devLog('🔍 AllergySearchResults - getFilteredItems():', filteredItems?.length || 0, '件');
+  devLog('🔍 AllergySearchResults - filteredItems:', filteredItems);
 
   // アレルギー適合性チェック（会社カード表示条件: direct以外のみ表示）
   const checkAllergyCompatibility = (item, selectedAllergies) => {
-    console.log('🔍 アレルギー適合性チェック開始:', {
+    devLog('🔍 アレルギー適合性チェック開始:', {
       itemName: item.name,
     selectedAllergies, 
       menuItemsCount: item.menu_items?.length || 0
@@ -24,7 +26,7 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
 
     // RestaurantContextで既にvw_company_card_eligibleでフィルタリング済みなので、
     // ここではすべての商品を表示（direct以外の商品が1件でもある会社のみが渡されている）
-    console.log('🔍 RestaurantContextでフィルタリング済み - 会社カード表示');
+    devLog('🔍 RestaurantContextでフィルタリング済み - 会社カード表示');
     return true;
   };
 
@@ -64,7 +66,7 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
   const debugSelectedMatrixValues = (item, selected) => {
     if (!Array.isArray(selected) || selected.length === 0) return;
     const list = selected.map(slug => ({ slug, value: getMatrixValue(item, slug) }));
-    console.log('🧩 選択アレルギーのmatrix値:', list);
+    devLog('🧩 選択アレルギーのmatrix値:', list);
   };
 
   const classifyAllergyStatus = (item, selectedAllergies) => {
@@ -80,93 +82,93 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
 
     // presenceBySlug（事前計算）を最優先、その次にmatrix、最後にproduct_allergies
     if (presence && Object.keys(presence).length > 0) {
-      console.log('🔍 classifyAllergyStatus - presence使用:', presence);
+      devLog('🔍 classifyAllergyStatus - presence使用:', presence);
       selectedAllergies.forEach(allergy => {
         const key = allergy === 'soy' ? 'soy' : allergy;
         const v = (presence[key] == null ? '' : String(presence[key])).trim().toLowerCase();
         if (v === 'none') {
           hasNone = true;
-          console.log(`🔍 classifyAllergyStatus - ${allergy}: none (presence)`);
+          devLog(`🔍 classifyAllergyStatus - ${allergy}: none (presence)`);
         } else if (v === 'trace') {
           hasTrace = true;
-          console.log(`🔍 classifyAllergyStatus - ${allergy}: trace (presence)`);
+          devLog(`🔍 classifyAllergyStatus - ${allergy}: trace (presence)`);
         } else if (v === 'fragrance') {
           hasFragrance = true;
-          console.log(`🔍 classifyAllergyStatus - ${allergy}: fragrance (presence)`);
+          devLog(`🔍 classifyAllergyStatus - ${allergy}: fragrance (presence)`);
         } else if (v === 'direct') {
           hasDirect = true;
-          console.log(`🔍 classifyAllergyStatus - ${allergy}: direct (presence)`);
+          devLog(`🔍 classifyAllergyStatus - ${allergy}: direct (presence)`);
         }
       });
     } else if (matrix && Object.keys(matrix).length > 0) {
       // product_allergies_matrixテーブルの情報を優先チェック
-      console.log('🔍 classifyAllergyStatus - matrix存在チェック:', !!matrix, matrix ? Object.keys(matrix) : 'なし');
-      console.log('🔍 classifyAllergyStatus - matrix使用:', matrix);
+      devLog('🔍 classifyAllergyStatus - matrix存在チェック:', !!matrix, matrix ? Object.keys(matrix) : 'なし');
+      devLog('🔍 classifyAllergyStatus - matrix使用:', matrix);
       debugSelectedMatrixValues(item, selectedAllergies);
       selectedAllergies.forEach(allergy => {
         const raw = getMatrixValue(item, allergy);
         const matrixValue = (raw == null ? '' : String(raw)).trim().toLowerCase();
         if (matrixValue === 'none') {
           hasNone = true;
-          console.log(`🔍 classifyAllergyStatus - ${allergy}: none (matrix)`);
+          devLog(`🔍 classifyAllergyStatus - ${allergy}: none (matrix)`);
         } else if (matrixValue === 'trace') {
           hasTrace = true;
-          console.log(`🔍 classifyAllergyStatus - ${allergy}: trace (matrix)`);
+          devLog(`🔍 classifyAllergyStatus - ${allergy}: trace (matrix)`);
         } else if (matrixValue === 'fragrance') {
           hasFragrance = true;
-          console.log(`🔍 classifyAllergyStatus - ${allergy}: fragrance (matrix)`);
+          devLog(`🔍 classifyAllergyStatus - ${allergy}: fragrance (matrix)`);
         } else if (matrixValue === 'direct') {
           hasDirect = true;
-          console.log(`🔍 classifyAllergyStatus - ${allergy}: direct (matrix)`);
+          devLog(`🔍 classifyAllergyStatus - ${allergy}: direct (matrix)`);
         }
       });
     } else {
       // product_allergies_matrixが空の場合は、product_allergiesテーブルをフォールバック
-      console.log('🔍 classifyAllergyStatus - product_allergies使用（フォールバック）');
-      console.log('⚠️ product_allergies_matrixが空のため、product_allergiesで判定');
+      devLog('🔍 classifyAllergyStatus - product_allergies使用（フォールバック）');
+      devLog('⚠️ product_allergies_matrixが空のため、product_allergiesで判定');
       
       // 選択されたアレルギーに対して、該当するアレルギー情報をチェック
       const relevantAllergies = allergies.filter(a => selectedSet.has(a.allergy_item_id));
-      console.log(`🔍 選択アレルギー${selectedAllergies.join(',')}に関連するアレルギー情報:`, relevantAllergies.length, '件');
-      console.log(`🔍 relevantAllergies詳細:`, relevantAllergies);
+      devLog(`🔍 選択アレルギー${selectedAllergies.join(',')}に関連するアレルギー情報:`, relevantAllergies.length, '件');
+      devLog(`🔍 relevantAllergies詳細:`, relevantAllergies);
       
       if (relevantAllergies.length === 0) {
         // 選択されたアレルギーの情報がない場合は、安全とみなす
         hasNone = true;
-        console.log('🔍 選択アレルギーの情報なし - 安全とみなす');
+        devLog('🔍 選択アレルギーの情報なし - 安全とみなす');
       } else {
         relevantAllergies.forEach(a => {
-          console.log(`🔍 アレルギー判定 - ${a.allergy_item_id}: ${a.presence_type}`);
+          devLog(`🔍 アレルギー判定 - ${a.allergy_item_id}: ${a.presence_type}`);
           
           // CSVのアレルギー表の情報のみを使用（強制判定は削除）
           if (a.presence_type === 'direct') {
             // 香料例外：notesに香料が入る場合は香料扱い
             if (a.notes && a.notes.includes('香料')) {
               hasFragrance = true;
-              console.log(`🔍 classifyAllergyStatus - ${a.allergy_item_id}: fragrance (notes)`);
+              devLog(`🔍 classifyAllergyStatus - ${a.allergy_item_id}: fragrance (notes)`);
             } else {
               hasDirect = true;
-              console.log(`🔍 classifyAllergyStatus - ${a.allergy_item_id}: direct (product_allergies)`);
+              devLog(`🔍 classifyAllergyStatus - ${a.allergy_item_id}: direct (product_allergies)`);
             }
           } else if (a.presence_type === 'trace') {
             hasTrace = true;
-            console.log(`🔍 classifyAllergyStatus - ${a.allergy_item_id}: trace (product_allergies)`);
+            devLog(`🔍 classifyAllergyStatus - ${a.allergy_item_id}: trace (product_allergies)`);
           } else if (a.presence_type === 'fragrance') {
             hasFragrance = true;
-            console.log(`🔍 classifyAllergyStatus - ${a.allergy_item_id}: fragrance (product_allergies)`);
+            devLog(`🔍 classifyAllergyStatus - ${a.allergy_item_id}: fragrance (product_allergies)`);
           } else if (a.presence_type === 'none') {
             hasNone = true;
-            console.log(`🔍 classifyAllergyStatus - ${a.allergy_item_id}: none (product_allergies)`);
+            devLog(`🔍 classifyAllergyStatus - ${a.allergy_item_id}: none (product_allergies)`);
           }
         });
       }
     }
 
     // none/trace/fragranceのいずれかがあれば安全（direct以外）
-        const isSafe = hasNone || hasTrace || hasFragrance;
-        console.log(`🔍 classifyAllergyStatus - 最終結果: isSafe=${isSafe}, hasNone=${hasNone}, hasTrace=${hasTrace}, hasFragrance=${hasFragrance}, hasDirect=${hasDirect}`);
-        console.log(`🔍 商品表示判定: ${!hasDirect && (isSafe || hasTrace || hasFragrance) ? '表示' : '除外'}`);
-        return { isSafe, hasTrace, hasFragrance, hasNone, hasDirect };
+    const isSafe = hasNone || hasTrace || hasFragrance;
+    devLog(`🔍 classifyAllergyStatus - 最終結果: isSafe=${isSafe}, hasNone=${hasNone}, hasTrace=${hasTrace}, hasFragrance=${hasFragrance}, hasDirect=${hasDirect}`);
+    devLog(`🔍 商品表示判定: ${!hasDirect && (isSafe || hasTrace || hasFragrance) ? '表示' : '除外'}`);
+    return { isSafe, hasTrace, hasFragrance, hasNone, hasDirect };
   };
 
   // アレルギー情報を取得（選択したアレルギーのみ表示）
@@ -176,8 +178,8 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
     const primaryMenuName = menuItems.length > 0 ? menuItems[0].name : null;
     const displayName = primaryMenuName || item.product_title || item.name || '商品名不明';
 
-    console.log(`🔍 getContaminationInfo 呼び出し - 商品: ${displayName}`);
-    console.log(`🔍 getContaminationInfo - 選択アレルギー:`, selectedAllergies);
+    devLog(`🔍 getContaminationInfo 呼び出し - 商品: ${displayName}`);
+    devLog(`🔍 getContaminationInfo - 選択アレルギー:`, selectedAllergies);
 
     const contaminationAllergies = [];
     const fragranceAllergies = [];
@@ -193,14 +195,14 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
         const displayName = mapAllergenKeyToName(k === 'soy' ? 'soybean' : k);
         if (value === 'trace') {
           contaminationAllergies.push(displayName);
-          console.log(`コンタミネーション発見(presence): ${displayName}コンタミネーション`);
+          devLog(`コンタミネーション発見(presence): ${displayName}コンタミネーション`);
         } else if (value === 'fragrance') {
           fragranceAllergies.push(displayName);
-          console.log(`香料含有発見(presence): ${displayName}香料に含む`);
+          devLog(`香料含有発見(presence): ${displayName}香料に含む`);
         }
       });
-      console.log('🟨 trace収集一覧:', contaminationAllergies);
-      console.log('🟨 fragrance収集一覧:', fragranceAllergies);
+      devLog('🟨 trace収集一覧:', contaminationAllergies);
+      devLog('🟨 fragrance収集一覧:', fragranceAllergies);
     } else if (matrix && Object.keys(matrix).length > 0) {
       // マトリクス優先で黄色ラベル（trace / fragrance）を作る
       const keys = Object.keys(matrix);
@@ -211,14 +213,14 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
         const displayName = mapAllergenKeyToName(k);
           if (value === 'trace') {
           contaminationAllergies.push(displayName);
-          console.log(`コンタミネーション発見(matrix): ${displayName}コンタミネーション`);
+          devLog(`コンタミネーション発見(matrix): ${displayName}コンタミネーション`);
         } else if (value === 'fragrance') {
           fragranceAllergies.push(displayName);
-          console.log(`香料含有発見(matrix): ${displayName}香料に含む`);
+          devLog(`香料含有発見(matrix): ${displayName}香料に含む`);
         }
       });
-      console.log('🟨 trace収集一覧:', contaminationAllergies);
-      console.log('🟨 fragrance収集一覧:', fragranceAllergies);
+      devLog('🟨 trace収集一覧:', contaminationAllergies);
+      devLog('🟨 fragrance収集一覧:', fragranceAllergies);
     } else {
       // フォールバック: product_allergies配列から黄色ラベルを作る
       const list = Array.isArray(item.product_allergies) ? item.product_allergies : [];
@@ -230,10 +232,10 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
         if (!allergyInfo) return;
         if (presenceType === 'trace') {
           contaminationAllergies.push(allergyInfo.name);
-          console.log(`コンタミネーション発見(fallback): ${allergyInfo.name}コンタミネーション`);
+          devLog(`コンタミネーション発見(fallback): ${allergyInfo.name}コンタミネーション`);
         } else if (presenceType === 'fragrance' || (presenceType === 'direct' && allergy.notes && allergy.notes.includes('香料'))) {
           fragranceAllergies.push(allergyInfo.name);
-          console.log(`香料含有発見(fallback): ${allergyInfo.name}香料に含む`);
+          devLog(`香料含有発見(fallback): ${allergyInfo.name}香料に含む`);
         }
       });
     }
@@ -247,24 +249,24 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
     const result = [];
     if (contaminationAllergies.length > 0) result.push(`${contaminationAllergies.join('、')}コンタミネーション`);
     if (fragranceAllergies.length > 0) result.push(`${fragranceAllergies.join('、')}香料に含む`);
-    console.log(`✅ 商品 ${displayName} の最終結果:`, result);
+    devLog(`✅ 商品 ${displayName} の最終結果:`, result);
     return result;
   };
 
   // Typesenseデータ用の店舗グループ化（アレルギー情報対応）
   const groupedStores = () => {
-    console.log('groupedStores - filteredItems processing:', filteredItems);
+    devLog('groupedStores - filteredItems processing:', filteredItems);
     
     const stores = {};
     
     filteredItems.forEach((item, index) => {
-      console.log(`groupedStores - processing item ${index}:`, item);
+      devLog(`groupedStores - processing item ${index}:`, item);
       
       // 会社名・店舗名を決定（item.name を会社名として使用）
       const companyName = item.name || item.brand || item.product_title || `会社${index + 1}`;
-      console.log('groupedStores - companyName:', companyName);
+      devLog('groupedStores - companyName:', companyName);
       // デバッグ: AllergySearchResults.jsxで受け取った最終item
-      console.log('📄 item全体の構造:', item);
+      devLog('📄 item全体の構造:', item);
       
       // 会社が存在しない場合は作成
       if (!stores[companyName]) {
@@ -279,8 +281,8 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
       const isAllergyCompatible = checkAllergyCompatibility(item, selectedAllergies);
       
       if (isAllergyCompatible) {
-        console.log('=== 会社:', companyName, '===');
-        console.log('商品情報:', { 
+        devLog('=== 会社:', companyName, '===');
+        devLog('商品情報:', { 
           name: item?.name, 
           product_name: item?.product_name,
           product_title: item?.product_title,
@@ -289,11 +291,11 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
         
         // 商品名は既にproduct_nameに設定されている（menu_item.name）
         const productName = item.product_name || item.name || '商品名なし';
-        console.log(`🔍 商品名デバッグ - item.product_name:`, item.product_name);
-        console.log(`🔍 商品名デバッグ - item.menu_items:`, item.menu_items);
-        console.log(`🔍 商品名デバッグ - item.product_title:`, item.product_title);
-        console.log(`🔍 商品名デバッグ - item.name:`, item.name);
-        console.log(`🔍 商品名デバッグ - 最終的なproductName:`, productName);
+        devLog(`🔍 商品名デバッグ - item.product_name:`, item.product_name);
+        devLog(`🔍 商品名デバッグ - item.menu_items:`, item.menu_items);
+        devLog(`🔍 商品名デバッグ - item.product_title:`, item.product_title);
+        devLog(`🔍 商品名デバッグ - item.name:`, item.name);
+        devLog(`🔍 商品名デバッグ - 最終的なproductName:`, productName);
         
         // アレルギー情報を取得（バッジ表示用）
         const contaminationInfo = getContaminationInfo(item);
@@ -303,7 +305,7 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
 
         // デバッグ: 乳選択時の商品判定ログ
         if (selectedAllergies && selectedAllergies.includes('milk')) {
-          console.log(`🔍 乳選択時デバッグ - 商品: ${productName}`, {
+          devLog(`🔍 乳選択時デバッグ - 商品: ${productName}`, {
             hasDirect: cls.hasDirect,
             isSafe: cls.isSafe,
             hasTrace: cls.hasTrace,
@@ -327,12 +329,12 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
             ].filter(Boolean),
             related_product: item
           });
-          console.log('groupedStores - added product with allergies:', productName, 'to company:', companyName);
+          devLog('groupedStores - added product with allergies:', productName, 'to company:', companyName);
         } else {
-          console.log(`❌ direct商品除外 or 不適合: ${productName} (hasDirect=${cls.hasDirect}, isSafe=${cls.isSafe}, hasTrace=${cls.hasTrace}, hasFragrance=${cls.hasFragrance})`);
+          devLog(`❌ direct商品除外 or 不適合: ${productName} (hasDirect=${cls.hasDirect}, isSafe=${cls.isSafe}, hasTrace=${cls.hasTrace}, hasFragrance=${cls.hasFragrance})`);
         }
         } else {
-        console.log(`❌ アレルギー不適合商品除外: ${item.name}`);
+        devLog(`❌ アレルギー不適合商品除外: ${item.name}`);
       }
     });
     
@@ -343,14 +345,14 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
       const fragrance = store.products.filter(p => p.classify?.hasFragrance);
       return { ...store, safe_items: safe, trace_items: trace, fragrance_items: fragrance };
     });
-    console.log('groupedStores - final result:', result);
-    console.log('groupedStores - stores with products:', result.length);
-    console.log('groupedStores - stores with products names:', result.map(s => s.name));
+    devLog('groupedStores - final result:', result);
+    devLog('groupedStores - stores with products:', result.length);
+    devLog('groupedStores - stores with products names:', result.map(s => s.name));
     
     return result;
   };
-
-  const stores = groupedStores();
+  // 重いグルーピングをメモ化（フィルタ結果と選択アレルギーが変わらない限り再計算しない）
+  const stores = useMemo(() => groupedStores(), [filteredItems, selectedAllergies]);
   const [expanded, setExpanded] = useState({});
   const toggleStore = (name) => setExpanded(prev => ({ ...prev, [name]: !prev[name] }));
 
@@ -421,7 +423,7 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
         const allUrls = [...imageUrls, ...storeSourceUrls].filter(Boolean);
         
         // デバッグ: データ構造確認
-        console.log('🔍 画像・リンク表示デバッグ:', {
+        devLog('🔍 画像・リンク表示デバッグ:', {
           storeName: store.name,
           firstProduct: firstProduct,
           imageUrls: imageUrls,

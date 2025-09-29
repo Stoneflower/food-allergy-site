@@ -36,7 +36,7 @@ const SearchResults = () => {
     safetyLevel: 'all'
   });
 
-  const { getFilteredItems, selectedAllergies, selectedFragranceForSearch, selectedTraceForSearch, searchKeyword, selectedArea, selectedCategory, setSelectedCategory, setSelectedArea, categories, allergyOptions } = useRestaurant();
+  const { getFilteredItems, selectedAllergies, selectedFragranceForSearch, selectedTraceForSearch, searchKeyword, selectedArea, selectedCategory, setSelectedCategory, setSelectedArea, categories, allergyOptions, executeSearch } = useRestaurant();
   const location = useLocation();
 
   // 遷移時スクロール制御（PCは重要情報バー／スマホは結果の直上）
@@ -529,12 +529,12 @@ const SearchResults = () => {
                     console.log('検索ボタンクリック - inputPrefecture:', inputPrefecture);
                     
                     // 都道府県の入力チェック
-                    const currentPrefecture = selectedArea || inputPrefecture;
+                    const currentPrefecture = (selectedArea && selectedArea.trim()) || (inputPrefecture && inputPrefecture.trim()) || '';
                     console.log('検索ボタンクリック - currentPrefecture:', currentPrefecture);
                     
-                    if (!currentPrefecture || currentPrefecture.trim() === '' || currentPrefecture === 'すべて') {
-                      console.log('都道府県が未入力のためアラート表示');
-                      alert('都道府県名を入力して、アレルギー対応店舗を検索できます');
+                    if (!currentPrefecture || currentPrefecture === 'すべて') {
+                      console.log('都道府県が未入力のためアラート表示（ヘッダーと同一文言）');
+                      alert('県名を記入してください');
                       return;
                     }
                     
@@ -543,7 +543,7 @@ const SearchResults = () => {
                     console.log('選択された都道府県:', currentPrefecture);
                     
                     // 入力された都道府県をコンテキストに反映
-                    if (inputPrefecture && inputPrefecture !== selectedArea) {
+                    if (inputPrefecture && inputPrefecture.trim() && inputPrefecture.trim() !== selectedArea) {
                       console.log('inputPrefectureをselectedAreaに設定:', inputPrefecture);
                       setSelectedArea(inputPrefecture.trim());
                     } else if (!selectedArea && inputPrefecture) {
@@ -551,6 +551,13 @@ const SearchResults = () => {
                       setSelectedArea(inputPrefecture.trim());
                     }
                     
+                    // 実際の検索を実行（ヘッダーと同一の実行ロジック）
+                    try {
+                      executeSearch();
+                    } catch (err) {
+                      console.warn('executeSearch 実行中にエラー:', err);
+                    }
+
                     // ページリロードではなく、状態更新で検索を実行
                     console.log('検索実行完了 - selectedArea更新済み');
                     // 実行後スクロール: デバイス幅で分岐

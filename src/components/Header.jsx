@@ -256,8 +256,8 @@ const Header = () => {
         </div>
       </div>
 
-      {/* Main Header - シンプルな検索バー（常時表示） */}
-      <header className="bg-white shadow-lg sticky top-0 z-50">
+      {/* Main Header - シンプルな検索バー（スマホ非表示、PC表示） */}
+      <header className="bg-white shadow-lg sticky top-0 z-50 hidden lg:block">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* 検索バー */}
           <div className="flex justify-center items-center h-16">

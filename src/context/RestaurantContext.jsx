@@ -33,6 +33,11 @@ export const useRestaurant = () => {
 };
 
 export const RestaurantProvider = ({ children }) => {
+  // 開発時のみ詳細ログを出す
+  const isDev = typeof import.meta !== 'undefined' ? import.meta.env?.DEV === true : false;
+  const devLog = (...args) => {
+    if (isDev) console.log(...args);
+  };
   // デフォルトのアレルギー項目（フォールバック用）
   const defaultMandatoryAllergies = [
     { id: 'egg', name: '卵', icon: '🥚' },
@@ -283,11 +288,9 @@ export const RestaurantProvider = ({ children }) => {
       }
 
       console.log('✅ 商品データ取得成功:', productsData?.length || 0, '件');
-      
-      // デバッグ: Supabase から取得した最初のデータ構造
-      if (productsData && productsData.length > 0) {
-        console.log('📦 最初の商品データ構造:', productsData[0]);
-        console.log('📦 rawDataFromSupabase:', productsData[0]);
+      // 詳細ログは開発時のみ
+      if (isDev && productsData && productsData.length > 0) {
+        devLog('📦 最初の商品データ構造:', productsData[0]);
       }
       
       // データを変換（searchServiceの形式に合わせる）
@@ -297,22 +300,13 @@ export const RestaurantProvider = ({ children }) => {
         area: '全国' // デフォルト値
       })) || [];
       
-      // アレルギー情報のデバッグログ
-      console.log('🔍 アレルギー情報デバッグ:');
-      data.forEach((item, index) => {
-        console.log(`🔍 アイテム${index + 1}: ${item.name} - product_allergies:`, item.product_allergies);
-        console.log(`🔍 アイテム${index + 1}: ${item.name} - product_allergies type:`, typeof item.product_allergies);
-        console.log(`🔍 アイテム${index + 1}: ${item.name} - product_allergies length:`, item.product_allergies?.length || 0);
-        if (item.product_allergies && item.product_allergies.length > 0) {
-          console.log(`🔍 アイテム${index + 1}: ${item.name} - product_allergies[0]:`, item.product_allergies[0]);
-        }
-        console.log(`🔍 アイテム${index + 1}: ${item.name} - product_allergies_matrix:`, item.product_allergies_matrix);
-        console.log(`🔍 アイテム${index + 1}: ${item.name} - product_allergies_matrix type:`, typeof item.product_allergies_matrix);
-        console.log(`🔍 アイテム${index + 1}: ${item.name} - product_allergies_matrix length:`, item.product_allergies_matrix?.length || 0);
-        if (item.product_allergies_matrix && item.product_allergies_matrix.length > 0) {
-          console.log(`🔍 アイテム${index + 1}: ${item.name} - product_allergies_matrix[0]:`, item.product_allergies_matrix[0]);
-        }
-      });
+      // 重いループ出力は開発時のみ
+      if (isDev) {
+        devLog('🔍 アレルギー情報デバッグ（開発時のみ）');
+        data.slice(0, 3).forEach((item, index) => {
+          devLog(`🔍 アイテム${index + 1}: ${item.name} - matrix.length:`, item.product_allergies_matrix?.length || 0);
+        });
+      }
       
       const error = null;
 
@@ -333,48 +327,56 @@ export const RestaurantProvider = ({ children }) => {
       console.log('検索結果:', data?.length || 0, '件', '実行時間:', executionTime.toFixed(2), 'ms');
 
       // データの変換処理
-      console.log('🔍 変換前のデータ:', data?.length || 0, '件');
-      console.log('🔍 変換前のデータサンプル:', data?.[0]);
+      devLog('🔍 変換前のデータ:', data?.length || 0, '件');
+      if (isDev) devLog('🔍 変換前のデータサンプル:', data?.[0]);
       
       // データベースの実際のカテゴリを詳しく確認
-      console.log('🔍 データベースの実際のカテゴリ一覧:');
-      data?.forEach((item, index) => {
-        console.log(`🔍 アイテム${index + 1}: ${item.name} - カテゴリ: "${item.category}"`);
-      });
+      if (isDev) {
+        devLog('🔍 データベースの実際のカテゴリ（開発時のみ一部）');
+        data?.slice(0, 5).forEach((item, index) => {
+          devLog(`🔍 アイテム${index + 1}: ${item.name} - カテゴリ: "${item.category}"`);
+        });
+      }
       
       // 変換前のデータを詳しく確認
-      console.log('🔍 変換前のデータ詳細確認:');
-      data?.forEach((item, index) => {
-        console.log(`🔍 変換前 アイテム${index + 1}: ${item.name}`);
-        console.log(`🔍 変換前 product_allergies:`, item.product_allergies);
-        console.log(`🔍 変換前 product_allergies type:`, typeof item.product_allergies);
-        console.log(`🔍 変換前 product_allergies length:`, item.product_allergies?.length || 0);
+      if (isDev) {
+        devLog('🔍 変換前のデータ詳細確認（開発時のみ一部）');
+        data?.slice(0, 3).forEach((item, index) => {
+          devLog(`🔍 変換前 アイテム${index + 1}: ${item.name}`);
+        });
+      }
+
+      // 重い変換前にレンダリングへ制御を返す（UIフリーズ回避）
+      await new Promise((resolve) => {
+        if (typeof requestAnimationFrame === 'function') {
+          requestAnimationFrame(() => resolve());
+        } else {
+          setTimeout(resolve, 0);
+        }
       });
       
       const transformedData = transformAndMergeData(data || []);
       
       // 変換後のデータを詳しく確認
-      console.log('🔍 変換後のデータ詳細確認:');
-      transformedData?.forEach((item, index) => {
-        console.log(`🔍 変換後 アイテム${index + 1}: ${item.name}`);
-        console.log(`🔍 変換後 product_allergies:`, item.product_allergies);
-        console.log(`🔍 変換後 product_allergies type:`, typeof item.product_allergies);
-        console.log(`🔍 変換後 product_allergies length:`, item.product_allergies?.length || 0);
-      });
-      console.log('🔍 変換後のデータ:', transformedData.length, '件');
-      console.log('🔍 変換後のデータサンプル:', transformedData[0]);
+      if (isDev) {
+        devLog('🔍 変換後のデータ詳細確認（開発時のみ一部）');
+        devLog('🔍 変換後のデータ:', transformedData.length, '件');
+        devLog('🔍 変換後のデータサンプル:', transformedData[0]);
+      }
       
       // カテゴリの詳細ログ
-      transformedData.forEach((item, index) => {
-        console.log(`🔍 アイテム${index + 1}:`, {
-          name: item.name,
-          category: item.category,
-          category_tokens: item.category_tokens
+      if (isDev) {
+        transformedData.slice(0, 5).forEach((item, index) => {
+          devLog(`🔍 アイテム${index + 1}:`, {
+            name: item.name,
+            category: item.category,
+            category_tokens: item.category_tokens
+          });
         });
-      });
+      }
       
-      console.log('🔍 setAllItems呼び出し前 - transformedData長さ:', transformedData.length);
-      console.log('🔍 setAllItems呼び出し前 - transformedDataサンプル:', transformedData[0]);
+      devLog('🔍 setAllItems呼び出し前 - transformedData長さ:', transformedData.length);
+      if (isDev) devLog('🔍 setAllItems呼び出し前 - transformedDataサンプル:', transformedData[0]);
       setAllItems(transformedData);
       console.log('🔍 setAllItems呼び出し完了');
 

@@ -188,16 +188,21 @@ export const RestaurantProvider = ({ children }) => {
 
   // 検索実行関数
   const executeSearch = () => {
-    console.log('検索実行:', { areaInputValue, searchKeyword, selectedCategory });
-    
-    if (!areaInputValue || areaInputValue.trim() === '') {
+    console.log('検索実行:', { areaInputValue, selectedArea, searchKeyword, selectedCategory });
+    // 左パネルでの即時更新に対応: areaInputValue がまだ反映前でも selectedArea を参照
+    const currentArea = (areaInputValue && areaInputValue.trim()) || (selectedArea && selectedArea.trim()) || '';
+    if (!currentArea) {
       console.log('エリア入力が空のため、検索を実行しません');
       setSelectedArea('');
       return;
     }
-    
-    setSelectedArea(areaInputValue.trim());
-    console.log('検索実行完了:', areaInputValue.trim());
+    // 双方向に同期
+    setSelectedArea(currentArea);
+    if (currentArea !== areaInputValue) {
+      // 表示欄とロジックのずれを避ける
+      setAreaInputValue(currentArea);
+    }
+    console.log('検索実行完了:', currentArea);
     
     // 初回のみデータ取得。それ以降はローカルフィルタのみ
     if (!hasLoadedAll) {

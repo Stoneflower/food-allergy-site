@@ -39,6 +39,10 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
   const defaultRules = {
     ...rules,
     allergenOrder: defaultAllergenOrder,
+    symbolMappings: {
+      ...rules.symbolMappings,
+      '🔹': 'none' // デフォルトで🔹を追加
+    },
     outputLabels: {
       direct: 'ふくむ',
       none: 'ふくまない',
@@ -208,8 +212,9 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
   };
 
   const handleAddManualSymbol = () => {
-    if (newSymbolInput.trim() && !detectedSymbols.has(newSymbolInput.trim()) && !manualSymbols.has(newSymbolInput.trim())) {
-      const newManualSymbols = new Set([...manualSymbols, newSymbolInput.trim()]);
+    const symbol = newSymbolInput.trim();
+    if (symbol && !detectedSymbols.has(symbol) && !manualSymbols.has(symbol)) {
+      const newManualSymbols = new Set([...manualSymbols, symbol]);
       setManualSymbols(newManualSymbols);
       
       // 手動追加された記号をsymbolMappingsにも追加（デフォルト値: 'none'）
@@ -217,12 +222,12 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
         ...prev,
         symbolMappings: {
           ...prev.symbolMappings,
-          [newSymbolInput.trim()]: 'none'
+          [symbol]: 'none'
         }
       }));
       
       setNewSymbolInput('');
-      console.log('🔍 手動記号追加:', newSymbolInput.trim(), '→ symbolMappingsに追加');
+      console.log('🔍 手動記号追加:', symbol, '→ symbolMappingsに追加');
     }
   };
 

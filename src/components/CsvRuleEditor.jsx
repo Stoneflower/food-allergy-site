@@ -32,8 +32,8 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
     'cashew',     // 25. カシューナッツ
     'sesame',     // 26. ごま
     'almond',     // 27. アーモンド
-    'matsutake',  // 28. まつたけ
-    'unused'      // 29. 使用しない
+    'unused',     // 28. 使用しない
+    'matsutake'   // 29. まつたけ
   ];
 
   const defaultRules = {

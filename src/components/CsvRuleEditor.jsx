@@ -41,7 +41,9 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
     allergenOrder: defaultAllergenOrder,
     symbolMappings: {
       ...rules.symbolMappings,
-      '🔹': 'none' // デフォルトで🔹を追加
+      '🔹': 'none', // デフォルトで🔹を追加
+      '★': 'none',
+      '☆': 'none'
     },
     outputLabels: {
       direct: 'ふくむ',

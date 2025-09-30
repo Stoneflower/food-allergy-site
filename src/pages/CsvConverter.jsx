@@ -24,7 +24,9 @@ const CsvConverter = () => {
       '▲': 'none',
       '-': 'none',
       '×': 'none',
-      '': 'none'
+      '': 'none',
+      '★': 'none',
+      '☆': 'none'
     },
     outputLabels: {
       direct: 'direct',

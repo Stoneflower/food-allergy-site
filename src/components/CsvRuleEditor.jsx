@@ -163,26 +163,41 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
     setDetectedSymbols(symbols);
     setDetectedAllergens(allergens);
     
-    // CSVヘッダーから検出されたアレルギー項目の順序を自動設定
+    // CSVヘッダー順で初期化し、29番目は未指定の場合のみ『使用しない(unused)』をデフォルト挿入。
+    // その後、未出現の項目を末尾に追加する。
     if (allergens.length > 0) {
       const detectedOrder = allergens
         .sort((a, b) => a.columnIndex - b.columnIndex) // 列順でソート
         .map(a => a.slug);
-      
-      // デフォルト順序をベースに、検出された項目を配置
-      const finalOrder = [...defaultAllergenOrder];
-      
-      // 検出された項目をデフォルト順序の位置に配置
-      detectedOrder.forEach((slug, index) => {
-        if (index < 28) { // 28番目まで
-          finalOrder[index] = slug;
+
+      const uniqueDetected = Array.from(new Set(detectedOrder));
+      const standardSlugs = standardAllergens.map(a => a.slug);
+
+      let finalOrder = [...uniqueDetected];
+      const used = new Set(finalOrder);
+
+      // 29番目（index 28）に未指定の場合のみunusedをデフォルト挿入
+      if (!used.has('unused')) {
+        if (finalOrder.length >= 28) {
+          finalOrder.splice(28, 0, 'unused');
+        } else {
+          // 28未満なら足りない分はCSV順を保ったまま、末尾にunusedを追加
+          finalOrder.push('unused');
+        }
+        used.add('unused');
+      }
+
+      // 標準定義で未出現のものを最後に補完（固定位置は設けない）
+      standardSlugs.forEach(slug => {
+        if (!used.has(slug)) {
+          finalOrder.push(slug);
+          used.add(slug);
         }
       });
-      
-      console.log('検出されたアレルギー順序:', detectedOrder);
-      console.log('最終的な順序（デフォルト順序ベース）:', finalOrder);
-      
-      // 検出された順序でallergenOrderを更新
+
+      console.log('検出されたアレルギー順序(CSV順):', uniqueDetected);
+      console.log('最終的な順序(CSV順+29=unusedデフォルト+補完):', finalOrder);
+
       setLocalRules(prev => ({
         ...prev,
         allergenOrder: finalOrder

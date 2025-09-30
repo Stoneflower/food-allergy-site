@@ -228,7 +228,7 @@ const CsvConversionPreview = ({ csvData, rules, uploadedImages = [], onConversio
         if (typeof cell === 'string' && normalizedRaw) {
           // 商品名に含まれる記号を除外してから記号を検出して変換（手動追加された記号も含む）
           const cleanCell = normalizedRaw.replace(/【|】|／|（|）|＊|・/g, '');
-          const symbolMatches = cleanCell.match(/[●○◎△▲\-▯◇◆□■※★☆🔹]/g);
+          const symbolMatches = cleanCell.match(/[●○◎△▲\-▯◇◆□■※★☆🔹]/gu);
           if (symbolMatches) {
             if (rowIndex < 5 && cellIndex < 5) {
               console.log(`    記号検出: "${symbolMatches}"`);

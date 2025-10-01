@@ -406,6 +406,7 @@ export const RestaurantProvider = ({ children }) => {
         console.log('🔍 eligibleProductIds生成 - selectedAllergies:', selectedAllergies);
         console.log('🔍 eligibleProductIds生成 - selectedFragranceForSearch:', selectedFragranceForSearch);
         console.log('🔍 eligibleProductIds生成 - selectedTraceForSearch:', selectedTraceForSearch);
+        console.log('🔍 eligibleProductIds生成 - transformedData length:', transformedData?.length);
         
         if (!hasAnyAllergies) {
           const ids = new Set((transformedData || []).map(p => p.product_id));

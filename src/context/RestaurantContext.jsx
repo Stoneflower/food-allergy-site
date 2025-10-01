@@ -558,11 +558,10 @@ export const RestaurantProvider = ({ children }) => {
           }
         }
 
-        // product 単位の安全性を集約（AND）:
-        // 既に false（危険）なら維持。未設定なら現在の menu_item の判定で初期化。
-        // 設定済みが true かつ今回が false の場合は false に落とす。
-        const prev = productIdToSafe.has(productId) ? productIdToSafe.get(productId) : true;
-        const next = prev && safeForThisItem;
+        // 店舗/商品カードは「1つでも安全なメニューがあれば表示」（OR集約）に変更
+        // 未設定なら現在の menu_item の判定で初期化。既に true なら維持。
+        const prev = productIdToSafe.has(productId) ? productIdToSafe.get(productId) : false;
+        const next = prev || safeForThisItem;
         productIdToSafe.set(productId, next);
       });
 

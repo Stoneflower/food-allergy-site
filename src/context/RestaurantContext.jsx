@@ -917,6 +917,44 @@ export const RestaurantProvider = ({ children }) => {
         return isEligible;
       });
       console.log('🔍 eligibleProductIdsフィルター後:', items.length, '件');
+
+      // 会社カード通過後: メニュー単位の危険判定で最終除外（direct/fragrance/trace のいずれか一致で除外）
+      const normalAllergies = selectedAllergies || [];
+      const fragranceAllergies = selectedFragranceForSearch || [];
+      const traceAllergies = selectedTraceForSearch || [];
+      const allUserAllergens = new Set([...normalAllergies, ...fragranceAllergies, ...traceAllergies]);
+
+      const isMenuSafe = (it) => {
+        // matrix優先
+        const rows = Array.isArray(it.product_allergies_matrix) ? it.product_allergies_matrix : [];
+        const matrix = (() => {
+          if (rows.length === 0) return null;
+          if (it.menu_item_id) {
+            const exact = rows.find(r => String(r.menu_item_id) === String(it.menu_item_id));
+            if (exact) return exact;
+          }
+          return rows[0];
+        })();
+        if (matrix) {
+          for (const slug of allUserAllergens) {
+            const key = slug === 'soy' ? 'soybean' : slug;
+            const raw = matrix[key];
+            const v = (raw == null ? 'none' : String(raw)).trim().toLowerCase();
+            if (v === 'direct' || v === 'fragrance' || v === 'trace') return false;
+          }
+          return true;
+        }
+        // レガシーデータ（念のため）
+        if (Array.isArray(it.product_allergies)) {
+          const rel = it.product_allergies.filter(a => allUserAllergens.has(a.allergy_item_id));
+          return !rel.some(a => a.presence_type === 'direct' || a.presence_type === 'fragrance' || a.presence_type === 'trace');
+        }
+        return true;
+      };
+
+      const before = items.length;
+      items = items.filter(isMenuSafe);
+      console.log(`🔍 メニュー単位の危険除外後: ${before} → ${items.length} 件`);
     }
     
     console.log('🔍 getFilteredItems開始 - allItemsData:', allItemsData.length);

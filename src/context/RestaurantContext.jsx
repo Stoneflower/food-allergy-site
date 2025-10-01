@@ -417,8 +417,15 @@ export const RestaurantProvider = ({ children }) => {
 
   // 選択アレルギー変更時に、マトリクスのみで eligibleProductIds をローカル再計算
   useEffect(() => {
+    console.log('🔥🔥🔥 useEffect実行開始（アレルギーフィルタリング）');
+    console.log('🔥 selectedAllergies:', selectedAllergies);
+    console.log('🔥 selectedFragranceForSearch:', selectedFragranceForSearch);
+    console.log('🔥 selectedTraceForSearch:', selectedTraceForSearch);
+    console.log('🔥 allItems.length:', allItems?.length || 0);
+    
     try {
       if (!allItems || allItems.length === 0) {
+        console.log('🔥 早期リターン: allItemsが空');
         setEligibleProductIds(new Set());
         return;
       }
@@ -428,7 +435,10 @@ export const RestaurantProvider = ({ children }) => {
                               (selectedFragranceForSearch && selectedFragranceForSearch.length > 0) ||
                               (selectedTraceForSearch && selectedTraceForSearch.length > 0);
       
+      console.log('🔥 hasAnyAllergies:', hasAnyAllergies);
+      
       if (!hasAnyAllergies) {
+        console.log('🔥 早期リターン: アレルギー設定が空 → 全件表示');
         const idsAll = new Set((allItems || []).map(p => p.product_id));
         setEligibleProductIds(idsAll);
         return;

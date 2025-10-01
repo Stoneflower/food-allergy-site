@@ -455,14 +455,15 @@ export const RestaurantProvider = ({ children }) => {
         traceAllergies: traceAllergies
       });
 
-      // product_id 単位で、「安全な menu_item が1つでもあるか」を判定
+      // product_id 単位で、「選択アレルゲンを含む menu_item が1つでもあればその商品は危険」とする
+      // 初期値は true（安全）とし、危険が見つかったら false に落とす
       const productIdToSafe = new Map();
 
       allItems.forEach(item => {
         const productId = item.product_id || (item.id ? String(item.id).split('_')[0] : null);
         if (!productId) return;
 
-        let safeForThisItem = true; // デフォルトは安全
+        let safeForThisItem = true; // デフォルトは安全（この menu_item 単位）
 
         const rows = Array.isArray(item.product_allergies_matrix) ? item.product_allergies_matrix : [];
         const matrix = (() => {
@@ -515,9 +516,12 @@ export const RestaurantProvider = ({ children }) => {
           }
         }
 
-        if (safeForThisItem) {
-          productIdToSafe.set(productId, true);
-        }
+        // product 単位の安全性を集約（AND）:
+        // 既に false（危険）なら維持。未設定なら現在の menu_item の判定で初期化。
+        // 設定済みが true かつ今回が false の場合は false に落とす。
+        const prev = productIdToSafe.has(productId) ? productIdToSafe.get(productId) : true;
+        const next = prev && safeForThisItem;
+        productIdToSafe.set(productId, next);
       });
 
       const ids = new Set();
@@ -825,8 +829,12 @@ export const RestaurantProvider = ({ children }) => {
   // フィルタリング機能
   const getFilteredItems = () => {
     let items = allItemsData;
-    // 会社カード表示条件: 選択アレルギーで direct以外（none/trace/香料）が1件でもある会社のみ
-    if (eligibleProductIds && eligibleProductIds.size > 0) {
+    // 会社カード表示条件: 選択アレルギーがある場合は eligibleProductIds を必ず適用
+    const hasAnySelectedAllergies = (selectedAllergies && selectedAllergies.length > 0) ||
+      (selectedFragranceForSearch && selectedFragranceForSearch.length > 0) ||
+      (selectedTraceForSearch && selectedTraceForSearch.length > 0);
+
+    if (hasAnySelectedAllergies) {
       console.log('🔍 eligibleProductIdsフィルタリング開始');
       console.log('🔍 フィルタリング前のアイテム数:', items.length);
       console.log('🔍 eligibleProductIds:', Array.from(eligibleProductIds));

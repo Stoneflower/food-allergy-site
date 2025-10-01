@@ -446,8 +446,9 @@ export const RestaurantProvider = ({ children }) => {
               const hasDangerous = rel.some(a => a.presence_type === 'direct' || a.presence_type === 'fragrance' || a.presence_type === 'trace');
               if (hasDangerous) safeForThisItem = false;
             }
-            const prev = productIdToSafe.has(productId) ? productIdToSafe.get(productId) : true;
-            const next = prev && safeForThisItem;
+            // 会社カードは「1つでも安全なメニューがあれば表示」(OR集約) に統一
+            const prev = productIdToSafe.has(productId) ? productIdToSafe.get(productId) : false;
+            const next = prev || safeForThisItem;
             productIdToSafe.set(productId, next);
           });
           const ids = new Set();

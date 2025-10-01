@@ -11,10 +11,11 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
   devLog('🔍 AllergySearchResults - selectedAllergies props:', selectedAllergies);
   devLog('🔍 AllergySearchResults - selectedAllergies length:', selectedAllergies?.length || 0);
 
-  const { getFilteredItems, isLoading } = useRestaurant();
-  const filteredItems = getFilteredItems();
-  devLog('🔍 AllergySearchResults - getFilteredItems():', filteredItems?.length || 0, '件');
-  devLog('🔍 AllergySearchResults - filteredItems:', filteredItems);
+  const { isLoading } = useRestaurant();
+  // propsのitemsを使用（SearchResults.jsxでフィルタリング済み）
+  const filteredItems = items || [];
+  devLog('🔍 AllergySearchResults - filteredItems:', filteredItems?.length || 0, '件');
+  devLog('🔍 AllergySearchResults - filteredItemsサンプル:', filteredItems?.[0]);
 
   // アレルギー適合性チェック（会社カード表示条件: direct以外のみ表示）
   const checkAllergyCompatibility = (item, selectedAllergies) => {

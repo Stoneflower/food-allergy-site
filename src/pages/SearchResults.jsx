@@ -144,9 +144,10 @@ const SearchResults = () => {
       
       console.log(`🔍 [${item.name}] category="${item.category}", isProductCategory=${isProductCategory}, has_related_product=${!!item.related_product}`);
       
-      if (isProductCategory && item.related_product) {
-        const productCategoryId = item.related_product.product_category_id;
-        console.log(`📦 商品 [${item.name}] のproduct_category_id: ${productCategoryId}`);
+      if (isProductCategory) {
+        // related_productがない場合は、item自体から取得
+        const productCategoryId = item.related_product?.product_category_id ?? item.product_category_id;
+        console.log(`📦 商品 [${item.name}] のproduct_category_id: ${productCategoryId} (from: ${item.related_product ? 'related_product' : 'item直接'})`);
         
         // product_category_idがnullまたはundefinedの場合は表示（CSVアップロード商品）
         if (productCategoryId === null || productCategoryId === undefined) {

@@ -923,13 +923,23 @@ export const RestaurantProvider = ({ children }) => {
             ? addresses.some(addr => selectedPrefectures.some(pref => isAreaMatch(addr, pref)))
             : addresses.some(addr => isAreaMatch(addr, selectedArea));
           const keep = hasAllFlag || hasAnySelected;
-          console.log('🔍 都道府県マッチ詳細（厳格）:', {
-            itemName: item.name,
-            addresses,
-            hasAllFlag,
-            hasAnySelected,
-            keep
-          });
+          
+          // 詳細デバッグログ
+          if (item.name === '菓道' || item.name === '日清シスコ') {
+            console.log(`🔍🔍🔍 [${item.name}] 都道府県フィルター詳細:`, {
+              itemName: item.name,
+              product_id: item.product_id,
+              has_all_address: item.has_all_address,
+              location_addresses: item.location_addresses,
+              store_locations_count: item.store_locations?.length,
+              addresses: addresses,
+              hasAllFlag: hasAllFlag,
+              hasAnySelected: hasAnySelected,
+              selectedArea: selectedArea,
+              keep: keep
+            });
+          }
+          
           // 都道府県指定時: addressが"すべて"なら常に表示。そうでなければ選択都道府県のいずれかに一致する場合のみ表示
           return keep;
         });

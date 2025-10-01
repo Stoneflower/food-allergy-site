@@ -423,16 +423,17 @@ export const RestaurantProvider = ({ children }) => {
               return rows[0];
             })();
             if (matrix) {
-              const allUserAllergens = new Set([
-                ...normalAllergies,
-                ...fragranceAllergies,
-                ...traceAllergies
-              ]);
-              allUserAllergens.forEach(slug => {
+              const normalSet = new Set(normalAllergies);
+              const fragSet = new Set(fragranceAllergies);
+              const traceSet = new Set(traceAllergies);
+              const checkedAllergens = new Set([...normalSet, ...fragSet, ...traceSet]);
+              checkedAllergens.forEach(slug => {
                 const key = slug === 'soy' ? 'soybean' : slug;
                 const raw = matrix[key];
                 const v = (raw == null ? 'none' : String(raw)).trim().toLowerCase();
-                if (v === 'direct' || v === 'fragrance' || v === 'trace') {
+                if ((normalSet.has(slug) && v === 'direct') ||
+                    (fragSet.has(slug) && v === 'fragrance') ||
+                    (traceSet.has(slug) && v === 'trace')) {
                   safeForThisItem = false;
                 }
               });
@@ -442,8 +443,15 @@ export const RestaurantProvider = ({ children }) => {
                 ...fragranceAllergies,
                 ...traceAllergies
               ]);
+              const normalSet = new Set(normalAllergies);
+              const fragSet = new Set(fragranceAllergies);
+              const traceSet = new Set(traceAllergies);
               const rel = item.product_allergies.filter(a => allUserAllergens.has(a.allergy_item_id));
-              const hasDangerous = rel.some(a => a.presence_type === 'direct' || a.presence_type === 'fragrance' || a.presence_type === 'trace');
+              const hasDangerous = rel.some(a =>
+                (normalSet.has(a.allergy_item_id) && a.presence_type === 'direct') ||
+                (fragSet.has(a.allergy_item_id) && a.presence_type === 'fragrance') ||
+                (traceSet.has(a.allergy_item_id) && a.presence_type === 'trace')
+              );
               if (hasDangerous) safeForThisItem = false;
             }
             // 会社カードは「1つでも安全なメニューがあれば表示」(OR集約) に統一
@@ -952,18 +960,29 @@ export const RestaurantProvider = ({ children }) => {
           return rows[0];
         })();
         if (matrix) {
+          const normalSet = new Set(normalAllergies);
+          const fragSet = new Set(fragranceAllergies);
+          const traceSet = new Set(traceAllergies);
           for (const slug of allUserAllergens) {
             const key = slug === 'soy' ? 'soybean' : slug;
             const raw = matrix[key];
             const v = (raw == null ? 'none' : String(raw)).trim().toLowerCase();
-            if (v === 'direct' || v === 'fragrance' || v === 'trace') return false;
+            if ((normalSet.has(slug) && v === 'direct') ||
+                (fragSet.has(slug) && v === 'fragrance') ||
+                (traceSet.has(slug) && v === 'trace')) {
+              return false;
+            }
           }
           return true;
         }
         // レガシーデータ（念のため）
         if (Array.isArray(it.product_allergies)) {
           const rel = it.product_allergies.filter(a => allUserAllergens.has(a.allergy_item_id));
-          return !rel.some(a => a.presence_type === 'direct' || a.presence_type === 'fragrance' || a.presence_type === 'trace');
+          return !rel.some(a =>
+            (normalAllergies.includes(a.allergy_item_id) && a.presence_type === 'direct') ||
+            (fragranceAllergies.includes(a.allergy_item_id) && a.presence_type === 'fragrance') ||
+            (traceAllergies.includes(a.allergy_item_id) && a.presence_type === 'trace')
+          );
         }
         return true;
       };

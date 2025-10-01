@@ -142,29 +142,36 @@ const SearchResults = () => {
         item.category === 'テイクアウト' ||
         item.category === '商品';
       
+      console.log(`🔍 [${item.name}] category="${item.category}", isProductCategory=${isProductCategory}, has_related_product=${!!item.related_product}`);
+      
       if (isProductCategory && item.related_product) {
         const productCategoryId = item.related_product.product_category_id;
-        console.log(`商品 ${item.name} のproduct_category_id:`, productCategoryId);
+        console.log(`📦 商品 [${item.name}] のproduct_category_id: ${productCategoryId}`);
         
         // product_category_idがnullまたはundefinedの場合は表示（CSVアップロード商品）
         if (productCategoryId === null || productCategoryId === undefined) {
-          console.log(`商品 ${item.name} はカテゴリー未設定（CSV商品）のため表示`);
+          console.log(`✅ 商品 [${item.name}] はカテゴリー未設定（CSV商品）→ 表示`);
           return true;
         }
         
         // 選択されたカテゴリIDに含まれる場合のみ表示
-        console.log(`商品 ${item.name} のproduct_category_id: ${productCategoryId} (型: ${typeof productCategoryId})`);
-        console.log(`selectedProductCategories: [${selectedProductCategories.join(', ')}] (型: ${typeof selectedProductCategories[0]})`);
+        console.log(`🔍 選択中のカテゴリーID: [${selectedProductCategories.join(', ')}]`);
         
         // 型を統一して比較（文字列と数値の混在を防ぐ）
         const isIncluded = selectedProductCategories.some(selectedId => 
           Number(selectedId) === Number(productCategoryId)
         );
-        console.log(`商品 ${item.name} は選択されたカテゴリに含まれるか:`, isIncluded);
+        
+        if (isIncluded) {
+          console.log(`✅ 商品 [${item.name}] (ID:${productCategoryId}) は選択カテゴリーに一致 → 表示`);
+        } else {
+          console.log(`❌ 商品 [${item.name}] (ID:${productCategoryId}) は選択カテゴリーに不一致 → 非表示`);
+        }
         return isIncluded;
       }
+      
       // 商品以外（レストラン等）は常に表示
-      console.log(`商品以外 ${item.name} ${t('search.messages.alwaysDisplay')}`);
+      console.log(`✅ [${item.name}] は商品カテゴリー対象外 → 常に表示`);
       return true;
     });
     

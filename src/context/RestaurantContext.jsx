@@ -440,9 +440,9 @@ export const RestaurantProvider = ({ children }) => {
       const traceAllergies = selectedTraceForSearch || [];
 
       console.log('🔍 フィルタリング設定:', {
-        normalAllergies: normalAllergies.length,
-        fragranceAllergies: fragranceAllergies.length,
-        traceAllergies: traceAllergies.length
+        normalAllergies: normalAllergies,
+        fragranceAllergies: fragranceAllergies,
+        traceAllergies: traceAllergies
       });
 
       // product_id 単位で、「安全な menu_item が1つでもあるか」を判定
@@ -471,6 +471,7 @@ export const RestaurantProvider = ({ children }) => {
             const raw = matrix[key];
             const v = (raw == null ? 'none' : String(raw)).trim().toLowerCase();
             if (v === 'direct') {
+              console.log(`🔴 [${item.name || item.product_name}] 通常アレルギー "${slug}" が direct → 非表示`);
               safeForThisItem = false; // 危険
             }
           });
@@ -480,7 +481,9 @@ export const RestaurantProvider = ({ children }) => {
             const key = slug === 'soy' ? 'soybean' : slug;
             const raw = matrix[key];
             const v = (raw == null ? 'none' : String(raw)).trim().toLowerCase();
+            console.log(`🟡 [${item.name || item.product_name}] 香料アレルギー "${slug}": matrix[${key}] = "${v}"`);
             if (v === 'fragrance') {
+              console.log(`🔴 [${item.name || item.product_name}] 香料アレルギー "${slug}" が fragrance → 非表示`);
               safeForThisItem = false; // 危険
             }
           });
@@ -491,6 +494,7 @@ export const RestaurantProvider = ({ children }) => {
             const raw = matrix[key];
             const v = (raw == null ? 'none' : String(raw)).trim().toLowerCase();
             if (v === 'trace') {
+              console.log(`🔴 [${item.name || item.product_name}] コンタミアレルギー "${slug}" が trace → 非表示`);
               safeForThisItem = false; // 危険
             }
           });

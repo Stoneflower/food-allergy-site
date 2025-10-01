@@ -3,7 +3,14 @@ import {motion} from 'framer-motion';
 import {useRestaurant} from '../context/RestaurantContext';
 
 const AllergyFilter=()=> {
-  const {mandatoryAllergies,recommendedAllergies,selectedAllergies,setSelectedAllergies}=useRestaurant();
+  const {
+    mandatoryAllergies,
+    recommendedAllergies,
+    selectedAllergies,
+    selectedFragranceForSearch,
+    selectedTraceForSearch,
+    setSelectedAllergies
+  } = useRestaurant();
 
   const toggleAllergy=(allergyId)=> {
     setSelectedAllergies(prev=> 
@@ -64,36 +71,96 @@ const AllergyFilter=()=> {
       </div>
 
       {/* 選択状況表示 */}
-      {selectedAllergies.length > 0 && (
+      {(selectedAllergies.length > 0 || selectedFragranceForSearch?.length > 0 || selectedTraceForSearch?.length > 0) && (
         <motion.div
           initial={{opacity: 0,y: 10}}
           animate={{opacity: 1,y: 0}}
         >
-          <div className="bg-red-50 border border-red-200 rounded p-1.5">
-            <div className="flex items-center justify-between mb-1">
-              <p className="text-red-800 text-xs">
-                <strong>{selectedAllergies.length}個選択中</strong>
-              </p>
-              <button
-                onClick={clearAll}
-                className="text-red-600 hover:text-red-800 text-xs underline"
-              >
-                クリア
-              </button>
+          {/* 通常アレルギー */}
+          {selectedAllergies.length > 0 && (
+            <div className="bg-red-50 border border-red-200 rounded p-1.5 mb-2">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-red-800 text-xs">
+                  <strong>通常アレルギー {selectedAllergies.length}個</strong>
+                </p>
+                <button
+                  onClick={clearAll}
+                  className="text-red-600 hover:text-red-800 text-xs underline"
+                >
+                  クリア
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-0.5">
+                {selectedAllergies.map(allergyId=> {
+                  const allergy=[...mandatoryAllergies,...recommendedAllergies].find(a=> a.id===allergyId);
+                  return (
+                    <span
+                      key={allergyId}
+                      className="bg-red-200 text-red-800 px-1.5 py-0.5 rounded text-xs"
+                    >
+                      {allergy?.icon} {allergy?.name}
+                    </span>
+                  );
+                })}
+              </div>
             </div>
-            <div className="flex flex-wrap gap-0.5">
-              {selectedAllergies.map(allergyId=> {
-                const allergy=[...mandatoryAllergies,...recommendedAllergies].find(a=> a.id===allergyId);
-                return (
-                  <span
-                    key={allergyId}
-                    className="bg-red-200 text-red-800 px-1.5 py-0.5 rounded text-xs"
-                  >
-                    {allergy?.icon} {allergy?.name}
-                  </span>
-                );
-              })}
+          )}
+
+          {/* 香料アレルギー（読み取り専用） */}
+          {selectedFragranceForSearch?.length > 0 && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded p-1.5 mb-2">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-yellow-800 text-xs">
+                  <strong>香料アレルギー {selectedFragranceForSearch.length}個</strong>
+                </p>
+                <span className="text-yellow-600 text-xs">MyPageで設定</span>
+              </div>
+              <div className="flex flex-wrap gap-0.5">
+                {selectedFragranceForSearch.map(allergyId=> {
+                  const allergy=[...mandatoryAllergies,...recommendedAllergies].find(a=> a.id===allergyId);
+                  return (
+                    <span
+                      key={`frag-${allergyId}`}
+                      className="bg-yellow-200 text-yellow-800 px-1.5 py-0.5 rounded text-xs"
+                    >
+                      {allergy?.icon} 香料 {allergy?.name}
+                    </span>
+                  );
+                })}
+              </div>
             </div>
+          )}
+
+          {/* コンタミアレルギー（読み取り専用） */}
+          {selectedTraceForSearch?.length > 0 && (
+            <div className="bg-orange-50 border border-orange-200 rounded p-1.5 mb-2">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-orange-800 text-xs">
+                  <strong>コンタミアレルギー {selectedTraceForSearch.length}個</strong>
+                </p>
+                <span className="text-orange-600 text-xs">MyPageで設定</span>
+              </div>
+              <div className="flex flex-wrap gap-0.5">
+                {selectedTraceForSearch.map(allergyId=> {
+                  const allergy=[...mandatoryAllergies,...recommendedAllergies].find(a=> a.id===allergyId);
+                  return (
+                    <span
+                      key={`trace-${allergyId}`}
+                      className="bg-orange-200 text-orange-800 px-1.5 py-0.5 rounded text-xs"
+                    >
+                      {allergy?.icon} コンタミ {allergy?.name}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* MyPageへのリンク */}
+          <div className="text-center mt-2">
+            <a href="/#/mypage" className="text-xs text-blue-600 hover:text-blue-800 underline">
+              MyPageでアレルギー設定を変更
+            </a>
           </div>
         </motion.div>
       )}

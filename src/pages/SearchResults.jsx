@@ -499,6 +499,16 @@ const SearchResults = () => {
               })() && (
                 <div className="bg-white rounded-xl shadow-md p-6">
                   <h3 className="text-lg font-semibold mb-4">商品カテゴリー</h3>
+                  
+                  {/* デバッグ情報を画面に表示 */}
+                  <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded text-xs">
+                    <div className="font-semibold mb-1">🔍 デバッグ情報:</div>
+                    <div>選択中: [{selectedProductCategories.join(', ')}]</div>
+                    <div>全商品数: {searchFilteredItems.length}件</div>
+                    <div>フィルター後: {categoryFilteredItems.length}件</div>
+                    <div>最終表示: {sortedItems.length}件</div>
+                  </div>
+
                   <div className="grid grid-cols-3 gap-3">
                     {productCategories.map(category => (
                       <button

@@ -465,44 +465,42 @@ export const RestaurantProvider = ({ children }) => {
         })();
 
         if (matrix) {
-          // 通常アレルギーチェック（directを危険判定）
-          normalAllergies.forEach(slug => {
-            const key = slug === 'soy' ? 'soybean' : slug;
-            const raw = matrix[key];
-            const v = (raw == null ? 'none' : String(raw)).trim().toLowerCase();
-            if (v === 'direct') {
-              console.log(`🔴 [${item.name || item.product_name}] 通常アレルギー "${slug}" が direct → 非表示`);
-              safeForThisItem = false; // 危険
-            }
-          });
+          // ユーザーが選択した全アレルゲンを統合（重複排除）
+          // どの区分（通常/香料/コンタミ）で選んでも、該当アレルゲンがdirect/fragrance/traceのいずれかで含まれていたら非表示
+          const allUserAllergens = new Set([
+            ...normalAllergies,
+            ...fragranceAllergies,
+            ...traceAllergies
+          ]);
 
-          // 香料アレルギーチェック（fragranceを危険判定）
-          fragranceAllergies.forEach(slug => {
-            const key = slug === 'soy' ? 'soybean' : slug;
-            const raw = matrix[key];
-            const v = (raw == null ? 'none' : String(raw)).trim().toLowerCase();
-            console.log(`🟡 [${item.name || item.product_name}] 香料アレルギー "${slug}": matrix[${key}] = "${v}"`);
-            if (v === 'fragrance') {
-              console.log(`🔴 [${item.name || item.product_name}] 香料アレルギー "${slug}" が fragrance → 非表示`);
-              safeForThisItem = false; // 危険
-            }
-          });
+          console.log(`🔍 [${item.name || item.product_name}] ユーザー選択アレルゲン統合:`, Array.from(allUserAllergens));
 
-          // コンタミアレルギーチェック（traceを危険判定）
-          traceAllergies.forEach(slug => {
+          // 各アレルゲンについて、direct/fragrance/traceのいずれかが含まれていたら非表示
+          allUserAllergens.forEach(slug => {
             const key = slug === 'soy' ? 'soybean' : slug;
             const raw = matrix[key];
             const v = (raw == null ? 'none' : String(raw)).trim().toLowerCase();
-            if (v === 'trace') {
-              console.log(`🔴 [${item.name || item.product_name}] コンタミアレルギー "${slug}" が trace → 非表示`);
-              safeForThisItem = false; // 危険
+            
+            if (v === 'direct' || v === 'fragrance' || v === 'trace') {
+              console.log(`❌ [${item.name || item.product_name}] アレルゲン "${slug}" が ${v} → 非表示`);
+              safeForThisItem = false; // どれか含まれていたら危険
             }
           });
         } else if (Array.isArray(item.product_allergies)) {
-          // レガシー product_allergies 対応（通常アレルギーのみ）
-          const rel = item.product_allergies.filter(a => normalAllergies.includes(a.allergy_item_id));
-          const hasDirect = rel.some(a => a.presence_type === 'direct');
-          if (hasDirect) {
+          // レガシー product_allergies 対応
+          const allUserAllergens = new Set([
+            ...normalAllergies,
+            ...fragranceAllergies,
+            ...traceAllergies
+          ]);
+          
+          const rel = item.product_allergies.filter(a => allUserAllergens.has(a.allergy_item_id));
+          const hasDangerous = rel.some(a => 
+            a.presence_type === 'direct' || 
+            a.presence_type === 'fragrance' || 
+            a.presence_type === 'trace'
+          );
+          if (hasDangerous) {
             safeForThisItem = false;
           }
         }

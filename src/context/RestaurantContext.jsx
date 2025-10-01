@@ -268,8 +268,6 @@ export const RestaurantProvider = ({ children }) => {
           source_url,
           source_url2,
           image_url,
-          product_fragrance_allergies,
-          product_trace_allergies,
           product_allergies_matrix (${matrixSelect}),
           menu_items (id, name, product_id),
           store_locations (id, branch_name, address, source_url, store_list_url)

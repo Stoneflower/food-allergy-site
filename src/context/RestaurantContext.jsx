@@ -268,6 +268,8 @@ export const RestaurantProvider = ({ children }) => {
           source_url,
           source_url2,
           image_url,
+          product_fragrance_allergies,
+          product_trace_allergies,
           product_allergies_matrix (${matrixSelect}),
           menu_items (id, name, product_id),
           store_locations (id, branch_name, address, source_url, store_list_url)
@@ -557,6 +559,21 @@ export const RestaurantProvider = ({ children }) => {
             safeForThisItem = false;
           }
         }
+        // CSV追加: 香料・コンタミ配列もチェック（どれか一致で危険）
+        if (safeForThisItem) {
+          const fragList = Array.isArray(item.product_fragrance_allergies) ? item.product_fragrance_allergies : [];
+          const traceList = Array.isArray(item.product_trace_allergies) ? item.product_trace_allergies : [];
+          const allUserAllergens = new Set([
+            ...normalAllergies,
+            ...fragranceAllergies,
+            ...traceAllergies
+          ]);
+          const hasFragHit = fragList.some(slug => allUserAllergens.has(slug));
+          const hasTraceHit = traceList.some(slug => allUserAllergens.has(slug));
+          if (hasFragHit || hasTraceHit) {
+            safeForThisItem = false;
+          }
+        }
 
         // 店舗/商品カードは「1つでも安全なメニューがあれば表示」（OR集約）に変更
         // 未設定なら現在の menu_item の判定で初期化。既に true なら維持。
@@ -622,6 +639,9 @@ export const RestaurantProvider = ({ children }) => {
               });
               return result;
             })();
+            // CSV向け: 香料・コンタミ配列（あれば保持）
+            const fragranceList = Array.isArray(item.product_fragrance_allergies) ? item.product_fragrance_allergies : [];
+            const traceList = Array.isArray(item.product_trace_allergies) ? item.product_trace_allergies : [];
               const transformedItem = {
               id: `${item.id}_${menuItem.id}`, // 一意ID（product_id + menu_item_id）
               product_id: item.id, // 元のproduct_idを保持
@@ -644,6 +664,8 @@ export const RestaurantProvider = ({ children }) => {
               allergyInfo: createDefaultAllergyInfo(),
               allergyFree: [],
               presenceBySlug,
+              product_fragrance_allergies: fragranceList,
+              product_trace_allergies: traceList,
               product_allergies: (() => {
                 console.log(`🔍 transformAndMergeData - ${menuItem.name} の product_allergies 処理開始:`, item.product_allergies);
                 const result = processAllergies(item.product_allergies) || [];
@@ -693,6 +715,9 @@ export const RestaurantProvider = ({ children }) => {
             });
             return result;
           })();
+          // CSV向け: 香料・コンタミ配列（あれば保持）
+          const fragranceList = Array.isArray(item.product_fragrance_allergies) ? item.product_fragrance_allergies : [];
+          const traceList = Array.isArray(item.product_trace_allergies) ? item.product_trace_allergies : [];
             
             const transformedItem = {
             id: item.id,
@@ -714,6 +739,8 @@ export const RestaurantProvider = ({ children }) => {
             allergyInfo: createDefaultAllergyInfo(),
             allergyFree: [],
             presenceBySlug,
+            product_fragrance_allergies: fragranceList,
+            product_trace_allergies: traceList,
             product_allergies: (() => {
               console.log(`🔍 transformAndMergeData - ${displayName} の product_allergies 処理開始:`, item.product_allergies);
               const result = processAllergies(item.product_allergies) || [];

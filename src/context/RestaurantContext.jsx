@@ -438,9 +438,7 @@ export const RestaurantProvider = ({ children }) => {
       console.log('🔥 hasAnyAllergies:', hasAnyAllergies);
       
       if (!hasAnyAllergies) {
-        console.log('🔥 早期リターン: アレルギー設定が空 → 全件表示');
-        const idsAll = new Set((allItems || []).map(p => p.product_id));
-        setEligibleProductIds(idsAll);
+        console.log('🔥 早期リターン: アレルギー設定が空 → 既存のeligibleProductIdsを維持して終了');
         return;
       }
 

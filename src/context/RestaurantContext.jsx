@@ -401,13 +401,21 @@ export const RestaurantProvider = ({ children }) => {
         const hasAnyAllergies = (selectedAllergies && selectedAllergies.length > 0) ||
           (selectedFragranceForSearch && selectedFragranceForSearch.length > 0) ||
           (selectedTraceForSearch && selectedTraceForSearch.length > 0);
+        
+        console.log('🔍 eligibleProductIds生成 - hasAnyAllergies:', hasAnyAllergies);
+        console.log('🔍 eligibleProductIds生成 - selectedAllergies:', selectedAllergies);
+        console.log('🔍 eligibleProductIds生成 - selectedFragranceForSearch:', selectedFragranceForSearch);
+        console.log('🔍 eligibleProductIds生成 - selectedTraceForSearch:', selectedTraceForSearch);
+        
         if (!hasAnyAllergies) {
           const ids = new Set((transformedData || []).map(p => p.product_id));
+          console.log('🔍 eligibleProductIds生成 - アレルギーなし、全productId追加:', Array.from(ids));
           setEligibleProductIds(ids);
         } else {
           const normalAllergies = selectedAllergies || [];
           const fragranceAllergies = selectedFragranceForSearch || [];
           const traceAllergies = selectedTraceForSearch || [];
+          console.log('🔍 eligibleProductIds生成 - アレルギーあり、安全判定開始');
           const productIdToSafe = new Map();
           (transformedData || []).forEach(item => {
             const productId = item.product_id || (item.id ? String(item.id).split('_')[0] : null);
@@ -422,6 +430,18 @@ export const RestaurantProvider = ({ children }) => {
               }
               return rows[0];
             })();
+            
+            // productId 207のデバッグログ
+            if (String(productId) === '207') {
+              console.log('🔍 productId 207処理:', {
+                productId,
+                itemName: item.name,
+                menuItemId: item.menu_item_id,
+                rowsLength: rows.length,
+                matrix: matrix,
+                safeForThisItem
+              });
+            }
             if (matrix) {
               const normalSet = new Set(normalAllergies);
               const fragSet = new Set(fragranceAllergies);
@@ -430,11 +450,35 @@ export const RestaurantProvider = ({ children }) => {
               checkedAllergens.forEach(slug => {
                 const key = slug === 'soy' ? 'soybean' : slug;
                 const raw = matrix[key];
+                // null値の場合は'none'として扱う（安全側に倒す）
                 const v = (raw == null ? 'none' : String(raw)).trim().toLowerCase();
-                if ((normalSet.has(slug) && v === 'direct') ||
-                    (fragSet.has(slug) && v === 'fragrance') ||
-                    (traceSet.has(slug) && v === 'trace')) {
+                const isNormalDanger = normalSet.has(slug) && v === 'direct';
+                const isFragDanger = fragSet.has(slug) && v === 'fragrance';
+                const isTraceDanger = traceSet.has(slug) && v === 'trace';
+                
+                if (String(productId) === '207') {
+                  console.log(`🔍 productId 207 アレルギー判定 - ${slug}:`, {
+                    key,
+                    raw,
+                    v,
+                    isNormalDanger,
+                    isFragDanger,
+                    isTraceDanger,
+                    normalSet: Array.from(normalSet),
+                    fragSet: Array.from(fragSet),
+                    traceSet: Array.from(traceSet)
+                  });
+                }
+                
+                if (isNormalDanger || isFragDanger || isTraceDanger) {
                   safeForThisItem = false;
+                  if (String(productId) === '207') {
+                    console.log(`🔍 productId 207 危険判定 - ${slug}で除外:`, {
+                      slug,
+                      v,
+                      safeForThisItem
+                    });
+                  }
                 }
               });
             } else if (Array.isArray(item.product_allergies)) {
@@ -458,9 +502,31 @@ export const RestaurantProvider = ({ children }) => {
             const prev = productIdToSafe.has(productId) ? productIdToSafe.get(productId) : false;
             const next = prev || safeForThisItem;
             productIdToSafe.set(productId, next);
+            
+            // productId 207の最終結果ログ
+            if (String(productId) === '207') {
+              console.log('🔍 productId 207 最終結果:', {
+                productId,
+                itemName: item.name,
+                safeForThisItem,
+                prev,
+                next,
+                finalSafe: next
+              });
+            }
           });
           const ids = new Set();
-          productIdToSafe.forEach((isSafe, productId) => { if (isSafe) ids.add(productId); });
+          productIdToSafe.forEach((isSafe, productId) => { 
+            if (isSafe) ids.add(productId);
+            if (String(productId) === '207') {
+              console.log('🔍 productId 207 eligibleProductIds判定:', {
+                productId,
+                isSafe,
+                included: isSafe
+              });
+            }
+          });
+          console.log('🔍 eligibleProductIds生成完了:', Array.from(ids));
           setEligibleProductIds(ids);
         }
       } catch (e) {

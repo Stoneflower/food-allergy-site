@@ -376,10 +376,10 @@ export const RestaurantProvider = ({ children }) => {
         });
       }
       
-      devLog('🔍 setAllItems呼び出し前 - transformedData長さ:', transformedData.length);
+      console.log('✅✅✅ setAllItems呼び出し前 - transformedData長さ:', transformedData.length);
       if (isDev) devLog('🔍 setAllItems呼び出し前 - transformedDataサンプル:', transformedData[0]);
       setAllItems(transformedData);
-      console.log('🔍 setAllItems呼び出し完了');
+      console.log('✅✅✅ setAllItems呼び出し完了 - allItems更新されました!');
 
       // 選択アレルギーに基づく会社カード表示対象IDの取得
       try {
@@ -703,12 +703,12 @@ export const RestaurantProvider = ({ children }) => {
           }
         });
       
-      console.log('データ変換完了:', transformedData.length, '件');
+      console.log('✅✅✅ データ変換完了:', transformedData.length, '件');
       return transformedData;
       
     } catch (err) {
-      console.error('データ変換エラー:', err);
-      console.error('エラー詳細:', err.stack);
+      console.error('❌❌❌ データ変換エラー:', err);
+      console.error('❌ エラー詳細:', err.stack);
       return [];
     }
   };

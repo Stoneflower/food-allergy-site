@@ -263,6 +263,7 @@ export const RestaurantProvider = ({ children }) => {
           name,
           brand,
           category,
+          product_category_id,
           description,
           source_url,
           source_url2,
@@ -421,21 +422,37 @@ export const RestaurantProvider = ({ children }) => {
         setEligibleProductIds(new Set());
         return;
       }
-      if (!selectedAllergies || selectedAllergies.length === 0) {
+      
+      // すべてのアレルギー設定が空の場合は全件表示
+      const hasAnyAllergies = (selectedAllergies && selectedAllergies.length > 0) ||
+                              (selectedFragranceForSearch && selectedFragranceForSearch.length > 0) ||
+                              (selectedTraceForSearch && selectedTraceForSearch.length > 0);
+      
+      if (!hasAnyAllergies) {
         const idsAll = new Set((allItems || []).map(p => p.product_id));
         setEligibleProductIds(idsAll);
         return;
       }
 
+      // 通常アレルギー、香料アレルギー、コンタミアレルギーを取得
+      const normalAllergies = selectedAllergies || [];
+      const fragranceAllergies = selectedFragranceForSearch || [];
+      const traceAllergies = selectedTraceForSearch || [];
+
+      console.log('🔍 フィルタリング設定:', {
+        normalAllergies: normalAllergies.length,
+        fragranceAllergies: fragranceAllergies.length,
+        traceAllergies: traceAllergies.length
+      });
+
       // product_id 単位で、「安全な menu_item が1つでもあるか」を判定
-      // 安全条件: 選択アレルギーの中で direct が一つも無く、かつ none/trace/fragrance のいずれかが少なくとも一つ含まれる
       const productIdToSafe = new Map();
 
       allItems.forEach(item => {
         const productId = item.product_id || (item.id ? String(item.id).split('_')[0] : null);
         if (!productId) return;
 
-        let safeForThisItem = false;
+        let safeForThisItem = true; // デフォルトは安全
 
         const rows = Array.isArray(item.product_allergies_matrix) ? item.product_allergies_matrix : [];
         const matrix = (() => {
@@ -448,24 +465,42 @@ export const RestaurantProvider = ({ children }) => {
         })();
 
         if (matrix) {
-          let itemHasDirect = false;
-          let itemHasNonDirect = false;
-          selectedAllergies.forEach(slug => {
+          // 通常アレルギーチェック（directを危険判定）
+          normalAllergies.forEach(slug => {
             const key = slug === 'soy' ? 'soybean' : slug;
             const raw = matrix[key];
             const v = (raw == null ? 'none' : String(raw)).trim().toLowerCase();
-            if (v === 'direct') itemHasDirect = true;
-            if (v === 'none' || v === 'trace' || v === 'fragrance') itemHasNonDirect = true;
+            if (v === 'direct') {
+              safeForThisItem = false; // 危険
+            }
           });
-          safeForThisItem = !itemHasDirect && itemHasNonDirect;
+
+          // 香料アレルギーチェック（fragranceを危険判定）
+          fragranceAllergies.forEach(slug => {
+            const key = slug === 'soy' ? 'soybean' : slug;
+            const raw = matrix[key];
+            const v = (raw == null ? 'none' : String(raw)).trim().toLowerCase();
+            if (v === 'fragrance') {
+              safeForThisItem = false; // 危険
+            }
+          });
+
+          // コンタミアレルギーチェック（traceを危険判定）
+          traceAllergies.forEach(slug => {
+            const key = slug === 'soy' ? 'soybean' : slug;
+            const raw = matrix[key];
+            const v = (raw == null ? 'none' : String(raw)).trim().toLowerCase();
+            if (v === 'trace') {
+              safeForThisItem = false; // 危険
+            }
+          });
         } else if (Array.isArray(item.product_allergies)) {
-          const rel = item.product_allergies.filter(a => selectedAllergies.includes(a.allergy_item_id));
+          // レガシー product_allergies 対応（通常アレルギーのみ）
+          const rel = item.product_allergies.filter(a => normalAllergies.includes(a.allergy_item_id));
           const hasDirect = rel.some(a => a.presence_type === 'direct');
-          const hasNonDirect = rel.some(a => a.presence_type === 'none' || a.presence_type === 'trace' || a.presence_type === 'fragrance');
-          safeForThisItem = !hasDirect && hasNonDirect;
-                } else {
-          // どちらも無い場合は未記入=noneとして安全扱い
-          safeForThisItem = true;
+          if (hasDirect) {
+            safeForThisItem = false;
+          }
         }
 
         if (safeForThisItem) {
@@ -478,12 +513,12 @@ export const RestaurantProvider = ({ children }) => {
         if (isSafe) ids.add(productId);
       });
       setEligibleProductIds(ids);
-      console.log('✅ eligibleProductIds(集約, matrix基準) 再計算:', Array.from(ids));
+      console.log('✅ eligibleProductIds(集約, matrix基準, 香料・コンタミ対応) 再計算:', Array.from(ids));
     } catch (e) {
       console.warn('会社カード表示対象ID(ローカル, matrix)計算エラー:', e);
       setEligibleProductIds(new Set());
     }
-  }, [selectedAllergies, allItems]);
+  }, [selectedAllergies, selectedFragranceForSearch, selectedTraceForSearch, allItems]);
 
   // データ変換処理
   const transformAndMergeData = (searchData) => {

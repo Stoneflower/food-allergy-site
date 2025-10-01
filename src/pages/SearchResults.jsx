@@ -131,7 +131,18 @@ const SearchResults = () => {
     
     const filtered = searchFilteredItems.filter(item => {
       // 商品データの場合のみカテゴリフィルターを適用
-      if ((item.category === 'products' || item.category === 'supermarkets' || item.category === 'online') && item.related_product) {
+      // 日本語カテゴリー（スーパー、ネットショップ、テイクアウト等）と英語カテゴリー両方に対応
+      const isProductCategory = 
+        item.category === 'products' || 
+        item.category === 'supermarkets' || 
+        item.category === 'online' ||
+        item.category === 'スーパー' ||
+        item.category === 'ネットショップ' ||
+        item.category === 'スーパー/ネットショップ' ||
+        item.category === 'テイクアウト' ||
+        item.category === '商品';
+      
+      if (isProductCategory && item.related_product) {
         const productCategoryId = item.related_product.product_category_id;
         console.log(`商品 ${item.name} のproduct_category_id:`, productCategoryId);
         

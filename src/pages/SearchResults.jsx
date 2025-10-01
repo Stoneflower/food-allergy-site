@@ -146,9 +146,9 @@ const SearchResults = () => {
         const productCategoryId = item.related_product.product_category_id;
         console.log(`商品 ${item.name} のproduct_category_id:`, productCategoryId);
         
-        // product_category_idがnullまたはundefinedの場合は表示（CSVアップロードで未設定の場合）
+        // product_category_idがnullまたはundefinedの場合は表示（CSVアップロード商品）
         if (productCategoryId === null || productCategoryId === undefined) {
-          console.log(`商品 ${item.name} ${t('search.messages.categoryNotSet')}`);
+          console.log(`商品 ${item.name} はカテゴリー未設定（CSV商品）のため表示`);
           return true;
         }
         

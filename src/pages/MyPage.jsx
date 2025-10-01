@@ -75,7 +75,7 @@ const MyPage = () => {
           .maybeSingle();
         if (aset?.selected_allergies) {
           const all = Array.isArray(aset.selected_allergies) ? aset.selected_allergies : [];
-          const normal = all.filter(a => typeof a === 'string' && !a.startsWith('included:') && !a.startsWith('fragrance:'));
+          const normal = all.filter(a => typeof a === 'string' && !a.startsWith('included:') && !a.startsWith('fragrance:') && !a.startsWith('trace:'));
           const frag = all
             .filter(a => typeof a === 'string' && (a.startsWith('included:') || a.startsWith('fragrance:')))
             .map(a => a.replace('included:', '').replace('fragrance:', ''));
@@ -121,8 +121,9 @@ const MyPage = () => {
     setSaving(true);
     setError('');
     try {
+      const normalClean = (selectedAllergies || []).filter(a => typeof a === 'string' && !a.includes(':'));
       const payloadSelected = [
-        ...selectedAllergies,
+        ...normalClean,
         ...selectedFragranceAllergies.map(a => `included:${a}`),
         ...selectedTraceAllergies.map(a => `trace:${a}`)
       ];
@@ -171,7 +172,7 @@ const MyPage = () => {
         .maybeSingle();
       if (aset?.selected_allergies) {
         const all = Array.isArray(aset.selected_allergies) ? aset.selected_allergies : [];
-        const normal = all.filter(a => typeof a === 'string' && !a.startsWith('included:') && !a.startsWith('fragrance:'));
+        const normal = all.filter(a => typeof a === 'string' && !a.startsWith('included:') && !a.startsWith('fragrance:') && !a.startsWith('trace:'));
         const frag = all
           .filter(a => typeof a === 'string' && (a.startsWith('included:') || a.startsWith('fragrance:')))
           .map(a => a.replace('included:', '').replace('fragrance:', ''));

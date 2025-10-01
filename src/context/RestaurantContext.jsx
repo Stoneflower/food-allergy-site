@@ -272,7 +272,8 @@ export const RestaurantProvider = ({ children }) => {
           menu_items (id, name, product_id),
           store_locations (id, branch_name, address, source_url, store_list_url)
         `)
-        .limit(200);
+        .order('id', { ascending: true })
+        .limit(2000);
 
       // キーワードのみ軽くサーバ絞り込み（カテゴリ/エリアはクライアント側で緩和ロジック適用）
       if (searchKeyword && searchKeyword.trim() !== '') {
@@ -289,6 +290,10 @@ export const RestaurantProvider = ({ children }) => {
       }
 
       console.log('✅ 商品データ取得成功:', productsData?.length || 0, '件');
+      if (Array.isArray(productsData)) {
+        const has207 = productsData.some(p => String(p.id) === '207');
+        console.log('🔎 取得結果に id=207 が含まれるか:', has207);
+      }
       // 詳細ログは開発時のみ
       if (isDev && productsData && productsData.length > 0) {
         devLog('📦 最初の商品データ構造:', productsData[0]);
@@ -380,6 +385,14 @@ export const RestaurantProvider = ({ children }) => {
       if (isDev) devLog('🔍 setAllItems呼び出し前 - transformedDataサンプル:', transformedData[0]);
       setAllItems(transformedData);
       console.log('✅✅✅ setAllItems呼び出し完了 - allItems更新されました!');
+      try {
+        const idx = transformedData.findIndex(it => String(it.product_id) === '207');
+        if (idx >= 0) {
+          console.log('🔎 変換後データに id=207 が含まれる（インデックス）:', idx, '項目例:', transformedData[idx]);
+        } else {
+          console.log('🔎 変換後データに id=207 は含まれていません');
+        }
+      } catch (_) {}
 
       // 選択アレルギーに基づく会社カード表示対象IDのローカル即時計算（matrix基準: 通常/香料/コンタミを考慮）
       try {
@@ -909,9 +922,9 @@ export const RestaurantProvider = ({ children }) => {
         // item.idは "product_id_menu_item_id" 形式なので、product_id部分を抽出
         const productId = item.product_id || item.id.split('_')[0];
         const isEligible = eligibleProductIds.has(productId);
-        if (!isEligible && (item.name === 'びっくりドンキー' || item.name === 'スシロー')) {
+        if (!isEligible && (item.name === 'びっくりドンキー' || item.name === 'スシロー' || String(productId) === '207')) {
           console.log('❌ eligibleProductIdsで除外:', item.name, 'ID:', item.id, 'productId:', productId, 'eligibleProductIdsに含まれていない');
-        } else if (isEligible && (item.name === 'びっくりドンキー' || item.name === 'スシロー')) {
+        } else if (isEligible && (item.name === 'びっくりドンキー' || item.name === 'スシロー' || String(productId) === '207')) {
           console.log('✅ eligibleProductIdsで通過:', item.name, 'ID:', item.id, 'productId:', productId);
         }
         return isEligible;

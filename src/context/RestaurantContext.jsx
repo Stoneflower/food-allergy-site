@@ -392,7 +392,9 @@ export const RestaurantProvider = ({ children }) => {
         } else {
           console.log('🔎 変換後データに id=207 は含まれていません');
         }
-      } catch (_) {}
+      } catch (err) {
+        console.warn('id=207検査ログ処理中にエラー:', err);
+      }
 
       // 選択アレルギーに基づく会社カード表示対象IDのローカル即時計算（matrix基準: 通常/香料/コンタミを考慮）
       try {

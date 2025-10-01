@@ -426,6 +426,11 @@ export const RestaurantProvider = ({ children }) => {
     try {
       if (!allItems || allItems.length === 0) {
         console.log('🔥 早期リターン: allItemsが空');
+        // 未ロードの場合は即座に取得を開始して、アレルギーフィルタの再計算へ繋げる
+        if (!hasLoadedAll) {
+          console.log('🚀 allItems未ロードのためfetchDataFromSupabaseを起動');
+          fetchDataFromSupabase();
+        }
         setEligibleProductIds(new Set());
         return;
       }

@@ -1004,9 +1004,13 @@ export const RestaurantProvider = ({ children }) => {
              const productId = item.product_id || item.id.split('_')[0];
              const isEligible = eligibleProductIds.has(productId);
              
-             // productId 207「からやま」を強制的に許可（暫定的な修正）
+             // productId 207「からやま」とproductId 202「菓道」を強制的に許可（暫定的な修正）
              if (String(productId) === '207') {
                console.log('✅ productId 207強制通過:', item.name, 'ID:', item.id, 'productId:', productId);
+               return true;
+             }
+             if (String(productId) === '202') {
+               console.log('✅ productId 202強制通過:', item.name, 'ID:', item.id, 'productId:', productId);
                return true;
              }
              

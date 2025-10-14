@@ -647,10 +647,16 @@ const Upload = () => {
       }
 
       // 商品登録後にデータを再取得（検索結果に反映させる）
-      console.log('🔄 データ再取得開始');
+      console.log('🔄🔄🔄 商品登録完了 - データ再取得開始 🔄🔄🔄');
+      console.log('  - 登録した商品ID:', productId);
+      console.log('  - 登録した商品名:', productTitleToSave || editedInfo?.productName);
+      
       if (refetchData) {
+        console.log('  - refetchData関数を実行します...');
         await refetchData();
-        console.log('✅ データ再取得完了');
+        console.log('✅✅✅ データ再取得完了 ✅✅✅');
+      } else {
+        console.error('❌ refetchData関数が存在しません！');
       }
 
       setStep(3);

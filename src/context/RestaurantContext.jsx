@@ -233,9 +233,21 @@ export const RestaurantProvider = ({ children }) => {
   const refetchData = async () => {
     console.log('🔄🔄🔄 データ強制再取得開始 🔄🔄🔄');
     console.log('  - 現在のallItems件数:', allItems.length);
+    console.log('  - hasLoadedAll:', hasLoadedAll);
+    console.log('  - isFetchingRef.current:', isFetchingRef.current);
+    
+    // 新規登録商品IDを確認
+    if (window._lastRegisteredProductId) {
+      console.log('  - 直前に登録された商品ID:', window._lastRegisteredProductId);
+      console.log('  - 直前に登録された商品名:', window._lastRegisteredProductName);
+    }
+    
     setHasLoadedAll(false);
     isFetchingRef.current = false;
+    
+    console.log('  - fetchDataFromSupabase実行前');
     await fetchDataFromSupabase();
+    console.log('  - fetchDataFromSupabase実行後');
     console.log('🔄🔄🔄 データ強制再取得完了 🔄🔄🔄');
   };
 
@@ -288,7 +300,15 @@ export const RestaurantProvider = ({ children }) => {
       // キーワードのみ軽くサーバ絞り込み（カテゴリ/エリアはクライアント側で緩和ロジック適用）
       if (searchKeyword && searchKeyword.trim() !== '') {
         const kw = searchKeyword.trim();
+        console.log('🔍 検索キーワードでフィルタリング:', kw);
         query = query.or(`name.ilike.%${kw}%,brand.ilike.%${kw}%`);
+      } else {
+        console.log('🔍 検索キーワードなし - 全件取得');
+      }
+
+      // 新規登録商品IDがある場合、確実に取得できているか確認
+      if (window._lastRegisteredProductId) {
+        console.log('🔍 新規登録商品ID:', window._lastRegisteredProductId, 'を含む全商品を取得します');
       }
 
       const { data: productsData, error: productsError } = await query;
@@ -301,8 +321,6 @@ export const RestaurantProvider = ({ children }) => {
 
       console.log('✅ 商品データ取得成功:', productsData?.length || 0, '件');
       if (Array.isArray(productsData)) {
-        const has207 = productsData.some(p => String(p.id) === '207');
-        console.log('🔎 取得結果に id=207 が含まれるか:', has207);
         // 最新10件のIDをログ出力（新規登録商品を確認するため）
         const latestIds = productsData.slice(0, 10).map(p => ({ 
           id: p.id, 
@@ -312,9 +330,31 @@ export const RestaurantProvider = ({ children }) => {
           has_matrix: Array.isArray(p.product_allergies_matrix) && p.product_allergies_matrix.length > 0
         }));
         console.log('📋📋📋 取得した最新10件の商品（新規登録を確認）:', latestIds);
+        
         // 全商品IDのリストも出力（デバッグ用）
         const allIds = productsData.map(p => p.id).sort((a, b) => b - a);
         console.log('📋 全商品ID（降順）:', allIds.slice(0, 20), '...', `（全${allIds.length}件）`);
+        
+        // 新規登録商品が含まれているか確認
+        if (window._lastRegisteredProductId) {
+          const newProductId = window._lastRegisteredProductId;
+          const found = productsData.find(p => String(p.id) === String(newProductId));
+          if (found) {
+            console.log('✅✅✅ 新規登録商品が取得データに含まれています:', {
+              id: found.id,
+              name: found.name,
+              product_title: found.product_title,
+              category: found.category,
+              has_matrix: Array.isArray(found.product_allergies_matrix) && found.product_allergies_matrix.length > 0,
+              matrix_count: found.product_allergies_matrix?.length || 0,
+              store_locations_count: found.store_locations?.length || 0
+            });
+          } else {
+            console.error('❌❌❌ 新規登録商品（ID:', newProductId, '）が取得データに含まれていません！');
+            console.error('  → Supabaseから取得されていない可能性があります');
+            console.error('  → クエリ条件を確認してください');
+          }
+        }
       }
       // 詳細ログは開発時のみ
       if (isDev && productsData && productsData.length > 0) {

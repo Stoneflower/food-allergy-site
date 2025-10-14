@@ -124,22 +124,18 @@ const Header = () => {
   };
 
   const toggleAllergy = (allergyId) => {
-    // 連続クリック時の再計算負荷を抑えるため、Context反映をデバウンス
     try {
+      console.log('🔘 toggleAllergy called:', allergyId);
       setSelectedAllergies(prev => {
         const next = prev.includes(allergyId)
           ? prev.filter(id => id !== allergyId)
           : [...prev, allergyId];
-        if (allergyDebounceRef.current) clearTimeout(allergyDebounceRef.current);
-        allergyDebounceRef.current = setTimeout(() => {
-          // 直近の選択状態をContextに反映（同一参照でも問題なし）
-          setSelectedAllergies(next);
-        }, 350);
-        // UI即時反映のため、いったん即時に返す（次のレンダで反映）
+        console.log('🔘 selectedAllergies updated:', { prev, next, allergyId });
+        // デバウンスなしで即座に反映
         return next;
       });
     } catch (e) {
-      console.warn('toggleAllergy debounce error:', e);
+      console.warn('toggleAllergy error:', e);
     }
   };
 

@@ -512,6 +512,21 @@ export const RestaurantProvider = ({ children }) => {
               const fragSet = new Set(fragranceAllergies);
               const traceSet = new Set(traceAllergies);
               const checkedAllergens = new Set([...normalSet, ...fragSet, ...traceSet]);
+              
+              // デバッグ: 乳（milk）を含む商品の判定ログ
+              const hasMilk = checkedAllergens.has('milk');
+              const milkValue = hasMilk ? matrix['milk'] : null;
+              if (hasMilk && milkValue) {
+                console.log(`🥛 [${item.name}] 乳アレルギー判定開始:`, {
+                  productId,
+                  productName: item.product_name || item.name,
+                  milkValue,
+                  normalSet: Array.from(normalSet),
+                  fragSet: Array.from(fragSet),
+                  traceSet: Array.from(traceSet)
+                });
+              }
+              
               checkedAllergens.forEach(slug => {
                 const key = slug === 'soy' ? 'soybean' : slug;
                 const raw = matrix[key];
@@ -532,6 +547,19 @@ export const RestaurantProvider = ({ children }) => {
                     normalSet: Array.from(normalSet),
                     fragSet: Array.from(fragSet),
                     traceSet: Array.from(traceSet)
+                  });
+                }
+                
+                // デバッグ: 乳の判定結果
+                if (slug === 'milk' && v !== 'none') {
+                  console.log(`🥛 [${item.name}] 乳（${v}）の判定結果:`, {
+                    productId,
+                    productName: item.product_name || item.name,
+                    v,
+                    isNormalDanger,
+                    isFragDanger,
+                    isTraceDanger,
+                    willExclude: isNormalDanger || isFragDanger || isTraceDanger
                   });
                 }
                 
@@ -567,6 +595,19 @@ export const RestaurantProvider = ({ children }) => {
             const prev = productIdToSafe.has(productId) ? productIdToSafe.get(productId) : false;
             const next = prev || safeForThisItem;
             productIdToSafe.set(productId, next);
+            
+            // デバッグ: 乳を含む商品の最終結果
+            if (normalAllergies.includes('milk') && matrix && matrix['milk'] && matrix['milk'] !== 'none') {
+              console.log(`🥛 [${item.name}] 乳アレルギー最終結果:`, {
+                productId,
+                productName: item.product_name || item.name,
+                milkValue: matrix['milk'],
+                safeForThisItem,
+                prev,
+                next,
+                willBeIncluded: next ? '✅ 表示される' : '❌ 除外される'
+              });
+            }
             
             // productId 207の最終結果ログ
             if (String(productId) === '207') {
@@ -675,25 +716,42 @@ export const RestaurantProvider = ({ children }) => {
         })();
 
         if (matrix) {
-          // ユーザーが選択した全アレルゲンを統合（重複排除）
-          // どの区分（通常/香料/コンタミ）で選んでも、該当アレルゲンがdirect/fragrance/traceのいずれかで含まれていたら非表示
-          const allUserAllergens = new Set([
-            ...normalAllergies,
-            ...fragranceAllergies,
-            ...traceAllergies
-          ]);
+          const normalSet = new Set(normalAllergies);
+          const fragSet = new Set(fragranceAllergies);
+          const traceSet = new Set(traceAllergies);
+          const allUserAllergens = new Set([...normalSet, ...fragSet, ...traceSet]);
 
           console.log(`🔍 [${item.name || item.product_name}] ユーザー選択アレルゲン統合:`, Array.from(allUserAllergens));
 
-          // 各アレルゲンについて、direct/fragrance/traceのいずれかが含まれていたら非表示
+          // 各アレルゲンについて、適切な区分で判定
           allUserAllergens.forEach(slug => {
             const key = slug === 'soy' ? 'soybean' : slug;
             const raw = matrix[key];
             const v = (raw == null ? 'none' : String(raw)).trim().toLowerCase();
             
-            if (v === 'direct' || v === 'fragrance' || v === 'trace') {
+            // 通常アレルギーとして選択 → directのみ除外
+            // 香料アレルギーとして選択 → fragranceのみ除外
+            // コンタミアレルギーとして選択 → traceのみ除外
+            const isNormalDanger = normalSet.has(slug) && v === 'direct';
+            const isFragDanger = fragSet.has(slug) && v === 'fragrance';
+            const isTraceDanger = traceSet.has(slug) && v === 'trace';
+            
+            // デバッグ: 乳の判定
+            if (slug === 'milk' && v !== 'none') {
+              console.log(`🥛 useEffect [${item.name}] 乳（${v}）の判定:`, {
+                productId,
+                productName: item.product_name || item.name,
+                v,
+                isNormalDanger,
+                isFragDanger,
+                isTraceDanger,
+                willExclude: isNormalDanger || isFragDanger || isTraceDanger
+              });
+            }
+            
+            if (isNormalDanger || isFragDanger || isTraceDanger) {
               console.log(`❌ [${item.name || item.product_name}] アレルゲン "${slug}" が ${v} → 非表示`);
-              safeForThisItem = false; // どれか含まれていたら危険
+              safeForThisItem = false;
             }
           });
         } else if (Array.isArray(item.product_allergies)) {
@@ -735,6 +793,19 @@ export const RestaurantProvider = ({ children }) => {
         const prev = productIdToSafe.has(productId) ? productIdToSafe.get(productId) : false;
         const next = prev || safeForThisItem;
         productIdToSafe.set(productId, next);
+        
+        // デバッグ: 乳を含む商品の最終結果（useEffect）
+        if (normalAllergies.includes('milk') && matrix && matrix['milk'] && matrix['milk'] !== 'none') {
+          console.log(`🥛 useEffect [${item.name}] 乳アレルギー最終結果:`, {
+            productId,
+            productName: item.product_name || item.name,
+            milkValue: matrix['milk'],
+            safeForThisItem,
+            prev,
+            next,
+            willBeIncluded: next ? '✅ 表示される' : '❌ 除外される'
+          });
+        }
       });
 
       const ids = new Set();

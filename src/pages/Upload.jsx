@@ -635,6 +635,10 @@ const Upload = () => {
           香料由来アレルゲン数: uniqFragrance.length,
           コンタミアレルゲン数: uniqContam.length
         });
+        
+        // 登録された商品IDを保存（refetchData後の確認用）
+        window._lastRegisteredProductId = productId;
+        window._lastRegisteredProductName = productTitleToSave || editedInfo?.productName;
       }
 
       // 画像アップロードに失敗・未実施の場合も保存は継続し、後から追加できるUIを出す

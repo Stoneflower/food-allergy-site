@@ -86,7 +86,8 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
       devLog('🔍 classifyAllergyStatus - presence使用:', presence);
       selectedAllergies.forEach(allergy => {
         const key = allergy === 'soy' ? 'soy' : allergy;
-        const v = (presence[key] == null ? '' : String(presence[key])).trim().toLowerCase();
+        // null または undefined または空文字列の場合は 'none' として扱う（安全側に倒す）
+        const v = (presence[key] == null || presence[key] === '' ? 'none' : String(presence[key])).trim().toLowerCase();
         if (v === 'none') {
           hasNone = true;
           devLog(`🔍 classifyAllergyStatus - ${allergy}: none (presence)`);
@@ -108,7 +109,8 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
       debugSelectedMatrixValues(item, selectedAllergies);
       selectedAllergies.forEach(allergy => {
         const raw = getMatrixValue(item, allergy);
-        const matrixValue = (raw == null ? '' : String(raw)).trim().toLowerCase();
+        // null または undefined または空文字列の場合は 'none' として扱う（未登録=安全）
+        const matrixValue = (raw == null || raw === '' ? 'none' : String(raw)).trim().toLowerCase();
         if (matrixValue === 'none') {
           hasNone = true;
           devLog(`🔍 classifyAllergyStatus - ${allergy}: none (matrix)`);
@@ -167,8 +169,14 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
 
     // none/trace/fragranceのいずれかがあれば安全（direct以外）
     const isSafe = hasNone || hasTrace || hasFragrance;
-    devLog(`🔍 classifyAllergyStatus - 最終結果: isSafe=${isSafe}, hasNone=${hasNone}, hasTrace=${hasTrace}, hasFragrance=${hasFragrance}, hasDirect=${hasDirect}`);
-    devLog(`🔍 商品表示判定: ${!hasDirect && (isSafe || hasTrace || hasFragrance) ? '表示' : '除外'}`);
+    console.log(`🔍 classifyAllergyStatus - 最終結果 [${item.product_name || item.name}]:`, {
+      isSafe,
+      hasNone,
+      hasTrace,
+      hasFragrance,
+      hasDirect,
+      displayJudge: !hasDirect && (isSafe || hasTrace || hasFragrance) ? '✅ 表示' : '❌ 除外'
+    });
     return { isSafe, hasTrace, hasFragrance, hasNone, hasDirect };
   };
 
@@ -256,12 +264,12 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
 
   // Typesenseデータ用の店舗グループ化（アレルギー情報対応）
   const groupedStores = () => {
-    devLog('groupedStores - filteredItems processing:', filteredItems);
+    console.log('🏪🏪🏪 groupedStores - filteredItems processing:', filteredItems?.length || 0, '件');
     
     const stores = {};
     
     filteredItems.forEach((item, index) => {
-      devLog(`groupedStores - processing item ${index}:`, item);
+      console.log(`🏪 groupedStores - processing item ${index}:`, item.name || item.product_name);
       
       // 会社名・店舗名を決定（item.name を会社名として使用）
       const companyName = item.name || item.brand || item.product_title || `会社${index + 1}`;
@@ -330,9 +338,18 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
             ].filter(Boolean),
             related_product: item
           });
-          devLog('groupedStores - added product with allergies:', productName, 'to company:', companyName);
+          console.log('✅ groupedStores - added product:', productName, 'to company:', companyName);
         } else {
-          devLog(`❌ direct商品除外 or 不適合: ${productName} (hasDirect=${cls.hasDirect}, isSafe=${cls.isSafe}, hasTrace=${cls.hasTrace}, hasFragrance=${cls.hasFragrance})`);
+          console.log(`❌ direct商品除外 or 不適合: ${productName}`, {
+            hasDirect: cls.hasDirect,
+            isSafe: cls.isSafe,
+            hasTrace: cls.hasTrace,
+            hasFragrance: cls.hasFragrance,
+            hasNone: cls.hasNone,
+            condition1: !cls.hasDirect,
+            condition2: cls.isSafe || cls.hasTrace || cls.hasFragrance,
+            finalResult: !cls.hasDirect && (cls.isSafe || cls.hasTrace || cls.hasFragrance)
+          });
         }
         } else {
         devLog(`❌ アレルギー不適合商品除外: ${item.name}`);
@@ -346,9 +363,10 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
       const fragrance = store.products.filter(p => p.classify?.hasFragrance);
       return { ...store, safe_items: safe, trace_items: trace, fragrance_items: fragrance };
     });
-    devLog('groupedStores - final result:', result);
-    devLog('groupedStores - stores with products:', result.length);
-    devLog('groupedStores - stores with products names:', result.map(s => s.name));
+    console.log('🏪🏪🏪 groupedStores - final result:', result.length, '店舗');
+    console.log('🏪 stores with products:', result.filter(s => s.products.length > 0).length, '店舗');
+    console.log('🏪 stores with products names:', result.filter(s => s.products.length > 0).map(s => s.name));
+    console.log('🏪 total products:', result.reduce((sum, s) => sum + s.products.length, 0), '商品');
     
     return result;
   };

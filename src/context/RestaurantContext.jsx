@@ -303,9 +303,18 @@ export const RestaurantProvider = ({ children }) => {
       if (Array.isArray(productsData)) {
         const has207 = productsData.some(p => String(p.id) === '207');
         console.log('🔎 取得結果に id=207 が含まれるか:', has207);
-        // 最新5件のIDをログ出力
-        const latestIds = productsData.slice(0, 5).map(p => ({ id: p.id, name: p.name || p.brand }));
-        console.log('📋 取得した最新5件の商品:', latestIds);
+        // 最新10件のIDをログ出力（新規登録商品を確認するため）
+        const latestIds = productsData.slice(0, 10).map(p => ({ 
+          id: p.id, 
+          name: p.name || p.brand,
+          product_title: p.product_title,
+          category: p.category,
+          has_matrix: Array.isArray(p.product_allergies_matrix) && p.product_allergies_matrix.length > 0
+        }));
+        console.log('📋📋📋 取得した最新10件の商品（新規登録を確認）:', latestIds);
+        // 全商品IDのリストも出力（デバッグ用）
+        const allIds = productsData.map(p => p.id).sort((a, b) => b - a);
+        console.log('📋 全商品ID（降順）:', allIds.slice(0, 20), '...', `（全${allIds.length}件）`);
       }
       // 詳細ログは開発時のみ
       if (isDev && productsData && productsData.length > 0) {

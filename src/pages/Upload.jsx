@@ -48,7 +48,7 @@ const Upload = () => {
   
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
-  const { allergyOptions } = useRestaurant();
+  const { allergyOptions, refetchData } = useRestaurant();
   const location = useLocation();
 
   // ページ遷移時に重要情報バーまでスクロール
@@ -607,6 +607,13 @@ const Upload = () => {
       // 画像アップロードに失敗・未実施の場合も保存は継続し、後から追加できるUIを出す
       if ((uploadedUrls?.length || 0) === 0 && productId) {
         console.warn('画像なしで保存完了。後から画像を追加できます。');
+      }
+
+      // 商品登録後にデータを再取得（検索結果に反映させる）
+      console.log('🔄 商品登録完了 - データ再取得開始');
+      if (refetchData) {
+        await refetchData();
+        console.log('✅ データ再取得完了');
       }
 
       setStep(3);

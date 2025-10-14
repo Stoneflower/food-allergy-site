@@ -190,12 +190,19 @@ const Header = () => {
           <div className="md:hidden flex items-center space-x-2">
             {/* Language Switcher */}
             <LanguageSwitcher />
-            <Link
-              to="/upload"
+            <button
+              onClick={() => {
+                if (isAuthed) {
+                  navigate('/upload');
+                } else {
+                  navigate('/login', { state: { redirectTo: '/upload' } });
+                }
+              }}
               className="p-2 rounded-lg bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 transition-colors"
+              title={isAuthed ? '商品を登録' : 'ログインして商品を登録'}
             >
               <SafeIcon icon={FiPlus} className="w-6 h-6" />
-            </Link>
+            </button>
             <button
               onClick={() => setShowMobileSearch(!showMobileSearch)}
               className="p-2 rounded-lg bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 transition-colors"

@@ -229,6 +229,14 @@ export const RestaurantProvider = ({ children }) => {
     }
   };
 
+  // データ強制再取得関数（商品登録後などに使用）
+  const refetchData = async () => {
+    console.log('🔄 データ強制再取得開始');
+    setHasLoadedAll(false);
+    isFetchingRef.current = false;
+    await fetchDataFromSupabase();
+  };
+
   // 新しい検索サービスを使用したデータ取得関数
   const fetchDataFromSupabase = async () => {
     if (isFetchingRef.current) {
@@ -1260,6 +1268,7 @@ export const RestaurantProvider = ({ children }) => {
     addToHistory,
     getFilteredItems,
     getFilteredRestaurants,
+    refetchData,
     getFilteredProducts,
     getFilteredSupermarkets,
     getFilteredOnlineShops,

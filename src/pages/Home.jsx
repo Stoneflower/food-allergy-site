@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import useAutoTranslation from '../hooks/useAutoTranslation';
@@ -21,6 +21,7 @@ const Home = () => {
   const { t } = useTranslation();
   const { t: autoT } = useAutoTranslation(); // ページ別キャッシュ戦略対応の翻訳フック
   const [isAuthed, setIsAuthed] = useState(false);
+  const location = useLocation();
   
   // 使用例: ページ別キャッシュ戦略を適用した翻訳
   // const translatedText = await autoT('home.hero.title', { pageName: 'home' });
@@ -34,7 +35,12 @@ const Home = () => {
     products,
     getRecommendations,
     favorites,
-    allItemsData
+    allItemsData,
+    fetchDataFromSupabase,
+    isLoading,
+    executeSearch,
+    setSelectedArea,
+    setAreaInputValue
   } = useRestaurant();
 
   // 認証状態を監視
@@ -52,6 +58,43 @@ const Home = () => {
       sub?.subscription?.unsubscribe?.();
     };
   }, []);
+
+  // 初回マウント時にデータを自動取得
+  React.useEffect(() => {
+    console.log('🏠 Home画面 - 初回データ取得開始');
+    console.log('🏠 allItemsData件数:', allItemsData?.length || 0);
+    if (!allItemsData || allItemsData.length === 0) {
+      console.log('🏠 データが空のため、fetchDataFromSupabaseを実行');
+      fetchDataFromSupabase();
+    } else {
+      console.log('🏠 既にデータがロード済み（', allItemsData.length, '件）');
+    }
+  }, []); // 空の依存配列で初回のみ実行
+
+  // Upload完了後の遷移時に都道府県で自動検索
+  React.useEffect(() => {
+    const prefillArea = location.state?.prefillArea;
+    if (prefillArea && prefillArea.trim()) {
+      console.log('🏠 Upload完了後の遷移を検出 - 自動検索実行');
+      console.log('🏠 prefillArea:', prefillArea);
+      
+      // 都道府県を設定
+      setSelectedArea(prefillArea);
+      setAreaInputValue(prefillArea);
+      
+      // 検索を実行（データロード後）
+      setTimeout(() => {
+        console.log('🏠 自動検索実行:', prefillArea);
+        executeSearch({
+          areaInputValue: prefillArea,
+          selectedArea: prefillArea,
+          selectedCategory,
+          selectedAllergies,
+          searchKeyword: ''
+        });
+      }, 500); // データ取得を待つ
+    }
+  }, [location.state?.prefillArea]); // prefillAreaが変わった時のみ実行
 
   const filteredItems = getFilteredItems();
   const filteredRestaurants = getFilteredRestaurants();

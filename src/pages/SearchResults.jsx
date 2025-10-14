@@ -36,7 +36,7 @@ const SearchResults = () => {
     safetyLevel: 'all'
   });
 
-  const { getFilteredItems, selectedAllergies, selectedFragranceForSearch, selectedTraceForSearch, searchKeyword, selectedArea, selectedCategory, setSelectedCategory, setSelectedArea, setAreaInputValue, categories, allergyOptions, executeSearch } = useRestaurant();
+  const { getFilteredItems, selectedAllergies, selectedFragranceForSearch, selectedTraceForSearch, searchKeyword, selectedArea, selectedCategory, setSelectedCategory, setSelectedArea, setAreaInputValue, categories, allergyOptions, executeSearch, fetchDataFromSupabase, allItemsData } = useRestaurant();
   const location = useLocation();
 
   // 遷移時スクロール制御（PCは重要情報バー／スマホは結果の直上）
@@ -60,6 +60,18 @@ const SearchResults = () => {
       }
     }, 120);
   }, [location]);
+
+  // 初回マウント時にデータを自動取得
+  useEffect(() => {
+    console.log('🔍 SearchResults画面 - 初回データ取得開始');
+    console.log('🔍 allItemsData件数:', allItemsData?.length || 0);
+    if (!allItemsData || allItemsData.length === 0) {
+      console.log('🔍 データが空のため、fetchDataFromSupabaseを実行');
+      fetchDataFromSupabase();
+    } else {
+      console.log('🔍 既にデータがロード済み（', allItemsData.length, '件）');
+    }
+  }, []); // 空の依存配列で初回のみ実行
 
   // 商品カテゴリを取得
   useEffect(() => {

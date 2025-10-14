@@ -618,6 +618,23 @@ const Upload = () => {
             .insert([rowToUpsert]);
           if (insErr) throw insErr;
         }
+
+        // 商品登録完了ログ（アレルギー情報を含む）
+        console.log('📝📝📝 商品登録完了 - 登録内容 📝📝📝', {
+          商品ID: productId,
+          商品名: productTitleToSave || editedInfo?.productName,
+          ブランド: nameToSave,
+          カテゴリ: categoryValue,
+          商品カテゴリID: selectedProductCategory?.id,
+          都道府県: selectedPrefecture,
+          バーコード: editedInfo.barcode,
+          加熱ステータス: heatStatus,
+          画像URL1: uploadedImageUrl,
+          画像URL2: uploadedImageUrl2,
+          直接含有アレルゲン数: uniqDirect.length,
+          香料由来アレルゲン数: uniqFragrance.length,
+          コンタミアレルゲン数: uniqContam.length
+        });
       }
 
       // 画像アップロードに失敗・未実施の場合も保存は継続し、後から追加できるUIを出す
@@ -626,21 +643,6 @@ const Upload = () => {
       }
 
       // 商品登録後にデータを再取得（検索結果に反映させる）
-      console.log('📝📝📝 商品登録完了 - 登録内容 📝📝📝', {
-        商品ID: productId,
-        商品名: productTitleToSave || editedInfo?.productName,
-        ブランド: nameToSave,
-        カテゴリ: categoryValue,
-        商品カテゴリID: selectedProductCategory?.id,
-        都道府県: selectedPrefecture,
-        バーコード: editedInfo.barcode,
-        加熱ステータス: heatStatus,
-        画像URL1: uploadedImageUrl,
-        画像URL2: uploadedImageUrl2,
-        直接含有アレルゲン数: uniqDirect.length,
-        香料由来アレルゲン数: uniqFragrance.length,
-        コンタミアレルゲン数: uniqContam.length
-      });
       console.log('🔄 データ再取得開始');
       if (refetchData) {
         await refetchData();

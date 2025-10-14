@@ -1315,8 +1315,33 @@ const Upload = () => {
             <div className="flex flex-col space-y-3">
               <button
                 onClick={() => {
-                  // 登録した商品を検索画面で確認できるよう、都道府県情報を渡す
-                  navigate('/', { state: { prefillArea: selectedPrefecture } });
+                  // 登録した商品を検索画面で確認できるよう、都道府県とカテゴリ情報を渡す
+                  console.log('📍 登録した商品を検索ボタンクリック:', {
+                    selectedPrefecture,
+                    productId: createdProductId,
+                    categoryValue: Object.entries(channels).filter(([,v]) => v).map(([k]) => ({
+                      restaurant: 'restaurants',
+                      takeout: 'products',
+                      supermarket: 'supermarkets',
+                      onlineShop: 'online'
+                    }[k])).filter(Boolean)[0] || 'all'
+                  });
+                  
+                  // 利用シーンから適切なカテゴリを決定
+                  let targetCategory = 'all';
+                  if (channels.restaurant) targetCategory = 'restaurants';
+                  else if (channels.takeout) targetCategory = 'products';
+                  else if (channels.supermarket) targetCategory = 'supermarkets';
+                  else if (channels.onlineShop) targetCategory = 'online';
+                  
+                  navigate('/search', { 
+                    state: { 
+                      prefillArea: selectedPrefecture,
+                      prefillCategory: targetCategory,
+                      fromUpload: true,
+                      registeredProductId: createdProductId
+                    } 
+                  });
                 }}
                 className="w-full py-3 px-6 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-semibold"
               >

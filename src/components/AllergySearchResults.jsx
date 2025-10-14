@@ -393,11 +393,69 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
     }
   };
 
-  // アレルギー未選択時のガイダンス表示
+  // アレルギー未選択時の展開状態管理
+  const [expandedNoAllergy, setExpandedNoAllergy] = useState({});
+  const toggleStoreNoAllergy = (name) => setExpandedNoAllergy(prev => ({ ...prev, [name]: !prev[name] }));
+
+  // アレルギー未選択時は全商品を表示（グループ化あり）
   if (!selectedAllergies || selectedAllergies.length === 0) {
+    console.log('⚠️ アレルギー未選択 - 全商品を表示');
+    
+    // 商品カードを直接表示
+    if (!filteredItems || filteredItems.length === 0) {
+      return (
+        <div className="text-center py-8">
+          <p className="text-gray-500">商品が見つかりませんでした</p>
+          <p className="text-sm text-gray-400 mt-2">都道府県とカテゴリを選択して検索してください</p>
+        </div>
+      );
+    }
+    
+    // 会社ごとにグループ化（アレルギー未選択版）
+    const storesNoAllergy = {};
+    filteredItems.forEach(item => {
+      const companyName = item.name || item.brand || item.product_title || '不明';
+      if (!storesNoAllergy[companyName]) {
+        storesNoAllergy[companyName] = { name: companyName, category: item.category || '不明', products: [] };
+      }
+      const productName = item.product_name || item.name || '商品名なし';
+      storesNoAllergy[companyName].products.push({
+        name: productName,
+        display_name: productName,
+        image_urls: [item?.source_url, item?.source_url2, item?.image_url].filter(Boolean),
+        related_product: item
+      });
+    });
+    
+    const storesArray = Object.values(storesNoAllergy);
+    console.log('⚠️ アレルギー未選択 - 表示店舗数:', storesArray.length);
+    console.log('⚠️ アレルギー未選択 - 店舗名:', storesArray.map(s => s.name));
+    
     return (
-      <div className="text-center py-8">
-        <p className="text-gray-700">アレルギーを選択してください</p>
+      <div className="space-y-4">
+        {storesArray.map((store, index) => {
+          const isOpen = !!expandedNoAllergy[store.name];
+          return (
+            <div key={index} className="bg-white rounded-lg shadow p-4 cursor-pointer hover:shadow-md transition-shadow" onClick={() => toggleStoreNoAllergy(store.name)}>
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-semibold text-gray-800 truncate">
+                  {store.name}
+                  <span className="text-sm text-gray-600 ml-2">({store.products.length})</span>
+                </h3>
+                <span className="text-sm text-gray-500">{isOpen ? '閉じる' : '開く'}</span>
+              </div>
+              {isOpen && (
+                <div className="mt-3 space-y-2">
+                  {store.products.map((product, i) => (
+                    <div key={i} className="border border-gray-200 rounded p-2">
+                      <div className="text-sm text-gray-800">{product.display_name}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     );
   }

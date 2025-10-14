@@ -73,6 +73,43 @@ const SearchResults = () => {
     }
   }, []); // 空の依存配列で初回のみ実行
 
+  // Upload完了後の遷移時に自動検索
+  useEffect(() => {
+    const prefillArea = location.state?.prefillArea;
+    const prefillCategory = location.state?.prefillCategory;
+    const fromUpload = location.state?.fromUpload;
+    const registeredProductId = location.state?.registeredProductId;
+    
+    if (fromUpload && prefillArea) {
+      console.log('🔍 Upload完了後の遷移を検出 - 自動検索実行');
+      console.log('🔍 prefillArea:', prefillArea);
+      console.log('🔍 prefillCategory:', prefillCategory);
+      console.log('🔍 registeredProductId:', registeredProductId);
+      
+      // 都道府県を設定
+      setSelectedArea(prefillArea);
+      setAreaInputValue(prefillArea);
+      setInputPrefecture(prefillArea);
+      
+      // カテゴリを設定
+      if (prefillCategory) {
+        setSelectedCategory(prefillCategory);
+      }
+      
+      // 検索を実行（データロード後）
+      setTimeout(() => {
+        console.log('🔍 自動検索実行:', { area: prefillArea, category: prefillCategory });
+        executeSearch({
+          areaInputValue: prefillArea,
+          selectedArea: prefillArea,
+          selectedCategory: prefillCategory || selectedCategory,
+          selectedAllergies: [],
+          searchKeyword: ''
+        });
+      }, 500); // データ取得を待つ
+    }
+  }, [location.state?.fromUpload, location.state?.prefillArea, location.state?.prefillCategory]); // 依存配列
+
   // 商品カテゴリを取得
   useEffect(() => {
     const fetchProductCategories = async () => {

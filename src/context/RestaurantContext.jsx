@@ -283,6 +283,7 @@ export const RestaurantProvider = ({ children }) => {
         .select(`
           id,
           name,
+          product_title,
           brand,
           category,
           product_category_id,

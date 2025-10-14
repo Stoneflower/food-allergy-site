@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import SafeIcon from '../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
@@ -14,6 +14,7 @@ const { FiCamera, FiUpload, FiX, FiCheck, FiAlertCircle, FiEdit3, FiSave, FiImag
 
 const Upload = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [step, setStep] = useState(1); // 1: 撮影/アップロード, 2: 情報確認, 3: 完了
   const [capturedImages, setCapturedImages] = useState([]); // 複数画像を管理
   const [isProcessing, setIsProcessing] = useState(false);
@@ -510,6 +511,15 @@ const Upload = () => {
         const uniqContam = Array.isArray(contaminationAllergens)
           ? Array.from(new Set(contaminationAllergens.filter(Boolean)))
           : [];
+        
+        // デバッグログ
+        console.log('🔍 アレルギー情報保存前の状態確認:');
+        console.log('  - fragranceAllergens:', fragranceAllergens);
+        console.log('  - contaminationAllergens:', contaminationAllergens);
+        console.log('  - editedInfo.allergens:', editedInfo.allergens);
+        console.log('  - uniqFragrance:', uniqFragrance);
+        console.log('  - uniqContam:', uniqContam);
+        console.log('  - uniqDirect:', uniqDirect);
 
         // 28品目（列名はmatrixのスキーマに合わせる）
         const standardSlugs = [
@@ -582,6 +592,12 @@ const Upload = () => {
         };
 
         console.log('🔄 matrixへ統一保存行:', rowToUpsert);
+        console.log('🔍 保存するアレルギー情報の詳細:');
+        Object.entries(baseRow).forEach(([key, value]) => {
+          if (value !== 'none') {
+            console.log(`  - ${key}: ${value}`);
+          }
+        });
         // 42P10対策: 複合ユニーク制約がない環境でも動くよう、手動UPSERT
         const { data: existingRow, error: selErr } = await supabase
           .from('product_allergies_matrix')
@@ -610,7 +626,12 @@ const Upload = () => {
       }
 
       // 商品登録後にデータを再取得（検索結果に反映させる）
-      console.log('🔄 商品登録完了 - データ再取得開始');
+      console.log('📝📝📝 商品登録完了 - 登録内容 📝📝📝');
+      console.log('  - 商品ID:', productId);
+      console.log('  - 商品名:', productTitleToSave || editedInfo?.productName);
+      console.log('  - カテゴリ:', categoryValue);
+      console.log('  - 都道府県:', selectedPrefecture);
+      console.log('🔄 データ再取得開始');
       if (refetchData) {
         await refetchData();
         console.log('✅ データ再取得完了');
@@ -1269,19 +1290,30 @@ const Upload = () => {
               </div>
             </div>
 
-            <div className="flex space-x-4">
+            <div className="flex flex-col space-y-3">
               <button
-                onClick={resetForm}
-                className="flex-1 py-3 px-6 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-semibold"
+                onClick={() => {
+                  // 登録した商品を検索画面で確認できるよう、都道府県情報を渡す
+                  navigate('/', { state: { prefillArea: selectedPrefecture } });
+                }}
+                className="w-full py-3 px-6 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-semibold"
               >
-                もう一つ投稿する
+                登録した商品を検索する
               </button>
-              <button
-                onClick={() => window.location.href = '/'}
-                className="flex-1 py-3 px-6 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-              >
-                ホームに戻る
-              </button>
+              <div className="flex space-x-4">
+                <button
+                  onClick={resetForm}
+                  className="flex-1 py-3 px-6 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                >
+                  もう一つ投稿
+                </button>
+                <button
+                  onClick={() => navigate('/')}
+                  className="flex-1 py-3 px-6 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  ホームに戻る
+                </button>
+              </div>
             </div>
           </motion.div>
         )}

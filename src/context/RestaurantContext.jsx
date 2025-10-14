@@ -231,10 +231,12 @@ export const RestaurantProvider = ({ children }) => {
 
   // データ強制再取得関数（商品登録後などに使用）
   const refetchData = async () => {
-    console.log('🔄 データ強制再取得開始');
+    console.log('🔄🔄🔄 データ強制再取得開始 🔄🔄🔄');
+    console.log('  - 現在のallItems件数:', allItems.length);
     setHasLoadedAll(false);
     isFetchingRef.current = false;
     await fetchDataFromSupabase();
+    console.log('🔄🔄🔄 データ強制再取得完了 🔄🔄🔄');
   };
 
   // 新しい検索サービスを使用したデータ取得関数
@@ -280,7 +282,7 @@ export const RestaurantProvider = ({ children }) => {
           menu_items (id, name, product_id),
           store_locations (id, branch_name, address, source_url, store_list_url)
         `)
-        .order('id', { ascending: true })
+        .order('id', { ascending: false })
         .limit(2000);
 
       // キーワードのみ軽くサーバ絞り込み（カテゴリ/エリアはクライアント側で緩和ロジック適用）
@@ -301,6 +303,9 @@ export const RestaurantProvider = ({ children }) => {
       if (Array.isArray(productsData)) {
         const has207 = productsData.some(p => String(p.id) === '207');
         console.log('🔎 取得結果に id=207 が含まれるか:', has207);
+        // 最新5件のIDをログ出力
+        const latestIds = productsData.slice(0, 5).map(p => ({ id: p.id, name: p.name || p.brand }));
+        console.log('📋 取得した最新5件の商品:', latestIds);
       }
       // 詳細ログは開発時のみ
       if (isDev && productsData && productsData.length > 0) {

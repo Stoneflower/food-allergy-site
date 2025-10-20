@@ -44,6 +44,19 @@ const CsvConversionPreview = ({ csvData, rules, uploadedImages = [], onConversio
     { slug: 'macadamia', name: 'マカダミアナッツ' }
   ];
 
+  // 設定ページのアレルギー順（ローカル保存があればそれを最優先）
+  const getAppliedAllergenOrder = () => {
+    try {
+      const saved = localStorage.getItem('appliedAllergenOrder');
+      if (saved) {
+        const arr = JSON.parse(saved);
+        if (Array.isArray(arr) && arr.length > 0) return arr;
+      }
+    } catch (_) {}
+    return Array.isArray(rules?.allergenOrder) ? rules.allergenOrder : standardAllergens.map(a => a.slug);
+  };
+  const allergenOrder = getAppliedAllergenOrder();
+
   // CSVデータを変換
   useEffect(() => {
     if (!csvData || !rules) {
@@ -210,7 +223,7 @@ const CsvConversionPreview = ({ csvData, rules, uploadedImages = [], onConversio
         }
         
         // まず対象アレルゲンを特定（空欄処理にも使う）
-        const allergenSlugForCell = detectAllergenFromContext(processedRow, cellIndex, standardAllergens);
+        const allergenSlugForCell = detectAllergenFromContext(processedRow, cellIndex, standardAllergens, allergenOrder);
 
         // 空欄・不可視空白を「ふくまない」に正規化
         const normalizedRaw = (cell ?? '')
@@ -269,7 +282,7 @@ const CsvConversionPreview = ({ csvData, rules, uploadedImages = [], onConversio
               console.log(`記号変換: 行${rowIndex + 1}, 列${cellIndex + 1}, 記号: "${symbol}", マッピング値: "${mappedValue}"`);
               if (mappedValue) {
                 // アレルギー項目を特定
-                const allergenSlug = allergenSlugForCell || detectAllergenFromContext(processedRow, cellIndex, standardAllergens);
+                const allergenSlug = allergenSlugForCell || detectAllergenFromContext(processedRow, cellIndex, standardAllergens, allergenOrder);
                 console.log(`アレルギー特定: 行${rowIndex + 1}, 列${cellIndex + 1}, アレルギー: "${allergenSlug}"`);
                 if (allergenSlug) {
                   // 直接日本語ラベルを設定
@@ -289,7 +302,7 @@ const CsvConversionPreview = ({ csvData, rules, uploadedImages = [], onConversio
             });
           } else if (normalizedRaw === '-') {
             // ハイフン記号も処理
-            const allergenSlug = allergenSlugForCell || detectAllergenFromContext(processedRow, cellIndex, standardAllergens);
+            const allergenSlug = allergenSlugForCell || detectAllergenFromContext(processedRow, cellIndex, standardAllergens, allergenOrder);
             if (allergenSlug) {
               convertedRow.converted[allergenSlug] = 'ふくまない';
               console.log(`変換完了 (ハイフン): 行${rowIndex + 1}, アレルギー: "${allergenSlug}", 値: "ふくまない"`);
@@ -308,7 +321,7 @@ const CsvConversionPreview = ({ csvData, rules, uploadedImages = [], onConversio
     updateStats(converted);
   }, [csvData, rules]);
 
-  const detectAllergenFromContext = (row, cellIndex, allergens) => {
+  const detectAllergenFromContext = (row, cellIndex, allergens, orderOverride) => {
     // 1行目のヘッダー行からアレルギー項目を特定
     if (csvData.length > 0) {
       const headerRow = csvData[0]; // 1行目
@@ -338,12 +351,14 @@ const CsvConversionPreview = ({ csvData, rules, uploadedImages = [], onConversio
       }
     }
     
-    // ヘッダーで見つからない場合、列位置から推定
-    // このCSVフォーマット: 商品名,卵,乳,小麦,そば,落花生,えび,かに,くるみ,大豆,牛肉,豚肉,鶏肉,さけ,さば,あわび,いか,いくら,オレンジ,キウイフルーツ,もも,りんご,やまいも,ゼラチン,バナナ,カシューナッツ,ゴマ,アーモンド,まつたけ
+    // ヘッダーで見つからない場合、設定された順序に基づく列位置から推定
     if (cellIndex >= 1) { // アレルギー項目は2列目以降（商品名の後）
       const allergenIndex = cellIndex - 1;
-      if (allergenIndex < rules.allergenOrder.length) {
-        return rules.allergenOrder[allergenIndex];
+      const baseOrder = Array.isArray(orderOverride) && orderOverride.length > 0
+        ? orderOverride
+        : (Array.isArray(rules?.allergenOrder) ? rules.allergenOrder : allergens.map(a => a.slug));
+      if (allergenIndex < baseOrder.length) {
+        return baseOrder[allergenIndex];
       }
     }
     

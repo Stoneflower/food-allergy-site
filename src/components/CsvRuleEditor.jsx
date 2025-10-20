@@ -258,15 +258,71 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
     if (csvData.length > 0) {
       const headerRow = csvData[0]; // 1行目
       console.log('🔍 CSVヘッダー行全体:', headerRow);
+      
+      // 分割された文字を結合する処理
+      const combinedHeaders = [];
+      let currentCombined = '';
+      let startIndex = 0;
+      
       headerRow.forEach((rawHeader, index) => {
         // A列（商品名列）はスキップ
-        if (index === 0) return;
-        if (typeof rawHeader !== 'string') return;
-        const header = rawHeader.trim();
-        const headerN = normalizeHeader(header);
-        console.log(`🔍 列${index + 1}: 元ヘッダー="${header}", 正規化後="${headerN}"`);
+        if (index === 0) {
+          combinedHeaders.push({ header: rawHeader, startIndex: index, endIndex: index });
+          return;
+        }
         
-        // 空文字・空白のみはスキップ（"" を誤検出しない）
+        if (typeof rawHeader !== 'string') {
+          combinedHeaders.push({ header: rawHeader, startIndex: index, endIndex: index });
+          return;
+        }
+        
+        const header = rawHeader.trim();
+        
+        // 1文字の場合は結合候補として蓄積
+        if (header.length === 1 && header.match(/[ひらがなカタカナ漢字]/)) {
+          if (currentCombined === '') {
+            startIndex = index;
+          }
+          currentCombined += header;
+          console.log(`🔗 結合中: "${currentCombined}" (列${index + 1})`);
+        } else {
+          // 結合中の文字列があれば保存
+          if (currentCombined !== '') {
+            combinedHeaders.push({ 
+              header: currentCombined, 
+              startIndex: startIndex, 
+              endIndex: index - 1,
+              isCombined: true 
+            });
+            console.log(`🔗 結合完了: "${currentCombined}" (列${startIndex + 1}-${index})`);
+            currentCombined = '';
+          }
+          // 現在のヘッダーを保存
+          combinedHeaders.push({ header: header, startIndex: index, endIndex: index });
+        }
+      });
+      
+      // 最後に結合中の文字列があれば保存
+      if (currentCombined !== '') {
+        combinedHeaders.push({ 
+          header: currentCombined, 
+          startIndex: startIndex, 
+          endIndex: headerRow.length - 1,
+          isCombined: true 
+        });
+        console.log(`🔗 結合完了(最後): "${currentCombined}" (列${startIndex + 1}-${headerRow.length})`);
+      }
+      
+      console.log('🔍 結合後のヘッダー:', combinedHeaders);
+      
+      // 結合されたヘッダーでアレルギー項目を検出
+      combinedHeaders.forEach(({ header, startIndex, endIndex, isCombined }) => {
+        if (startIndex === 0) return; // A列（商品名列）はスキップ
+        
+        const headerN = normalizeHeader(header);
+        console.log(`🔍 列${startIndex + 1}${endIndex > startIndex ? `-${endIndex + 1}` : ''}: 元ヘッダー="${header}", 正規化後="${headerN}"${isCombined ? ' (結合済み)' : ''}`);
+        
+        // 空文字・空白のみはスキップ
         if (!header) return;
 
         // 1) 正規化同士の比較でまず一致を探す
@@ -279,11 +335,12 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
           if (!hit) return null;
           return standardAllergens.find(a => a.slug === hit.slug) || null;
         })();
+        
         if (allergen) {
-          allergens.push({ ...allergen, columnIndex: index });
-          console.log(`✅ アレルギー項目検出: 列${index + 1}, ヘッダー: "${header}", 項目: ${allergen.name}`);
+          allergens.push({ ...allergen, columnIndex: startIndex });
+          console.log(`✅ アレルギー項目検出: 列${startIndex + 1}${endIndex > startIndex ? `-${endIndex + 1}` : ''}, ヘッダー: "${header}", 項目: ${allergen.name}${isCombined ? ' (結合済み)' : ''}`);
         } else {
-          console.log(`❌ アレルギー項目未検出: 列${index + 1}, ヘッダー: "${header}", 正規化後: "${headerN}"`);
+          console.log(`❌ アレルギー項目未検出: 列${startIndex + 1}${endIndex > startIndex ? `-${endIndex + 1}` : ''}, ヘッダー: "${header}", 正規化後: "${headerN}"${isCombined ? ' (結合済み)' : ''}`);
           // 標準アレルギー項目との部分一致もチェック
           const partialMatches = standardAllergens.filter(a => {
             const aN = normalizeHeader(a.name);

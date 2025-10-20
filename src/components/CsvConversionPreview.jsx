@@ -356,7 +356,7 @@ const CsvConversionPreview = ({ csvData, rules, uploadedImages = [], onConversio
       const allergenIndex = cellIndex - 1;
       const baseOrder = Array.isArray(orderOverride) && orderOverride.length > 0
         ? orderOverride
-        : (Array.isArray(rules?.allergenOrder) ? rules.allergenOrder : allergens.map(a => a.slug));
+        : allergenOrder;
       if (allergenIndex < baseOrder.length) {
         return baseOrder[allergenIndex];
       }
@@ -466,7 +466,7 @@ const CsvConversionPreview = ({ csvData, rules, uploadedImages = [], onConversio
       };
 
       // 標準アレルギー項目の順序で整理
-      rules.allergenOrder.forEach(slug => {
+      allergenOrder.forEach(slug => {
         result.converted[slug] = row.converted[slug] || '';
       });
 
@@ -477,8 +477,8 @@ const CsvConversionPreview = ({ csvData, rules, uploadedImages = [], onConversio
       // プレビュー最終データをローカルに保存（後段の保存処理でそのまま使用）
       localStorage.setItem('finalPreviewData', JSON.stringify(finalData));
       // この時点のアレルギー順を保存して、設定画面にも反映できるようにする
-      if (Array.isArray(rules?.allergenOrder) && rules.allergenOrder.length > 0) {
-        localStorage.setItem('appliedAllergenOrder', JSON.stringify(rules.allergenOrder));
+      if (Array.isArray(allergenOrder) && allergenOrder.length > 0) {
+        localStorage.setItem('appliedAllergenOrder', JSON.stringify(allergenOrder));
       }
     } catch (e) {
       // noop
@@ -549,7 +549,7 @@ const CsvConversionPreview = ({ csvData, rules, uploadedImages = [], onConversio
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   操作
                 </th>
-                {rules.allergenOrder.map(slug => {
+                {allergenOrder.map(slug => {
                   const allergen = standardAllergens.find(a => a.slug === slug);
                   return (
                     <th key={slug} className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -597,7 +597,7 @@ const CsvConversionPreview = ({ csvData, rules, uploadedImages = [], onConversio
                       <FiTrash2 className="w-4 h-4" />
                     </button>
                   </td>
-                  {rules.allergenOrder.map(slug => {
+                  {allergenOrder.map(slug => {
                     const value = getCellValue(rowIndex, slug);
                     const isEditing = editingCell === `${rowIndex}-${slug}`;
                     

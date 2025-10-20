@@ -5,43 +5,42 @@ import { FiPlus, FiTrash2, FiEdit3, FiSave, FiRotateCcw } from 'react-icons/fi';
 const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
   // デフォルトのallergenOrderを指定された順序に設定
   const defaultAllergenOrder = [
-    'egg',        // 1. 卵
-    'milk',       // 2. 乳
-    'wheat',      // 3. 小麦
-    'buckwheat',  // 4. そば
+    'wheat',      // 1. 小麦
+    'buckwheat',  // 2. そば
+    'egg',        // 3. 卵
+    'milk',       // 4. 乳
     'peanut',     // 5. 落花生
     'shrimp',     // 6. えび
     'crab',       // 7. かに
     'walnut',     // 8. くるみ
-    'soy',        // 9. 大豆
-    'beef',       // 10. 牛肉
-    'pork',       // 11. 豚肉
-    'chicken',    // 12. 鶏肉
-    'salmon',     // 13. さけ
-    'mackerel',   // 14. さば
-    'abalone',    // 15. あわび
-    'squid',      // 16. いか
-    'salmon_roe', // 17. いくら
-    'orange',     // 18. オレンジ
-    'kiwi',       // 19. キウイフルーツ
-    'peach',      // 20. もも
-    'apple',      // 21. りんご
+    'abalone',    // 9. あわび
+    'squid',      // 10. いか
+    'salmon_roe', // 11. いくら
+    'orange',     // 12. オレンジ
+    'kiwi',       // 13. キウイフルーツ
+    'beef',       // 14. 牛肉
+    'salmon',     // 15. さけ
+    'mackerel',   // 16. さば
+    'soy',        // 17. 大豆
+    'chicken',    // 18. 鶏肉
+    'pork',       // 19. 豚肉
+    'macadamia',  // 20. マカダミア
+    'peach',      // 21. もも
     'yam',        // 22. やまいも
-    'gelatin',    // 23. ゼラチン
-    'banana',     // 24. バナナ
-    'cashew',     // 25. カシューナッツ
+    'apple',      // 23. りんご
+    'gelatin',    // 24. ゼラチン
+    'banana',     // 25. バナナ
     'sesame',     // 26. ごま
-    'almond',     // 27. アーモンド
-    'unused',     // 28. 使用しない
-    'matsutake'   // 29. まつたけ
+    'cashew',     // 27. カシューナッツ
+    'almond',     // 28. アーモンド
+    'unused',     // 29. 使用しない
+    'matsutake'   // 30. まつたけ
   ];
 
   const defaultRules = {
     ...rules,
-    // 既に親から順序が渡されていればそれを優先。なければデフォルトにフォールバック
-    allergenOrder: (rules && Array.isArray(rules.allergenOrder) && rules.allergenOrder.length > 0)
-      ? rules.allergenOrder
-      : defaultAllergenOrder,
+    // デフォルト順序を使用（CSVから検出された場合は後で上書きされる）
+    allergenOrder: defaultAllergenOrder,
     symbolMappings: {
       ...rules.symbolMappings,
       '🔹': 'none', // デフォルトで🔹を追加
@@ -67,47 +66,51 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
   const [manualSymbols, setManualSymbols] = useState(new Set());
   const [newSymbolInput, setNewSymbolInput] = useState('');
 
-  // 親から渡される allergenOrder の変更を即時同期（CSV側で決めた順序を優先）
+  // 親から渡される allergenOrder の変更を即時同期
+  // ただし、CSVから順序が検出された場合はCSVの順序を優先
   useEffect(() => {
     if (Array.isArray(rules?.allergenOrder) && rules.allergenOrder.length > 0) {
-      setLocalRules(prev => ({
-        ...prev,
-        allergenOrder: [...rules.allergenOrder]
-      }));
+      // CSVからアレルギー項目が検出されていない場合のみ、親の順序を使用
+      if (detectedAllergens.length === 0) {
+        setLocalRules(prev => ({
+          ...prev,
+          allergenOrder: [...rules.allergenOrder]
+        }));
+      }
     }
-  }, [rules?.allergenOrder]);
+  }, [rules?.allergenOrder, detectedAllergens.length]);
 
   // 標準アレルギー項目
   const standardAllergens = [
-    { slug: 'egg', name: '卵' },
-    { slug: 'milk', name: '乳' },
     { slug: 'wheat', name: '小麦' },
     { slug: 'buckwheat', name: 'そば' },
+    { slug: 'egg', name: '卵' },
+    { slug: 'milk', name: '乳' },
     { slug: 'peanut', name: '落花生' },
     { slug: 'shrimp', name: 'えび' },
     { slug: 'crab', name: 'かに' },
     { slug: 'walnut', name: 'くるみ' },
-    { slug: 'soy', name: '大豆' },
-    { slug: 'beef', name: '牛肉' },
-    { slug: 'pork', name: '豚肉' },
-    { slug: 'chicken', name: '鶏肉' },
-    { slug: 'salmon', name: 'さけ' },
-    { slug: 'mackerel', name: 'さば' },
     { slug: 'abalone', name: 'あわび' },
     { slug: 'squid', name: 'いか' },
     { slug: 'salmon_roe', name: 'いくら' },
     { slug: 'orange', name: 'オレンジ' },
     { slug: 'kiwi', name: 'キウイフルーツ' },
+    { slug: 'beef', name: '牛肉' },
+    { slug: 'salmon', name: 'さけ' },
+    { slug: 'mackerel', name: 'さば' },
+    { slug: 'soy', name: '大豆' },
+    { slug: 'chicken', name: '鶏肉' },
+    { slug: 'pork', name: '豚肉' },
+    { slug: 'macadamia', name: 'マカダミアナッツ' },
     { slug: 'peach', name: 'もも' },
-    { slug: 'apple', name: 'りんご' },
     { slug: 'yam', name: 'やまいも' },
+    { slug: 'apple', name: 'りんご' },
     { slug: 'gelatin', name: 'ゼラチン' },
     { slug: 'banana', name: 'バナナ' },
-    { slug: 'cashew', name: 'カシューナッツ' },
     { slug: 'sesame', name: 'ごま' },
+    { slug: 'cashew', name: 'カシューナッツ' },
     { slug: 'almond', name: 'アーモンド' },
-    { slug: 'matsutake', name: 'まつたけ' },
-    { slug: 'macadamia', name: 'マカダミアナッツ' }
+    { slug: 'matsutake', name: 'まつたけ' }
   ];
 
   // CSVから記号とアレルギー項目を検出
@@ -175,7 +178,16 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
           (header.includes('ｾﾞﾗﾁﾝ') && a.slug === 'gelatin') ||
           (header.includes('ｶｼｭｰﾅｯﾂ') && a.slug === 'cashew') ||
           (header.includes('ｱｰﾓﾝﾄﾞ') && a.slug === 'almond') ||
-          (header.includes('マカダミアナッツ') && a.slug === 'macadamia')
+          (header.includes('マカダミアナッツ') && a.slug === 'macadamia') ||
+          // より柔軟なマッチング
+          (header.includes('キウイ') && a.slug === 'kiwi') ||
+          (header.includes('キウィ') && a.slug === 'kiwi') ||
+          (header.includes('ゼラチン') && a.slug === 'gelatin') ||
+          (header.includes('カシュー') && a.slug === 'cashew') ||
+          (header.includes('アーモンド') && a.slug === 'almond') ||
+          (header.includes('マカダミア') && a.slug === 'macadamia') ||
+          (header.includes('ごま') && a.slug === 'sesame') ||
+          (header.includes('胡麻') && a.slug === 'sesame')
         );
         if (allergen) {
           allergens.push({ ...allergen, columnIndex: index });
@@ -188,8 +200,7 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
     setDetectedSymbols(symbols);
     setDetectedAllergens(allergens);
     
-    // CSVヘッダー順で初期化し、29番目は未指定の場合のみ『使用しない(unused)』をデフォルト挿入。
-    // その後、未出現の項目を末尾に追加する。
+    // CSVヘッダー順で初期化し、CSVの順序を最優先にする
     if (allergens.length > 0) {
       const detectedOrder = allergens
         .sort((a, b) => a.columnIndex - b.columnIndex) // 列順でソート
@@ -198,21 +209,11 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
       const uniqueDetected = Array.from(new Set(detectedOrder));
       const standardSlugs = standardAllergens.map(a => a.slug);
 
+      // CSVで検出された順序をベースにする
       let finalOrder = [...uniqueDetected];
       const used = new Set(finalOrder);
 
-      // 29番目（index 28）に未指定の場合のみunusedをデフォルト挿入
-      if (!used.has('unused')) {
-        if (finalOrder.length >= 28) {
-          finalOrder.splice(28, 0, 'unused');
-        } else {
-          // 28未満なら足りない分はCSV順を保ったまま、末尾にunusedを追加
-          finalOrder.push('unused');
-        }
-        used.add('unused');
-      }
-
-      // 標準定義で未出現のものを最後に補完（固定位置は設けない）
+      // 標準定義で未出現のものを最後に補完
       standardSlugs.forEach(slug => {
         if (!used.has(slug)) {
           finalOrder.push(slug);
@@ -220,15 +221,27 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
         }
       });
 
-      console.log('検出されたアレルギー順序(CSV順):', uniqueDetected);
-      console.log('最終的な順序(CSV順+29=unusedデフォルト+補完):', finalOrder);
+      // unusedを最後に追加（必要に応じて）
+      if (!used.has('unused')) {
+        finalOrder.push('unused');
+      }
 
-      // 親から既に順序が渡されている場合は、それを尊重して上書きしない
+      console.log('検出されたアレルギー順序(CSV順):', uniqueDetected);
+      console.log('最終的な順序(CSV順+補完):', finalOrder);
+
+      // CSVから順序が検出された場合は、それを優先して設定
+      setLocalRules(prev => ({
+        ...prev,
+        allergenOrder: finalOrder
+      }));
+    } else {
+      // CSVからアレルギー項目が検出されなかった場合は、デフォルト順序を使用
+      console.log('CSVからアレルギー項目が検出されませんでした。デフォルト順序を使用します。');
       const hasParentOrder = Array.isArray(rules?.allergenOrder) && rules.allergenOrder.length > 0;
       if (!hasParentOrder) {
         setLocalRules(prev => ({
           ...prev,
-          allergenOrder: finalOrder
+          allergenOrder: defaultAllergenOrder
         }));
       }
     }

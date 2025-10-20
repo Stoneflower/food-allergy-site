@@ -177,7 +177,7 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
       if (typeof s !== 'string') return '';
       // 空白類（半角/全角/ノーブレーク）と改行を除去、ダッシュ類を統一
       return s
-        .replace(/[\s\u3000\u00A0]/g, '')
+        .replace(/[\s\u3000\u00A0\n\r]/g, '')  // 改行文字も除去
         .replace(/[ーｰ−―─‐]/g, 'ー')
         .replace(/・/g, '')
         .trim();
@@ -187,7 +187,7 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
     const synonymRules = [
       { re: /(キウイフルーツ|キウィフルーツ|ｷｳｲﾌﾙｰﾂ|キウイ|力ウイフルーツ|力ウィフルーツ)/, slug: 'kiwi' },
       { re: /(ゼラチン|ｾﾞﾗﾁﾝ)/, slug: 'gelatin' },
-      { re: /(カシューナッツ|カシュ—ナッツ|ｶｼｭｰﾅｯﾂ|カシュー|力シューナッツ|力シュ—ナッツ)/, slug: 'cashew' },
+      { re: /(カシューナッツ|カシュ—ナッツ|ｶｼｭｰﾅｯﾂ|カシュー|力シューナッツ|力シュ—ナッツ|力シュ一ナツツ)/, slug: 'cashew' },
       { re: /(アーモンド|ア—モンド|ｱｰﾓﾝﾄﾞ)/, slug: 'almond' },
       { re: /(ごま|胡麻)/, slug: 'sesame' },
       { re: /(魚介類|シーフード|しーふーど)/, slug: 'seafood' },
@@ -196,7 +196,9 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
       { re: /(そば|蕎麦)/, slug: 'buckwheat' },
       { re: /(落花生|ピーナッツ)/, slug: 'peanut' },
       { re: /(さけ|鮭)/, slug: 'salmon' },
-      { re: /(さば|鯖)/, slug: 'mackerel' }
+      { re: /(さば|鯖)/, slug: 'mackerel' },
+      { re: /(豚肉|月豕肉)/, slug: 'pork' },
+      { re: /(マカダミアナッツ|マ力ダアナツツ|マカダミア)/, slug: 'macadamia' }
     ];
 
     // 先頭200行から記号を検出（商品名列は除外）

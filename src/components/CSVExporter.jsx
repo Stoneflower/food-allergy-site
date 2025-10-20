@@ -130,7 +130,8 @@ const CsvExporter = ({ data, onBack }) => {
           peach: 'none',
           yam: 'none',
           apple: 'none',
-          macadamia: 'none'
+          macadamia: 'none',
+          seafood: 'none'
         }));
         
         const { error: fallbackInsertError } = await supabase
@@ -198,7 +199,8 @@ const CsvExporter = ({ data, onBack }) => {
     { slug: 'sesame', name: 'ごま' },
     { slug: 'almond', name: 'アーモンド' },
     { slug: 'matsutake', name: 'まつたけ' },
-    { slug: 'macadamia', name: 'マカダミアナッツ' }
+    { slug: 'macadamia', name: 'マカダミアナッツ' },
+    { slug: 'seafood', name: '魚介類' }
   ];
 
   // アレルギー項目名の正規化マッピング（異なる表記を統一）

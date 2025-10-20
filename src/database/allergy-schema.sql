@@ -82,6 +82,98 @@ CREATE TABLE IF NOT EXISTS product_safety_results (
   UNIQUE(user_id, product_id)
 );
 
+-- 商品のアレルギー情報行列テーブル（CSVアップロード用）
+CREATE TABLE IF NOT EXISTS product_allergies_matrix (
+  id SERIAL PRIMARY KEY,
+  product_id INTEGER REFERENCES products(id) ON DELETE CASCADE,
+  -- 法定8品目
+  egg VARCHAR(20) DEFAULT 'none', -- 'direct', 'trace', 'none', 'unused'
+  milk VARCHAR(20) DEFAULT 'none',
+  wheat VARCHAR(20) DEFAULT 'none',
+  buckwheat VARCHAR(20) DEFAULT 'none',
+  peanut VARCHAR(20) DEFAULT 'none',
+  shrimp VARCHAR(20) DEFAULT 'none',
+  crab VARCHAR(20) DEFAULT 'none',
+  walnut VARCHAR(20) DEFAULT 'none',
+  -- 推奨20品目
+  almond VARCHAR(20) DEFAULT 'none',
+  abalone VARCHAR(20) DEFAULT 'none',
+  squid VARCHAR(20) DEFAULT 'none',
+  salmon_roe VARCHAR(20) DEFAULT 'none',
+  orange VARCHAR(20) DEFAULT 'none',
+  kiwi VARCHAR(20) DEFAULT 'none',
+  beef VARCHAR(20) DEFAULT 'none',
+  salmon VARCHAR(20) DEFAULT 'none',
+  mackerel VARCHAR(20) DEFAULT 'none',
+  soy VARCHAR(20) DEFAULT 'none',
+  chicken VARCHAR(20) DEFAULT 'none',
+  pork VARCHAR(20) DEFAULT 'none',
+  macadamia VARCHAR(20) DEFAULT 'none',
+  peach VARCHAR(20) DEFAULT 'none',
+  yam VARCHAR(20) DEFAULT 'none',
+  apple VARCHAR(20) DEFAULT 'none',
+  gelatin VARCHAR(20) DEFAULT 'none',
+  banana VARCHAR(20) DEFAULT 'none',
+  cashew VARCHAR(20) DEFAULT 'none',
+  sesame VARCHAR(20) DEFAULT 'none',
+  matsutake VARCHAR(20) DEFAULT 'none',
+  -- グループ項目
+  seafood VARCHAR(20) DEFAULT 'none',
+  -- その他
+  unused VARCHAR(20) DEFAULT 'none',
+  -- 追加列
+  fragrance_allergens VARCHAR(20) DEFAULT 'none',
+  heat_status VARCHAR(20) DEFAULT 'none',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(product_id)
+);
+
+-- 商品のトレースアレルギー情報テーブル（国別）
+CREATE TABLE IF NOT EXISTS product_trace_allergies (
+  id SERIAL PRIMARY KEY,
+  product_id INTEGER REFERENCES products(id) ON DELETE CASCADE,
+  country_code VARCHAR(10) NOT NULL DEFAULT 'JP', -- 国コード（JP, US, EU等）
+  -- 法定8品目
+  egg VARCHAR(20) DEFAULT 'none', -- 'direct', 'trace', 'none', 'unused'
+  milk VARCHAR(20) DEFAULT 'none',
+  wheat VARCHAR(20) DEFAULT 'none',
+  buckwheat VARCHAR(20) DEFAULT 'none',
+  peanut VARCHAR(20) DEFAULT 'none',
+  shrimp VARCHAR(20) DEFAULT 'none',
+  crab VARCHAR(20) DEFAULT 'none',
+  walnut VARCHAR(20) DEFAULT 'none',
+  -- 推奨20品目
+  almond VARCHAR(20) DEFAULT 'none',
+  abalone VARCHAR(20) DEFAULT 'none',
+  squid VARCHAR(20) DEFAULT 'none',
+  salmon_roe VARCHAR(20) DEFAULT 'none',
+  orange VARCHAR(20) DEFAULT 'none',
+  kiwi VARCHAR(20) DEFAULT 'none',
+  beef VARCHAR(20) DEFAULT 'none',
+  salmon VARCHAR(20) DEFAULT 'none',
+  mackerel VARCHAR(20) DEFAULT 'none',
+  soy VARCHAR(20) DEFAULT 'none',
+  chicken VARCHAR(20) DEFAULT 'none',
+  pork VARCHAR(20) DEFAULT 'none',
+  macadamia VARCHAR(20) DEFAULT 'none',
+  peach VARCHAR(20) DEFAULT 'none',
+  yam VARCHAR(20) DEFAULT 'none',
+  apple VARCHAR(20) DEFAULT 'none',
+  gelatin VARCHAR(20) DEFAULT 'none',
+  banana VARCHAR(20) DEFAULT 'none',
+  cashew VARCHAR(20) DEFAULT 'none',
+  sesame VARCHAR(20) DEFAULT 'none',
+  matsutake VARCHAR(20) DEFAULT 'none',
+  -- グループ項目
+  seafood VARCHAR(20) DEFAULT 'none',
+  -- その他
+  unused VARCHAR(20) DEFAULT 'none',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(product_id, country_code)
+);
+
 -- 法定8品目（特定原材料）- 表示義務
 INSERT INTO allergy_items (item_id, name, name_en, category, icon, description, small_amount_safe, heated_safe, severity_level) VALUES
 ('egg', '卵', 'Egg', 'mandatory', '🥚', '鶏卵、うずら卵など', false, false, 'high'),

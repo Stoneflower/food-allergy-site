@@ -145,22 +145,28 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
     // 1行目（ヘッダー行）からアレルギー項目を検出
     if (csvData.length > 0) {
       const headerRow = csvData[0]; // 1行目
-      headerRow.forEach((header, index) => {
-        if (typeof header === 'string') {
-          const allergen = standardAllergens.find(a => 
-            header.includes(a.name) || a.name.includes(header) ||
-            // カタカナ表記も対応
-            (header.includes('ｵﾚﾝｼﾞ') && a.slug === 'orange') ||
-            (header.includes('ｷｳｲﾌﾙｰﾂ') && a.slug === 'kiwi') ||
-            (header.includes('ｾﾞﾗﾁﾝ') && a.slug === 'gelatin') ||
-            (header.includes('ｶｼｭｰﾅｯﾂ') && a.slug === 'cashew') ||
-            (header.includes('ｱｰﾓﾝﾄﾞ') && a.slug === 'almond') ||
-            (header.includes('マカダミアナッツ') && a.slug === 'macadamia')
-          );
-          if (allergen) {
-            allergens.push({ ...allergen, columnIndex: index });
-            console.log(`アレルギー項目検出: 列${index + 1}, ヘッダー: "${header}", 項目: ${allergen.name}`);
-          }
+      headerRow.forEach((rawHeader, index) => {
+        // A列（商品名列）はスキップ
+        if (index === 0) return;
+        if (typeof rawHeader !== 'string') return;
+        const header = rawHeader.trim();
+        // 空文字・空白のみはスキップ（"" を誤検出しない）
+        if (!header) return;
+
+        const allergen = standardAllergens.find(a => 
+          header === a.name || header.includes(a.name) || a.name.includes(header) ||
+          header === a.slug || header.includes(a.slug) ||
+          // カタカナ表記も対応
+          (header.includes('ｵﾚﾝｼﾞ') && a.slug === 'orange') ||
+          (header.includes('ｷｳｲﾌﾙｰﾂ') && a.slug === 'kiwi') ||
+          (header.includes('ｾﾞﾗﾁﾝ') && a.slug === 'gelatin') ||
+          (header.includes('ｶｼｭｰﾅｯﾂ') && a.slug === 'cashew') ||
+          (header.includes('ｱｰﾓﾝﾄﾞ') && a.slug === 'almond') ||
+          (header.includes('マカダミアナッツ') && a.slug === 'macadamia')
+        );
+        if (allergen) {
+          allergens.push({ ...allergen, columnIndex: index });
+          console.log(`アレルギー項目検出: 列${index + 1}, ヘッダー: "${header}", 項目: ${allergen.name}`);
         }
       });
     }
@@ -204,10 +210,14 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
       console.log('検出されたアレルギー順序(CSV順):', uniqueDetected);
       console.log('最終的な順序(CSV順+29=unusedデフォルト+補完):', finalOrder);
 
-      setLocalRules(prev => ({
-        ...prev,
-        allergenOrder: finalOrder
-      }));
+      // 親から既に順序が渡されている場合は、それを尊重して上書きしない
+      const hasParentOrder = Array.isArray(rules?.allergenOrder) && rules.allergenOrder.length > 0;
+      if (!hasParentOrder) {
+        setLocalRules(prev => ({
+          ...prev,
+          allergenOrder: finalOrder
+        }));
+      }
     }
   }, [csvData]);
 

@@ -129,6 +129,32 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
     const symbols = new Set();
     const allergens = [];
 
+    const normalizeHeader = (s) => {
+      if (typeof s !== 'string') return '';
+      // 空白類（半角/全角/ノーブレーク）と改行を除去、ダッシュ類を統一
+      return s
+        .replace(/[\s\u3000\u00A0]/g, '')
+        .replace(/[ーｰ−―─‐]/g, 'ー')
+        .replace(/・/g, '')
+        .trim();
+    };
+
+    // 同義語・別表記 → slug マッピング（正規表現）
+    const synonymRules = [
+      { re: /(キウイフルーツ|キウィフルーツ|ｷｳｲﾌﾙｰﾂ|キウイ)/, slug: 'kiwi' },
+      { re: /(ゼラチン|ｾﾞﾗﾁﾝ)/, slug: 'gelatin' },
+      { re: /(カシューナッツ|ｶｼｭｰﾅｯﾂ|カシュー)/, slug: 'cashew' },
+      { re: /(アーモンド|ｱｰﾓﾝﾄﾞ)/, slug: 'almond' },
+      { re: /(ごま|胡麻)/, slug: 'sesame' },
+      { re: /(魚介類|シーフード|しーふーど)/, slug: 'seafood' },
+      { re: /(大豆)/, slug: 'soy' },
+      { re: /(小麦)/, slug: 'wheat' },
+      { re: /(そば|蕎麦)/, slug: 'buckwheat' },
+      { re: /(落花生|ピーナッツ)/, slug: 'peanut' },
+      { re: /(さけ|鮭)/, slug: 'salmon' },
+      { re: /(さば|鯖)/, slug: 'mackerel' }
+    ];
+
     // 先頭200行から記号を検出（商品名列は除外）
     const symbolScanRows = Math.min(csvData.length, 200);
     csvData.slice(0, symbolScanRows).forEach((row, rowIndex) => {
@@ -191,31 +217,20 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
         if (index === 0) return;
         if (typeof rawHeader !== 'string') return;
         const header = rawHeader.trim();
+        const headerN = normalizeHeader(header);
         // 空文字・空白のみはスキップ（"" を誤検出しない）
         if (!header) return;
 
-        const allergen = standardAllergens.find(a => 
-          header === a.name || header.includes(a.name) || a.name.includes(header) ||
-          header === a.slug || header.includes(a.slug) ||
-          // カタカナ表記も対応
-          (header.includes('ｵﾚﾝｼﾞ') && a.slug === 'orange') ||
-          (header.includes('ｷｳｲﾌﾙｰﾂ') && a.slug === 'kiwi') ||
-          (header.includes('ｾﾞﾗﾁﾝ') && a.slug === 'gelatin') ||
-          (header.includes('ｶｼｭｰﾅｯﾂ') && a.slug === 'cashew') ||
-          (header.includes('ｱｰﾓﾝﾄﾞ') && a.slug === 'almond') ||
-          (header.includes('マカダミアナッツ') && a.slug === 'macadamia') ||
-          // より柔軟なマッチング
-          (header.includes('キウイ') && a.slug === 'kiwi') ||
-          (header.includes('キウィ') && a.slug === 'kiwi') ||
-          (header.includes('ゼラチン') && a.slug === 'gelatin') ||
-          (header.includes('カシュー') && a.slug === 'cashew') ||
-          (header.includes('アーモンド') && a.slug === 'almond') ||
-          (header.includes('マカダミア') && a.slug === 'macadamia') ||
-          (header.includes('ごま') && a.slug === 'sesame') ||
-          (header.includes('胡麻') && a.slug === 'sesame') ||
-          (header.includes('魚介') && a.slug === 'seafood') ||
-          (header.includes('シーフード') && a.slug === 'seafood')
-        );
+        // 1) 正規化同士の比較でまず一致を探す
+        const allergen = standardAllergens.find(a => {
+          const aN = normalizeHeader(a.name);
+          return headerN === aN || aN.includes(headerN) || headerN.includes(aN) || headerN === a.slug;
+        }) || (() => {
+          // 2) 同義語ルールでマッチ
+          const hit = synonymRules.find(rule => rule.re.test(headerN));
+          if (!hit) return null;
+          return standardAllergens.find(a => a.slug === hit.slug) || null;
+        })();
         if (allergen) {
           allergens.push({ ...allergen, columnIndex: index });
           console.log(`アレルギー項目検出: 列${index + 1}, ヘッダー: "${header}", 項目: ${allergen.name}`);

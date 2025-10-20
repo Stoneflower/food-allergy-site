@@ -33,8 +33,9 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
     'sesame',     // 26. ごま
     'cashew',     // 27. カシューナッツ
     'almond',     // 28. アーモンド
-    'unused',     // 29. 使用しない
-    'matsutake'   // 30. まつたけ
+    'seafood',    // 29. 魚介類（グループ）
+    'unused',     // 30. 使用しない
+    'matsutake'   // 31. まつたけ
   ];
 
   const defaultRules = {
@@ -111,7 +112,8 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
     { slug: 'sesame', name: 'ごま' },
     { slug: 'cashew', name: 'カシューナッツ' },
     { slug: 'almond', name: 'アーモンド' },
-    { slug: 'matsutake', name: 'まつたけ' }
+    { slug: 'matsutake', name: 'まつたけ' },
+    { slug: 'seafood', name: '魚介類' }
   ];
 
   // CSVから記号とアレルギー項目を検出
@@ -188,7 +190,9 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
           (header.includes('アーモンド') && a.slug === 'almond') ||
           (header.includes('マカダミア') && a.slug === 'macadamia') ||
           (header.includes('ごま') && a.slug === 'sesame') ||
-          (header.includes('胡麻') && a.slug === 'sesame')
+          (header.includes('胡麻') && a.slug === 'sesame') ||
+          (header.includes('魚介') && a.slug === 'seafood') ||
+          (header.includes('シーフード') && a.slug === 'seafood')
         );
         if (allergen) {
           allergens.push({ ...allergen, columnIndex: index });

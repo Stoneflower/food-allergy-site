@@ -73,7 +73,12 @@ export const RestaurantProvider = ({ children }) => {
     { id: 'apple', name: 'りんご', icon: '🍎' }
   ];
 
-  const defaultAllergyOptions = [...defaultMandatoryAllergies, ...defaultRecommendedAllergies];
+  // グループ項目（任意拡張）
+  const groupAllergies = [
+    { id: 'seafood', name: '魚介類', icon: '🐟' }
+  ];
+
+  const defaultAllergyOptions = [...defaultMandatoryAllergies, ...defaultRecommendedAllergies, ...groupAllergies];
 
   // 状態管理
   const [selectedAllergies, setSelectedAllergies] = useState([]);
@@ -699,6 +704,14 @@ export const RestaurantProvider = ({ children }) => {
       // 初期値は true（安全）とし、危険が見つかったら false に落とす
       const productIdToSafe = new Map();
 
+      const expandGroup = (slug) => {
+        if (slug === 'soy') return ['soybean'];
+        if (slug === 'seafood') {
+          return ['shrimp','crab','squid','abalone','salmon','mackerel','salmon_roe'];
+        }
+        return [slug];
+      };
+
       allItems.forEach(item => {
         const productId = item.product_id || (item.id ? String(item.id).split('_')[0] : null);
         if (!productId) return;
@@ -725,17 +738,18 @@ export const RestaurantProvider = ({ children }) => {
 
           // 各アレルゲンについて、適切な区分で判定
           allUserAllergens.forEach(slug => {
-            const key = slug === 'soy' ? 'soybean' : slug;
-            const raw = matrix[key];
-            const v = (raw == null ? 'none' : String(raw)).trim().toLowerCase();
-            
-            // 通常アレルギーとして選択 → directのみ除外
-            // 香料アレルギーとして選択 → fragranceのみ除外
-            // コンタミアレルギーとして選択 → traceのみ除外
-            const isNormalDanger = normalSet.has(slug) && v === 'direct';
-            const isFragDanger = fragSet.has(slug) && v === 'fragrance';
-            const isTraceDanger = traceSet.has(slug) && v === 'trace';
-            
+            const keys = expandGroup(slug);
+            // 任意のキーで危険が見つかれば除外
+            let hit = false;
+            keys.forEach(k => {
+              const key = k;
+              const raw = matrix[key];
+              const v = (raw == null ? 'none' : String(raw)).trim().toLowerCase();
+              const isNormalDanger = normalSet.has(slug) && v === 'direct';
+              const isFragDanger = fragSet.has(slug) && v === 'fragrance';
+              const isTraceDanger = traceSet.has(slug) && v === 'trace';
+              if (isNormalDanger || isFragDanger || isTraceDanger) hit = true;
+            });
             // デバッグ: 乳の判定
             if (slug === 'milk' && v !== 'none') {
               console.log(`🥛 useEffect [${item.name}] 乳（${v}）の判定:`, {
@@ -749,7 +763,7 @@ export const RestaurantProvider = ({ children }) => {
               });
             }
             
-            if (isNormalDanger || isFragDanger || isTraceDanger) {
+            if (hit) {
               console.log(`❌ [${item.name || item.product_name}] アレルゲン "${slug}" が ${v} → 非表示`);
               safeForThisItem = false;
             }

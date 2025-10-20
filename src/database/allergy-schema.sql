@@ -116,6 +116,10 @@ INSERT INTO allergy_items (item_id, name, name_en, category, icon, description, 
 ('yam', 'やまいも', 'Yam', 'recommended', '🍠', 'ヤマイモ、長芋、自然薯など', false, false, 'medium'),
 ('apple', 'りんご', 'Apple', 'recommended', '🍎', 'リンゴ、リンゴジュースなど', true, true, 'low');
 
+-- 追加: 魚介類（グループ項目）
+INSERT INTO allergy_items (item_id, name, name_en, category, icon, description, small_amount_safe, heated_safe, severity_level) VALUES
+('seafood', '魚介類', 'Seafood (Group)', 'recommended', '🐟', '魚介全般（えび・かに・いか・あわび・さけ・さば・いくら など）', false, false, 'medium');
+
 -- インデックスの作成
 CREATE INDEX IF NOT EXISTS idx_allergy_items_item_id ON allergy_items(item_id);
 CREATE INDEX IF NOT EXISTS idx_allergy_items_category ON allergy_items(category);

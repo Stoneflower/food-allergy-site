@@ -18,6 +18,7 @@ const CsvConverter = () => {
       '●': 'direct',
       '〇': 'direct', 
       '○': 'direct',
+      '•': 'direct',
       '◎': 'direct',
       '※': 'trace',
       '△': 'none',
@@ -52,6 +53,82 @@ const CsvConverter = () => {
 
   const handleCsvUpload = (data) => {
     setCsvData(data);
+
+    // 1行目（ヘッダー）のB列以降から順序を抽出して allergenOrder を上書き
+    try {
+      const header = Array.isArray(data) && data.length > 0 ? data[0] : null;
+      if (header && Array.isArray(header)) {
+        // 標準アレルゲン定義（name と slug の対応）
+        const standardAllergens = [
+          { slug: 'egg', name: '卵' },
+          { slug: 'milk', name: '乳' },
+          { slug: 'wheat', name: '小麦' },
+          { slug: 'buckwheat', name: 'そば' },
+          { slug: 'peanut', name: '落花生' },
+          { slug: 'shrimp', name: 'えび' },
+          { slug: 'crab', name: 'かに' },
+          { slug: 'walnut', name: 'くるみ' },
+          { slug: 'soy', name: '大豆' },
+          { slug: 'beef', name: '牛肉' },
+          { slug: 'pork', name: '豚肉' },
+          { slug: 'chicken', name: '鶏肉' },
+          { slug: 'salmon', name: 'さけ' },
+          { slug: 'mackerel', name: 'さば' },
+          { slug: 'abalone', name: 'あわび' },
+          { slug: 'squid', name: 'いか' },
+          { slug: 'salmon_roe', name: 'いくら' },
+          { slug: 'orange', name: 'オレンジ' },
+          { slug: 'kiwi', name: 'キウイフルーツ' },
+          { slug: 'peach', name: 'もも' },
+          { slug: 'apple', name: 'りんご' },
+          { slug: 'yam', name: 'やまいも' },
+          { slug: 'gelatin', name: 'ゼラチン' },
+          { slug: 'banana', name: 'バナナ' },
+          { slug: 'cashew', name: 'カシューナッツ' },
+          { slug: 'sesame', name: 'ごま' },
+          { slug: 'almond', name: 'アーモンド' },
+          { slug: 'matsutake', name: 'まつたけ' }
+        ];
+
+        const katakanaAliases = [
+          { alias: 'ｵﾚﾝｼﾞ', slug: 'orange' },
+          { alias: 'ｷｳｲﾌﾙｰﾂ', slug: 'kiwi' },
+          { alias: 'ｾﾞﾗﾁﾝ', slug: 'gelatin' },
+          { alias: 'ｶｼｭｰﾅｯﾂ', slug: 'cashew' },
+          { alias: 'ｱｰﾓﾝﾄﾞ', slug: 'almond' },
+          { alias: 'ﾏｶﾀﾞﾐｱﾅｯﾂ', slug: 'macadamia' },
+        ];
+
+        const normalize = (s) => (s || '').toString().trim();
+
+        const headerOrder = header
+          .slice(1) // B列以降
+          .map((h) => normalize(h))
+          .map((h) => {
+            // 1) slug 直接一致 or 含有
+            const bySlug = standardAllergens.find(a => h === a.slug || h.includes(a.slug));
+            if (bySlug) return bySlug.slug;
+            // 2) 日本語名の一致 or 含有（全角）
+            const byName = standardAllergens.find(a => h === a.name || h.includes(a.name) || a.name.includes(h));
+            if (byName) return byName.slug;
+            // 3) カタカナ別表記
+            const byAlias = katakanaAliases.find(k => h.includes(k.alias));
+            if (byAlias) return byAlias.slug;
+            return null; // 不明な列はスキップ
+          })
+          .filter(Boolean);
+
+        // 重複除去しつつ順序維持
+        const derivedOrder = Array.from(new Set(headerOrder));
+
+        if (derivedOrder.length > 0) {
+          setRules(prev => ({ ...prev, allergenOrder: derivedOrder }));
+        }
+      }
+    } catch (e) {
+      // noop（マッピングに失敗した場合は既定順序を使用）
+    }
+
     setCurrentStep(2);
   };
 

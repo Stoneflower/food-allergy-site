@@ -50,6 +50,7 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
       '☆': 'none',
       '―': 'none',
       'ー': 'none',
+      '一': 'none',
       '•': 'none',
       '◊': 'none',
       '▽': 'none',

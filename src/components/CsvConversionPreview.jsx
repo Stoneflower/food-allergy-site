@@ -57,7 +57,7 @@ const CsvConversionPreview = ({ csvData, rules, uploadedImages = [], onConversio
     const dataRows = csvData.slice(1);
     console.log('データ行数:', dataRows.length);
 
-    // 手動追加された記号をルールに追加
+    // 手動追加された記号をルールに追加（未設定は none 初期化）
     const allSymbolMappings = { ...rules.symbolMappings };
     if (rules.manualSymbols) {
       rules.manualSymbols.forEach(symbol => {
@@ -66,6 +66,10 @@ const CsvConversionPreview = ({ csvData, rules, uploadedImages = [], onConversio
         }
       });
     }
+    // よく使う追加記号の既定値（未設定ガード）
+    ['●','ー','―','-','•','◊','▽','▽◊','△◊'].forEach(sym => {
+      if (allSymbolMappings[sym] == null) allSymbolMappings[sym] = sym === '●' ? 'direct' : 'none';
+    });
 
     // outputLabelsのデフォルト値を設定
     console.log('rules.outputLabels:', rules.outputLabels);
@@ -228,8 +232,17 @@ const CsvConversionPreview = ({ csvData, rules, uploadedImages = [], onConversio
         if (typeof cell === 'string' && normalizedRaw) {
           // 商品名に含まれる記号を除外してから記号を検出して変換（手動追加された記号も含む）
           const cleanCell = normalizedRaw.replace(/【|】|／|（|）|＊|・/g, '');
-          const symbolMatches = cleanCell.match(/[●○•◎△▲\-▯◇◆□■※★☆🔹―]/gu);
-          if (symbolMatches) {
+
+          // 先に複合記号（空白挟みも）を検出して正規化
+          const compositeRegex = /(▽\s*◊|△\s*◊)/gu;
+          const compositeFound = cleanCell.match(compositeRegex) || [];
+          const compositeNormalized = compositeFound.map(m => m.replace(/\s+/g, ''));
+
+          // 単一記号も検出（追加: ー, ◊, ▽）
+          const singleMatches = cleanCell.match(/[●○•◎△▲▽◊ー\-▯◇◆□■※★☆🔹―]/gu) || [];
+          const symbolMatches = [...new Set([...compositeNormalized, ...singleMatches])];
+
+          if (symbolMatches.length > 0) {
             if (rowIndex < 5 && cellIndex < 5) {
               console.log(`    記号検出: "${symbolMatches}"`);
             }

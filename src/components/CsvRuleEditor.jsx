@@ -109,7 +109,11 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
         const arr = JSON.parse(saved);
         if (Array.isArray(arr) && arr.length > 0) applied = arr;
       }
-    } catch (e) {}
+    } catch (e) {
+      if (typeof console !== 'undefined' && console.debug) {
+        console.debug('appliedAllergenOrder useEffect 読込スキップ:', e?.message);
+      }
+    }
 
     if (applied) {
       setLocalRules(prev => ({ ...prev, allergenOrder: applied }));

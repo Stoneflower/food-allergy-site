@@ -58,6 +58,7 @@ const CsvConverter = () => {
     try {
       const header = Array.isArray(data) && data.length > 0 ? data[0] : null;
       if (header && Array.isArray(header)) {
+        console.log('[CSV] ヘッダー行(raw):', header);
         // 標準アレルゲン定義（name と slug の対応）
         const standardAllergens = [
           { slug: 'egg', name: '卵' },
@@ -121,9 +122,11 @@ const CsvConverter = () => {
 
         // 重複除去しつつ順序維持
         const derivedOrder = Array.from(new Set(headerOrder));
+        console.log('[CSV] 解析されたアレルギー順序(B列以降):', derivedOrder);
 
         if (derivedOrder.length > 0) {
           setRules(prev => ({ ...prev, allergenOrder: derivedOrder }));
+          console.log('[CSV] rules.allergenOrder を更新しました');
         }
       }
     } catch (e) {

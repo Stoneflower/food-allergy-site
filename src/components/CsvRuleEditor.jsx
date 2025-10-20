@@ -59,6 +59,9 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
   };
   
   const [localRules, setLocalRules] = useState(defaultRules);
+  useEffect(() => {
+    console.log('[Editor] 親から受領した順序:', rules?.allergenOrder);
+  }, [rules?.allergenOrder]);
   const [detectedSymbols, setDetectedSymbols] = useState(new Set());
   const [detectedAllergens, setDetectedAllergens] = useState([]);
   const [manualSymbols, setManualSymbols] = useState(new Set());

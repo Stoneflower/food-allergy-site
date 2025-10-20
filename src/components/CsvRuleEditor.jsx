@@ -21,7 +21,7 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
     'beef',       // 14. 牛肉
     'salmon',     // 15. さけ
     'mackerel',   // 16. さば
-    'soy',        // 17. 大豆
+    'soybean',    // 17. 大豆
     'chicken',    // 18. 鶏肉
     'pork',       // 19. 豚肉
     'macadamia',  // 20. マカダミア
@@ -42,7 +42,7 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
   const csvPreferredOrder = [
     'wheat', 'buckwheat', 'egg', 'milk', 'peanut', 'shrimp', 'crab', 'walnut',
     'abalone', 'squid', 'salmon_roe', 'orange', 'kiwi', 'beef', 'salmon', 'mackerel',
-    'soy', 'chicken', 'pork', 'macadamia', 'peach', 'yam', 'apple', 'gelatin',
+    'soybean', 'chicken', 'pork', 'macadamia', 'peach', 'yam', 'apple', 'gelatin',
     'banana', 'sesame', 'cashew', 'almond', 'matsutake', 'seafood'
   ];
 
@@ -150,7 +150,7 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
     { slug: 'beef', name: '牛肉' },
     { slug: 'salmon', name: 'さけ' },
     { slug: 'mackerel', name: 'さば' },
-    { slug: 'soy', name: '大豆' },
+    { slug: 'soybean', name: '大豆' },
     { slug: 'chicken', name: '鶏肉' },
     { slug: 'pork', name: '豚肉' },
     { slug: 'macadamia', name: 'マカダミアナッツ' },
@@ -191,7 +191,7 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
       { re: /(アーモンド|ア—モンド|ｱｰﾓﾝﾄﾞ)/, slug: 'almond' },
       { re: /(ごま|胡麻)/, slug: 'sesame' },
       { re: /(魚介類|シーフード|しーふーど)/, slug: 'seafood' },
-      { re: /(大豆)/, slug: 'soy' },
+      { re: /(大豆)/, slug: 'soybean' },
       { re: /(小麦)/, slug: 'wheat' },
       { re: /(そば|蕎麦)/, slug: 'buckwheat' },
       { re: /(落花生|ピーナッツ)/, slug: 'peanut' },

@@ -67,7 +67,7 @@ const CsvConversionPreview = ({ csvData, rules, uploadedImages = [], onConversio
       });
     }
     // よく使う追加記号の既定値（未設定ガード）
-    ['●','ー','―','-','•','◊','▽','▽◊','△◊'].forEach(sym => {
+    ['●','ー','—','―','-','•','◊','▽','▽◊','△◊'].forEach(sym => {
       if (allSymbolMappings[sym] == null) allSymbolMappings[sym] = sym === '●' ? 'direct' : 'none';
     });
 
@@ -248,8 +248,24 @@ const CsvConversionPreview = ({ csvData, rules, uploadedImages = [], onConversio
             if (rowIndex < 5 && cellIndex < 5) {
               console.log(`    記号検出: "${symbolMatches}"`);
             }
+            // マッピング解決関数（ダッシュ類は相互に参照）
+            const resolveMapping = (sym) => {
+              const dashVariants = ['ー','—','―','ｰ','−','─','‐','-'];
+              const candidates = [sym];
+              if (sym === 'ー') {
+                candidates.push(...dashVariants.filter(s => s !== 'ー'));
+              } else if (dashVariants.includes(sym)) {
+                candidates.push('ー');
+              }
+              for (const c of candidates) {
+                const mv = allSymbolMappings[c];
+                if (mv) return mv;
+              }
+              return allSymbolMappings['ー'] || 'none';
+            };
+
             symbolMatches.forEach(symbol => {
-              const mappedValue = allSymbolMappings[symbol];
+              const mappedValue = resolveMapping(symbol);
               console.log(`記号変換: 行${rowIndex + 1}, 列${cellIndex + 1}, 記号: "${symbol}", マッピング値: "${mappedValue}"`);
               if (mappedValue) {
                 // アレルギー項目を特定
@@ -445,6 +461,10 @@ const CsvConversionPreview = ({ csvData, rules, uploadedImages = [], onConversio
     try {
       // プレビュー最終データをローカルに保存（後段の保存処理でそのまま使用）
       localStorage.setItem('finalPreviewData', JSON.stringify(finalData));
+      // この時点のアレルギー順を保存して、設定画面にも反映できるようにする
+      if (Array.isArray(rules?.allergenOrder) && rules.allergenOrder.length > 0) {
+        localStorage.setItem('appliedAllergenOrder', JSON.stringify(rules.allergenOrder));
+      }
     } catch (e) {
       // noop
     }

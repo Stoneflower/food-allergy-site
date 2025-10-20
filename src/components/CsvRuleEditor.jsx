@@ -58,6 +58,7 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
       '☆': 'none',
       '―': 'none',
       'ー': 'none',
+      '—': 'none',
       '一': 'none',
       '•': 'none',
       '◊': 'none',
@@ -95,6 +96,16 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
         }));
       }
     }
+    // プレビュー側で確定した順序があれば、それを適用（ユーザーが次へ進んだ後の戻りでも維持）
+    try {
+      const saved = localStorage.getItem('appliedAllergenOrder');
+      if (saved) {
+        const arr = JSON.parse(saved);
+        if (Array.isArray(arr) && arr.length > 0) {
+          setLocalRules(prev => ({ ...prev, allergenOrder: arr }));
+        }
+      }
+    } catch (_) {}
   }, [rules?.allergenOrder, detectedAllergens.length]);
 
   // 標準アレルギー項目
@@ -172,18 +183,19 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
         if (cellIndex === 0) return;
         
         if (typeof cell === 'string') {
-          // 商品名に含まれる記号を除外してから記号パターンを検出
+          // 商品名に含まれる記号を除外し、ダッシュ類を統一
           const cleanCell = cell.replace(/【|】|／|（|）|＊|・/g, '');
+          const normalizedCell = cleanCell.replace(/[ーｰ−―—─‐]/g, 'ー');
           // 2文字以上の複合記号を先に検出（間に空白があっても検出）
           const compositeRegex = /(▽\s*◊|△\s*◊)/u;
-          const compositeMatch = cleanCell.match(compositeRegex);
+          const compositeMatch = normalizedCell.match(compositeRegex);
           if (compositeMatch) {
             const normalized = compositeMatch[1].replace(/\s+/g, '');
             symbols.add(normalized);
             console.log(`複合記号検出: 行${rowIndex + 1}, 列${cellIndex + 1}, 記号: "${normalized}"`);
           }
           // 単一記号の検出（新規: ー, ◊, ▽ も対象）
-          const symbolMatches = cleanCell.match(/[●○•◎△▲▽◊ー\-▯◇◆□■※★☆🔹―]/gu);
+          const symbolMatches = normalizedCell.match(/[●○•◎△▲▽◊ー\-▯◇◆□■※★☆🔹―]/gu);
           
           if (symbolMatches) {
             symbolMatches.forEach(symbol => {

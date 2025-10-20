@@ -83,6 +83,8 @@ const CsvConversionPreview = ({ csvData, rules, uploadedImages = [], onConversio
     ['●','ー','—','―','-','•','◊','▽','▽◊','△◊'].forEach(sym => {
       if (allSymbolMappings[sym] == null) allSymbolMappings[sym] = sym === '●' ? 'direct' : 'none';
     });
+    
+    console.log('🔍 使用する記号マッピング:', allSymbolMappings);
 
     // outputLabelsのデフォルト値を設定
     console.log('rules.outputLabels:', rules.outputLabels);
@@ -253,8 +255,8 @@ const CsvConversionPreview = ({ csvData, rules, uploadedImages = [], onConversio
           const compositeFound = normalizedCell.match(compositeRegex) || [];
           const compositeNormalized = compositeFound.map(m => m.replace(/\s+/g, ''));
 
-          // 単一記号も検出（追加: ー, ◊, ▽）
-          const singleMatches = normalizedCell.match(/[●○•◎△▲▽◊ー\-▯◇◆□■※★☆🔹―一]/gu) || [];
+          // 単一記号も検出（追加: ー, ◊, ▽, —）
+          const singleMatches = normalizedCell.match(/[●○•◎△▲▽◊ー—\-▯◇◆□■※★☆🔹―一]/gu) || [];
           const symbolMatches = [...new Set([...compositeNormalized, ...singleMatches])];
 
           if (symbolMatches.length > 0) {
@@ -270,11 +272,17 @@ const CsvConversionPreview = ({ csvData, rules, uploadedImages = [], onConversio
               } else if (dashVariants.includes(sym)) {
                 candidates.push('ー');
               }
+              console.log(`🔍 記号マッピング解決: "${sym}" → 候補: [${candidates.join(', ')}]`);
               for (const c of candidates) {
                 const mv = allSymbolMappings[c];
-                if (mv) return mv;
+                if (mv) {
+                  console.log(`🔍 マッピング発見: "${c}" → "${mv}"`);
+                  return mv;
+                }
               }
-              return allSymbolMappings['ー'] || 'none';
+              const fallback = allSymbolMappings['ー'] || 'none';
+              console.log(`🔍 フォールバック: "${sym}" → "${fallback}"`);
+              return fallback;
             };
 
             symbolMatches.forEach(symbol => {

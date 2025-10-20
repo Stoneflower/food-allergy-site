@@ -105,7 +105,12 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
           setLocalRules(prev => ({ ...prev, allergenOrder: arr }));
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      // ローカルストレージ未対応環境やJSON不正時は無視
+      if (typeof console !== 'undefined' && console.debug) {
+        console.debug('appliedAllergenOrder の読み込みをスキップ:', e?.message);
+      }
+    }
   }, [rules?.allergenOrder, detectedAllergens.length]);
 
   // 標準アレルギー項目

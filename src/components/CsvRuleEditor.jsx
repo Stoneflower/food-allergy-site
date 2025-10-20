@@ -64,6 +64,16 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
   const [manualSymbols, setManualSymbols] = useState(new Set());
   const [newSymbolInput, setNewSymbolInput] = useState('');
 
+  // 親から渡される allergenOrder の変更を即時同期（CSV側で決めた順序を優先）
+  useEffect(() => {
+    if (Array.isArray(rules?.allergenOrder) && rules.allergenOrder.length > 0) {
+      setLocalRules(prev => ({
+        ...prev,
+        allergenOrder: [...rules.allergenOrder]
+      }));
+    }
+  }, [rules?.allergenOrder]);
+
   // 標準アレルギー項目
   const standardAllergens = [
     { slug: 'egg', name: '卵' },

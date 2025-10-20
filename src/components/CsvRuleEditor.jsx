@@ -126,7 +126,7 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
         if (typeof cell === 'string') {
           // 商品名に含まれる記号を除外してから記号パターンを検出
           const cleanCell = cell.replace(/【|】|／|（|）|＊|・/g, '');
-          const symbolMatches = cleanCell.match(/[●○◎△▲\-▯◇◆□■※★☆🔹―]/gu);
+          const symbolMatches = cleanCell.match(/[●○•◎△▲\-▯◇◆□■※★☆🔹―]/gu);
           
           if (symbolMatches) {
             symbolMatches.forEach(symbol => {

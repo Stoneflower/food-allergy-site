@@ -741,30 +741,37 @@ export const RestaurantProvider = ({ children }) => {
             const keys = expandGroup(slug);
             // 任意のキーで危険が見つかれば除外
             let hit = false;
+            let lastV = 'none';
+            let lastFlags = { isNormalDanger: false, isFragDanger: false, isTraceDanger: false };
             keys.forEach(k => {
-              const key = k;
-              const raw = matrix[key];
+              const raw = matrix[k];
               const v = (raw == null ? 'none' : String(raw)).trim().toLowerCase();
               const isNormalDanger = normalSet.has(slug) && v === 'direct';
               const isFragDanger = fragSet.has(slug) && v === 'fragrance';
               const isTraceDanger = traceSet.has(slug) && v === 'trace';
               if (isNormalDanger || isFragDanger || isTraceDanger) hit = true;
+              lastV = v;
+              lastFlags = { isNormalDanger, isFragDanger, isTraceDanger };
             });
-            // デバッグ: 乳の判定
-            if (slug === 'milk' && v !== 'none') {
-              console.log(`🥛 useEffect [${item.name}] 乳（${v}）の判定:`, {
-                productId,
-                productName: item.product_name || item.name,
-                v,
-                isNormalDanger,
-                isFragDanger,
-                isTraceDanger,
-                willExclude: isNormalDanger || isFragDanger || isTraceDanger
-              });
+            // デバッグ: 乳の判定（キーを直接参照して出力）
+            if (slug === 'milk') {
+              const milkRaw = matrix['milk'];
+              const milkV = (milkRaw == null ? 'none' : String(milkRaw)).trim().toLowerCase();
+              if (milkV !== 'none') {
+                console.log(`🥛 useEffect [${item.name}] 乳（${milkV}）の判定:`, {
+                  productId,
+                  productName: item.product_name || item.name,
+                  v: milkV,
+                  isNormalDanger: normalSet.has('milk') && milkV === 'direct',
+                  isFragDanger: fragSet.has('milk') && milkV === 'fragrance',
+                  isTraceDanger: traceSet.has('milk') && milkV === 'trace',
+                  willExclude: (normalSet.has('milk') && milkV === 'direct') || (fragSet.has('milk') && milkV === 'fragrance') || (traceSet.has('milk') && milkV === 'trace')
+                });
+              }
             }
             
             if (hit) {
-              console.log(`❌ [${item.name || item.product_name}] アレルゲン "${slug}" が ${v} → 非表示`);
+              console.log(`❌ [${item.name || item.product_name}] アレルゲン "${slug}" が ${lastV} → 非表示`, lastFlags);
               safeForThisItem = false;
             }
           });

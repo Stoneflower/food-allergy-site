@@ -52,7 +52,7 @@ const CsvConversionPreview = ({ csvData, rules, uploadedImages = [], onConversio
         const arr = JSON.parse(saved);
         if (Array.isArray(arr) && arr.length > 0) return arr;
       }
-    } catch (_) {}
+    } catch (e) { console.debug('Error loading appliedAllergenOrder from localStorage:', e); }
     return Array.isArray(rules?.allergenOrder) ? rules.allergenOrder : standardAllergens.map(a => a.slug);
   };
   const allergenOrder = getAppliedAllergenOrder();

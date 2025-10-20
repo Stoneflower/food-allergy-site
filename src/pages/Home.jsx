@@ -249,7 +249,7 @@ const Home = () => {
               <span className="text-6xl md:text-8xl">📸</span>
               <div>
                 <h1 className="text-4xl md:text-6xl font-bold mb-2">
-                  <span className="text-yellow-300 drop-shadow-lg">CanIEatOo?</span>
+                  <span className="text-yellow-300 drop-shadow-lg">EATtoo</span>
                 </h1>
                 <p className="text-2xl md:text-3xl font-medium text-orange-200 drop-shadow-md">
                   {t('common.appTagline')}

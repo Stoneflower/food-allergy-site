@@ -1,6 +1,6 @@
 {
   "common": {
-    "appName": "CanIEatOo?",
+    "appName": "EATtoo",
     "appTagline": "みんなで共有",
     "welcome": "食べられるものをみんなで簡単共有"
   },
@@ -24,7 +24,7 @@
     },
     "links": {
       "contact": "お問合せ",
-      "about": "CanIEatOo?について",
+      "about": "EATtooについて",
       "loginRegister": "無料会員登録・ログイン"
     }
   },
@@ -69,7 +69,7 @@
       "description": "あなたに合わせた詳細設定で、もっと安心・便利に。",
       "contamination": {
         "title": "コンタミネーション設定",
-        "description": "混入の可能性（trace）を個別に管理。微量NGなどの判断に役立ちます。"
+        "description": "混入の可能性を個別に管理。微量NGなどの判断に役立ちます。"
       },
       "fragrance": {
         "title": "香料含有設定",
@@ -286,7 +286,7 @@
     "title": "プライバシーポリシー"
   },
   "about": {
-    "title": "CanIEatOo? について",
+    "title": "EATtoo について",
     "subtitle": "食べれる？",
     "description": "「これ食べても大丈夫？」の家族のやり取りから生まれたサイトです。食物アレルギーをお持ちの方が、アレルギーを簡単に判断できて、少しでもよろこんでもらえらたらうれしいです",
     "mission": {
@@ -323,7 +323,7 @@
       }
     },
     "solutions": {
-      "title": "CanIEatOo?の解決策",
+      "title": "EATtooの解決策",
       "detailedInfo": {
         "title": "詳細なアレルギー情報",
         "description": "28品目すべてのアレルギー情報を事前に確認できます"

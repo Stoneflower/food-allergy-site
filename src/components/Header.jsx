@@ -172,7 +172,7 @@ const Header = () => {
               </div>
               <div className="flex flex-col">
                 <div className="flex items-baseline space-x-1">
-                  <span className="text-lg font-bold text-white">CanIEatOo?</span>
+                  <span className="text-lg font-bold text-white">EATtoo</span>
                 </div>
                 <span className="text-orange-200 text-xs font-medium">{t('common.appTagline')}</span>
               </div>
@@ -672,7 +672,7 @@ const Header = () => {
                 className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
                 onClick={() => setIsMenuOpen(false)}
               >
-                CanIEatOo?について
+                EATtooについて
               </Link>
               {isAuthed ? (
                 <>

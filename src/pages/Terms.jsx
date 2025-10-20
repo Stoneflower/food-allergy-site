@@ -24,7 +24,7 @@ const Terms = () => {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <h1 className="text-2xl font-bold text-gray-900 mb-6">利用規約</h1>
         <div className="bg-white rounded-xl shadow p-6 space-y-4 text-sm leading-7 text-gray-800">
-          <p>本利用規約（以下「本規約」）は、CanIEatOo?（以下「本サービス」）の提供条件および本サービスの利用に関する当社と利用者との間の権利義務関係を定めるものです。</p>
+          <p>本利用規約（以下「本規約」）は、EATtoo（以下「本サービス」）の提供条件および本サービスの利用に関する当社と利用者との間の権利義務関係を定めるものです。</p>
           <h2 className="font-semibold mt-4">1. 適用</h2>
           <p>本規約は、本サービスの利用に関わる一切の関係に適用されます。</p>
           <h2 className="font-semibold mt-4">2. アカウント</h2>

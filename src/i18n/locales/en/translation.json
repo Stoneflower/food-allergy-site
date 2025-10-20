@@ -1,6 +1,6 @@
 {
   "common": {
-    "appName": "CanIEatOo?",
+    "appName": "EATtoo",
     "appTagline": "Share Together",
     "welcome": "Easy sharing of safe foods for everyone"
   },
@@ -24,7 +24,7 @@
     },
     "links": {
       "contact": "Contact",
-      "about": "About CanIEatOo?",
+      "about": "About EATtoo",
       "loginRegister": "Free Sign up / Login"
     }
   },
@@ -286,7 +286,7 @@
     "title": "Privacy Policy"
   },
   "about": {
-    "title": "About CanIEatOo?",
+    "title": "About EATtoo",
     "subtitle": "Can I eat it?",
     "description": "This site was born from family conversations asking 'Is it safe to eat this?' We hope that people with food allergies can easily determine their allergies and feel a little happier.",
     "mission": {
@@ -323,7 +323,7 @@
       }
     },
     "solutions": {
-      "title": "CanIEatOo?'s Solutions",
+      "title": "EATtoo's Solutions",
       "detailedInfo": {
         "title": "Detailed Allergy Information",
         "description": "You can check all 28 allergen categories in advance"

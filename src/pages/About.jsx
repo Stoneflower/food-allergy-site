@@ -167,7 +167,7 @@ const About = () => {
             >
               <div className="text-center mb-6">
                 <span className="text-5xl">💡</span>
-                <h3 className="text-2xl font-bold text-gray-900 mt-4">CanIEatOo?の解決策</h3>
+                <h3 className="text-2xl font-bold text-gray-900 mt-4">EATtooの解決策</h3>
               </div>
               
               <div className="space-y-4">

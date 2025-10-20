@@ -16,7 +16,7 @@ exports.handler = async (event) => {
       return { statusCode: 500, body: 'Email env not configured' };
     }
 
-    const subject = `【お問い合わせ】CanIEatOo? から`;
+    const subject = `【お問い合わせ】EATtoo から`;
     const header = '表示に問題があったり、こういうふうにしてほしいなど、ありましたらお送りください。\nお礼のメールもモチベーションに繋がるので、絶賛受付中です。\n\n';
     const text = `${header}お名前: ${name}\nメール: ${email}\n\n本文:\n${message}`;
     const html = `

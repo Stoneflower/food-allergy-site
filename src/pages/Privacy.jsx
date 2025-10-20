@@ -24,7 +24,7 @@ const Privacy = () => {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <h1 className="text-2xl font-bold text-gray-900 mb-6">プライバシーポリシー</h1>
         <div className="bg-white rounded-xl shadow p-6 space-y-4 text-sm leading-7 text-gray-800">
-          <p>本プライバシーポリシーは、CanIEatOo?（以下「本サービス」）における利用者の個人情報の取扱い方針を定めるものです。</p>
+          <p>本プライバシーポリシーは、EATtoo（以下「本サービス」）における利用者の個人情報の取扱い方針を定めるものです。</p>
           <h2 className="font-semibold mt-4">1. 収集する情報</h2>
           <p>メールアドレス、氏名、アレルギー設定、問い合わせ内容等を取得する場合があります。</p>
           <h2 className="font-semibold mt-4">2. 利用目的</h2>

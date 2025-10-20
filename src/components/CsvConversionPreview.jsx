@@ -647,7 +647,7 @@ const CsvConversionPreview = ({ csvData, rules, uploadedImages = [], onConversio
           className="flex items-center space-x-2 px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-medium"
         >
           <FiCheckCircle className="w-4 h-4" />
-          <span>変換完了</span>
+          <span>次のステップへ進む</span>
         </button>
       </div>
     </div>

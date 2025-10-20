@@ -46,10 +46,20 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
     'banana', 'sesame', 'cashew', 'almond', 'matsutake', 'seafood'
   ];
 
+  // 可能ならプレビューで確定した順序を初期値に採用
+  let initialAppliedOrder = null;
+  try {
+    const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('appliedAllergenOrder') : null;
+    if (saved) {
+      const arr = JSON.parse(saved);
+      if (Array.isArray(arr) && arr.length > 0) initialAppliedOrder = arr;
+    }
+  } catch (_) {}
+
   const defaultRules = {
     ...rules,
     // デフォルト順序を使用（CSVから検出された場合は後で上書きされる）
-    allergenOrder: defaultAllergenOrder,
+    allergenOrder: initialAppliedOrder || defaultAllergenOrder,
     symbolMappings: {
       ...rules.symbolMappings,
       '●': 'direct',
@@ -87,28 +97,25 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
   // 親から渡される allergenOrder の変更を即時同期
   // ただし、CSVから順序が検出された場合はCSVの順序を優先
   useEffect(() => {
-    if (Array.isArray(rules?.allergenOrder) && rules.allergenOrder.length > 0) {
-      // CSVからアレルギー項目が検出されていない場合のみ、親の順序を使用
-      if (detectedAllergens.length === 0) {
-        setLocalRules(prev => ({
-          ...prev,
-          allergenOrder: [...rules.allergenOrder]
-        }));
-      }
-    }
-    // プレビュー側で確定した順序があれば、それを適用（ユーザーが次へ進んだ後の戻りでも維持）
+    // プレビュー確定順序があれば最優先
+    let applied = null;
     try {
       const saved = localStorage.getItem('appliedAllergenOrder');
       if (saved) {
         const arr = JSON.parse(saved);
-        if (Array.isArray(arr) && arr.length > 0) {
-          setLocalRules(prev => ({ ...prev, allergenOrder: arr }));
-        }
+        if (Array.isArray(arr) && arr.length > 0) applied = arr;
       }
-    } catch (e) {
-      // ローカルストレージ未対応環境やJSON不正時は無視
-      if (typeof console !== 'undefined' && console.debug) {
-        console.debug('appliedAllergenOrder の読み込みをスキップ:', e?.message);
+    } catch (e) {}
+
+    if (applied) {
+      setLocalRules(prev => ({ ...prev, allergenOrder: applied }));
+      return;
+    }
+
+    // なければ親設定（検出がないときのみ）を反映
+    if (Array.isArray(rules?.allergenOrder) && rules.allergenOrder.length > 0) {
+      if (detectedAllergens.length === 0) {
+        setLocalRules(prev => ({ ...prev, allergenOrder: [...rules.allergenOrder] }));
       }
     }
   }, [rules?.allergenOrder, detectedAllergens.length]);

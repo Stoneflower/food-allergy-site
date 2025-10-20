@@ -38,6 +38,14 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
     'matsutake'   // 31. まつたけ
   ];
 
+  // CSVテンプレ順（CSVで一般的な並び）。CSV未検出分の補完に使用
+  const csvPreferredOrder = [
+    'wheat', 'buckwheat', 'egg', 'milk', 'peanut', 'shrimp', 'crab', 'walnut',
+    'abalone', 'squid', 'salmon_roe', 'orange', 'kiwi', 'beef', 'salmon', 'mackerel',
+    'soy', 'chicken', 'pork', 'macadamia', 'peach', 'yam', 'apple', 'gelatin',
+    'banana', 'sesame', 'cashew', 'almond', 'matsutake', 'seafood'
+  ];
+
   const defaultRules = {
     ...rules,
     // デフォルト順序を使用（CSVから検出された場合は後で上書きされる）
@@ -250,15 +258,15 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
         .map(a => a.slug);
 
       const uniqueDetected = Array.from(new Set(detectedOrder));
-      const standardSlugs = standardAllergens.map(a => a.slug);
 
       // CSVで検出された順序をベースにする
       let finalOrder = [...uniqueDetected];
       const used = new Set(finalOrder);
 
-      // 標準定義で未出現のものを最後に補完
-      standardSlugs.forEach(slug => {
-        if (!used.has(slug)) {
+      // CSVテンプレ順に従って未出現を補完（固定順で崩れない）
+      csvPreferredOrder.forEach(slug => {
+        // 標準に存在するもののみ対象
+        if (standardAllergens.some(a => a.slug === slug) && !used.has(slug)) {
           finalOrder.push(slug);
           used.add(slug);
         }

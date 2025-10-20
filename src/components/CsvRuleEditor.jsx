@@ -54,7 +54,11 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
       const arr = JSON.parse(saved);
       if (Array.isArray(arr) && arr.length > 0) initialAppliedOrder = arr;
     }
-  } catch (_) {}
+  } catch (e) {
+    if (typeof console !== 'undefined' && console.debug) {
+      console.debug('appliedAllergenOrder 初期読込スキップ:', e?.message);
+    }
+  }
 
   const defaultRules = {
     ...rules,

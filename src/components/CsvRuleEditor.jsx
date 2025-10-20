@@ -38,7 +38,10 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
 
   const defaultRules = {
     ...rules,
-    allergenOrder: defaultAllergenOrder,
+    // 既に親から順序が渡されていればそれを優先。なければデフォルトにフォールバック
+    allergenOrder: (rules && Array.isArray(rules.allergenOrder) && rules.allergenOrder.length > 0)
+      ? rules.allergenOrder
+      : defaultAllergenOrder,
     symbolMappings: {
       ...rules.symbolMappings,
       '🔹': 'none', // デフォルトで🔹を追加

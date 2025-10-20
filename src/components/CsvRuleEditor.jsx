@@ -185,9 +185,9 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
 
     // 同義語・別表記 → slug マッピング（正規表現）
     const synonymRules = [
-      { re: /(キウイフルーツ|キウィフルーツ|ｷｳｲﾌﾙｰﾂ|キウイ)/, slug: 'kiwi' },
+      { re: /(キウイフルーツ|キウィフルーツ|ｷｳｲﾌﾙｰﾂ|キウイ|力ウイフルーツ|力ウィフルーツ)/, slug: 'kiwi' },
       { re: /(ゼラチン|ｾﾞﾗﾁﾝ)/, slug: 'gelatin' },
-      { re: /(カシューナッツ|ｶｼｭｰﾅｯﾂ|カシュー)/, slug: 'cashew' },
+      { re: /(カシューナッツ|カシュ—ナッツ|ｶｼｭｰﾅｯﾂ|カシュー|力シューナッツ|力シュ—ナッツ)/, slug: 'cashew' },
       { re: /(アーモンド|ア—モンド|ｱｰﾓﾝﾄﾞ)/, slug: 'almond' },
       { re: /(ごま|胡麻)/, slug: 'sesame' },
       { re: /(魚介類|シーフード|しーふーど)/, slug: 'seafood' },
@@ -283,7 +283,15 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
           allergens.push({ ...allergen, columnIndex: index });
           console.log(`✅ アレルギー項目検出: 列${index + 1}, ヘッダー: "${header}", 項目: ${allergen.name}`);
         } else {
-          console.log(`❌ アレルギー項目未検出: 列${index + 1}, ヘッダー: "${header}"`);
+          console.log(`❌ アレルギー項目未検出: 列${index + 1}, ヘッダー: "${header}", 正規化後: "${headerN}"`);
+          // 標準アレルギー項目との部分一致もチェック
+          const partialMatches = standardAllergens.filter(a => {
+            const aN = normalizeHeader(a.name);
+            return headerN.includes(aN) || aN.includes(headerN);
+          });
+          if (partialMatches.length > 0) {
+            console.log(`  部分一致候補:`, partialMatches.map(a => a.name));
+          }
         }
       });
     }

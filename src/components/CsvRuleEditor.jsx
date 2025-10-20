@@ -101,7 +101,13 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
   // 親から渡される allergenOrder の変更を即時同期
   // ただし、CSVから順序が検出された場合はCSVの順序を優先
   useEffect(() => {
-    // プレビュー確定順序があれば最優先
+    // CSVからアレルギー項目が検出された場合は、CSVの順序を最優先
+    if (detectedAllergens.length > 0) {
+      // CSV検出順序は別のuseEffectで処理されるため、ここでは何もしない
+      return;
+    }
+
+    // CSVから検出されていない場合のみ、プレビュー確定順序を適用
     let applied = null;
     try {
       const saved = localStorage.getItem('appliedAllergenOrder');
@@ -120,11 +126,9 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
       return;
     }
 
-    // なければ親設定（検出がないときのみ）を反映
+    // なければ親設定を反映
     if (Array.isArray(rules?.allergenOrder) && rules.allergenOrder.length > 0) {
-      if (detectedAllergens.length === 0) {
-        setLocalRules(prev => ({ ...prev, allergenOrder: [...rules.allergenOrder] }));
-      }
+      setLocalRules(prev => ({ ...prev, allergenOrder: [...rules.allergenOrder] }));
     }
   }, [rules?.allergenOrder, detectedAllergens.length]);
 
@@ -184,7 +188,7 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
       { re: /(キウイフルーツ|キウィフルーツ|ｷｳｲﾌﾙｰﾂ|キウイ)/, slug: 'kiwi' },
       { re: /(ゼラチン|ｾﾞﾗﾁﾝ)/, slug: 'gelatin' },
       { re: /(カシューナッツ|ｶｼｭｰﾅｯﾂ|カシュー)/, slug: 'cashew' },
-      { re: /(アーモンド|ｱｰﾓﾝﾄﾞ)/, slug: 'almond' },
+      { re: /(アーモンド|ア—モンド|ｱｰﾓﾝﾄﾞ)/, slug: 'almond' },
       { re: /(ごま|胡麻)/, slug: 'sesame' },
       { re: /(魚介類|シーフード|しーふーど)/, slug: 'seafood' },
       { re: /(大豆)/, slug: 'soy' },
@@ -253,12 +257,15 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
     // 1行目（ヘッダー行）からアレルギー項目を検出
     if (csvData.length > 0) {
       const headerRow = csvData[0]; // 1行目
+      console.log('🔍 CSVヘッダー行全体:', headerRow);
       headerRow.forEach((rawHeader, index) => {
         // A列（商品名列）はスキップ
         if (index === 0) return;
         if (typeof rawHeader !== 'string') return;
         const header = rawHeader.trim();
         const headerN = normalizeHeader(header);
+        console.log(`🔍 列${index + 1}: 元ヘッダー="${header}", 正規化後="${headerN}"`);
+        
         // 空文字・空白のみはスキップ（"" を誤検出しない）
         if (!header) return;
 
@@ -274,7 +281,9 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
         })();
         if (allergen) {
           allergens.push({ ...allergen, columnIndex: index });
-          console.log(`アレルギー項目検出: 列${index + 1}, ヘッダー: "${header}", 項目: ${allergen.name}`);
+          console.log(`✅ アレルギー項目検出: 列${index + 1}, ヘッダー: "${header}", 項目: ${allergen.name}`);
+        } else {
+          console.log(`❌ アレルギー項目未検出: 列${index + 1}, ヘッダー: "${header}"`);
         }
       });
     }
@@ -317,6 +326,14 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
         ...prev,
         allergenOrder: finalOrder
       }));
+
+      // 新しいCSVが検出されたので、古いappliedAllergenOrderをクリア
+      try {
+        localStorage.removeItem('appliedAllergenOrder');
+        console.log('新しいCSV検出により、古いappliedAllergenOrderをクリアしました');
+      } catch (e) {
+        console.debug('appliedAllergenOrderクリアエラー:', e);
+      }
     } else {
       // CSVからアレルギー項目が検出されなかった場合は、デフォルト順序を使用
       console.log('CSVからアレルギー項目が検出されませんでした。デフォルト順序を使用します。');

@@ -48,7 +48,13 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
       '🔹': 'none', // デフォルトで🔹を追加
       '★': 'none',
       '☆': 'none',
-      '―': 'none'
+      '―': 'none',
+      'ー': 'none',
+      '•': 'none',
+      '◊': 'none',
+      '▽': 'none',
+      '▽◊': 'none',
+      '△◊': 'none'
     },
     outputLabels: {
       direct: 'ふくむ',
@@ -123,8 +129,9 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
     const symbols = new Set();
     const allergens = [];
 
-    // 最初の数行から記号を検出（商品名列は除外）
-    csvData.slice(0, 20).forEach((row, rowIndex) => {
+    // 先頭200行から記号を検出（商品名列は除外）
+    const symbolScanRows = Math.min(csvData.length, 200);
+    csvData.slice(0, symbolScanRows).forEach((row, rowIndex) => {
       row.forEach((cell, cellIndex) => {
         // 商品名列（1列目）は記号検出から除外
         if (cellIndex === 0) return;
@@ -132,7 +139,16 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
         if (typeof cell === 'string') {
           // 商品名に含まれる記号を除外してから記号パターンを検出
           const cleanCell = cell.replace(/【|】|／|（|）|＊|・/g, '');
-          const symbolMatches = cleanCell.match(/[●○•◎△▲\-▯◇◆□■※★☆🔹―]/gu);
+          // 2文字以上の複合記号を先に検出（間に空白があっても検出）
+          const compositeRegex = /(▽\s*◊|△\s*◊)/u;
+          const compositeMatch = cleanCell.match(compositeRegex);
+          if (compositeMatch) {
+            const normalized = compositeMatch[1].replace(/\s+/g, '');
+            symbols.add(normalized);
+            console.log(`複合記号検出: 行${rowIndex + 1}, 列${cellIndex + 1}, 記号: "${normalized}"`);
+          }
+          // 単一記号の検出（新規: ー, ◊, ▽ も対象）
+          const symbolMatches = cleanCell.match(/[●○•◎△▲▽◊ー\-▯◇◆□■※★☆🔹―]/gu);
           
           if (symbolMatches) {
             symbolMatches.forEach(symbol => {
@@ -141,12 +157,18 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
             });
           } else {
             // 記号が含まれている可能性があるセルをログ出力
-            if (cell.includes('△') || cell.includes('●') || cell.includes('○') || cell.includes('◎') || cell.includes('※') || cell.includes('▲')) {
+            if (cell.includes('△') || cell.includes('●') || cell.includes('○') || cell.includes('◎') || cell.includes('※') || cell.includes('▲') || cell.includes('▽') || cell.includes('◊')) {
               console.log(`記号候補: 行${rowIndex + 1}, 列${cellIndex + 1}, セル内容: "${cell}"`);
             }
             // △記号の特別なデバッグログ
             if (cell.includes('△')) {
               console.log(`🔍 △記号発見: 行${rowIndex + 1}, 列${cellIndex + 1}, セル内容: "${cell}"`);
+            }
+            if (cell.includes('▽')) {
+              console.log(`🔍 ▽記号発見: 行${rowIndex + 1}, 列${cellIndex + 1}, セル内容: "${cell}"`);
+            }
+            if (/(▽\s*◊|△\s*◊)/u.test(cell)) {
+              console.log(`🔍 複合(▽◊/△◊)候補発見: 行${rowIndex + 1}, 列${cellIndex + 1}, セル内容: "${cell}"`);
             }
             // すべてのセルの内容をログ出力（デバッグ用）
             if (cell.includes('※')) {

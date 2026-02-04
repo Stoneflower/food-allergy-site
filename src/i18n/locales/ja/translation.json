@@ -326,7 +326,7 @@
       "title": "EATtooの解決策",
       "detailedInfo": {
         "title": "詳細なアレルギー情報",
-        "description": "28品目すべてのアレルギー情報を事前に確認できます"
+        "description": "主要なアレルギー品目の情報を事前に確認できます"
       },
       "safeRestaurants": {
         "title": "安心のレストラン選び",
@@ -340,8 +340,8 @@
     "features": {
       "title": "サービスの特徴",
       "fullSupport": {
-        "title": "28品目完全対応",
-        "description": "法定8品目と推奨20品目、全28品目のアレルギー情報に完全対応しています"
+        "title": "主要アレルギー品目に完全対応",
+        "description": "法定8品目と推奨品目のアレルギー情報に完全対応しています"
       },
       "curatedRestaurants": {
         "title": "厳選されたレストラン",

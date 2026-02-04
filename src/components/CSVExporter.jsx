@@ -5,7 +5,7 @@ import Papa from 'papaparse';
 import { supabase } from '../lib/supabase';
 import { useRestaurant } from '../context/RestaurantContext';
 
-const CsvExporter = ({ data, onBack }) => {
+const CsvExporter = ({ data, allergenOrder, onBack }) => {
   const [downloadStatus, setDownloadStatus] = useState('ready');
   const [uploadStatus, setUploadStatus] = useState('ready');
   const [fileName, setFileName] = useState('converted_allergy_data.csv');
@@ -131,6 +131,7 @@ const CsvExporter = ({ data, onBack }) => {
           yam: 'none',
           apple: 'none',
           macadamia: 'none',
+          honey: 'none',
           seafood: 'none'
         }));
         
@@ -198,6 +199,7 @@ const CsvExporter = ({ data, onBack }) => {
     { slug: 'cashew', name: 'カシューナッツ' },
     { slug: 'sesame', name: 'ごま' },
     { slug: 'almond', name: 'アーモンド' },
+    { slug: 'honey', name: 'はちみつ' },
     { slug: 'matsutake', name: 'まつたけ' },
     { slug: 'macadamia', name: 'マカダミアナッツ' },
     { slug: 'seafood', name: '魚介類' }
@@ -216,7 +218,10 @@ const CsvExporter = ({ data, onBack }) => {
     'soybean': '大豆',
     // まつたけとマカダミアナッツは別項目として保持
     'まつたけ': 'まつたけ',
-    'マカダミアナッツ': 'マカダミアナッツ'
+    'マカダミアナッツ': 'マカダミアナッツ',
+    'はちみつ': 'はちみつ',
+    'ハチミツ': 'はちみつ',
+    '蜂蜜': 'はちみつ'
   };
 
   // 含有量表示の正規化マッピング（英語キーも受理）
@@ -516,6 +521,11 @@ const CsvExporter = ({ data, onBack }) => {
     }));
   };
 
+  // アレルギー順序を決定（allergenOrderが渡されていればそれを使用、なければstandardAllergens）
+  const orderedAllergens = allergenOrder && allergenOrder.length > 0 
+    ? allergenOrder.map(slug => standardAllergens.find(a => a.slug === slug)).filter(Boolean)
+    : standardAllergens;
+
   const generateCsvData = () => {
     if (!data || data.length === 0) return [];
 
@@ -532,7 +542,7 @@ const CsvExporter = ({ data, onBack }) => {
       'raw_store_list_url',
       'raw_notes',
       'raw_menu_name',
-      ...standardAllergens.map(a => a.slug),
+      ...orderedAllergens.map(a => a.slug),
       'fragrance_allergens',
       'heat_status'
     ];
@@ -554,7 +564,7 @@ const CsvExporter = ({ data, onBack }) => {
       csvRow.push(defaultStoreListUrl);
       csvRow.push(''); // notes
       csvRow.push(menuName);
-      standardAllergens.forEach(allergen => {
+      orderedAllergens.forEach(allergen => {
         const value = row.converted?.[allergen.slug] ?? '';
         // プレビュー最終値（日本語）を優先して英語へダイレクト変換
         const directMapped = mapPreviewLabelToEnglish(value);
@@ -722,6 +732,17 @@ const CsvExporter = ({ data, onBack }) => {
       
       console.log('🔄 ジョブ作成開始:', jobId);
       
+      // 認証状態を確認
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      console.log('🔍 認証状態確認:', { user: user?.id, authError });
+      
+      // 認証されていない場合はエラー
+      if (!user) {
+        console.error('❌ 認証されていません');
+        setUploadStatus('error');
+        return;
+      }
+      
       const { data: jobData, error: jobError } = await supabase
         .from('import_jobs')
         .insert([{
@@ -790,7 +811,7 @@ const CsvExporter = ({ data, onBack }) => {
           };
           
           // アレルギー情報を追加（正規化適用）
-          standardAllergens.forEach((allergen, index) => {
+          orderedAllergens.forEach((allergen, index) => {
             const value = row[11 + index] || '';
             // 含有量表示を正規化（メニュー名文脈付き）
             stagingRow[allergen.slug] = normalizePresence(value, { menuName: finalMenuName, allergenSlug: allergen.slug });
@@ -869,13 +890,28 @@ const CsvExporter = ({ data, onBack }) => {
           .select('id, product_id, address');
         console.log('🔍 商品検索前のstore_locations:', beforeProductSearch?.length || 0, '件');
         
-        const { data: productData, error: productError } = await supabase
+        // まず完全一致で検索
+        let { data: productData, error: productError } = await supabase
           .from('products')
           .select('id, name')
-          .ilike('name', productName.trim())
-          .single();
+          .eq('name', productName.trim())
+          .limit(1);
         
-        if (productError || !productData) {
+        // 完全一致で見つからない場合は部分一致で検索
+        if (productError || !productData || productData.length === 0) {
+          const { data: partialMatch, error: partialError } = await supabase
+            .from('products')
+            .select('id, name')
+            .ilike('name', `%${productName.trim()}%`)
+            .limit(1);
+          
+          if (!partialError && partialMatch && partialMatch.length > 0) {
+            productData = partialMatch;
+            productError = null;
+          }
+        }
+        
+        if (productError || !productData || productData.length === 0) {
           console.log('🔄 商品が存在しないため、新規作成します:', productName);
           
           // 新しい商品を作成
@@ -932,8 +968,8 @@ const CsvExporter = ({ data, onBack }) => {
           console.log('🔍 商品作成後のstore_locations:', afterCreate?.length || 0, '件');
           
         } else {
-          productId = productData.id;
-          console.log('📦 既存商品ID:', productId, '商品名:', productData.name);
+          productId = productData[0].id;
+          console.log('📦 既存商品ID:', productId, '商品名:', productData[0].name);
           
           console.log('🔍 既存商品取得後のstore_locations確認');
           const { data: afterExisting, error: afterExistingErr } = await supabase
@@ -1252,8 +1288,8 @@ const CsvExporter = ({ data, onBack }) => {
 
           // 3) CSVの各行を集計して保存
           //   - product_allergies: presence_type を direct/none に統一（JP）
-          //   - product_trace_allergies: 28品目の direct/none（traceはdirectにマップ）（JP）
-          //   - product_fragrance_allergies: 28品目の direct/none（選択された香料のみdirect）（JP）
+          //   - product_trace_allergies: 主要品目の direct/none（traceはdirectにマップ）（JP）
+          //   - product_fragrance_allergies: 主要品目の direct/none（選択された香料のみdirect）（JP）
           try {
             // 既存のアレルギー行を全削除（このCSV取込で上書き）
             // JPと旧データ（country_code NULL）を両方削除
@@ -1268,7 +1304,7 @@ const CsvExporter = ({ data, onBack }) => {
             const aggregated = new Map(); // allergy_item_id -> presence_type（direct/trace/none）
 
             (Array.isArray(stagingData) ? stagingData : []).forEach(row => {
-              standardAllergens.forEach(allergen => {
+              orderedAllergens.forEach(allergen => {
                 // stagingDataは既にnormalizePresenceで変換済みなので、そのまま使用
                 const mapped = row[allergen.slug] || 'none';
                 const prev = aggregated.get(allergen.slug) || 'none';
@@ -1294,10 +1330,10 @@ const CsvExporter = ({ data, onBack }) => {
               ? parsedFragrance.split(',').map(s => s.trim()).filter(Boolean)
               : [];
 
-            // trace / fragrance を 28品目の direct/none マップとして保存（正規化テーブル）
+            // trace / fragrance を 主要品目の direct/none マップとして保存（正規化テーブル）
             const traceMap = {};
             const fragranceMap = {};
-            standardAllergens.forEach(allergen => {
+            orderedAllergens.forEach(allergen => {
               const key = allergen.slug;
               const agg = aggregated.get(key) || 'none';
               // traceMap: 集計がtraceのとき direct、それ以外 none
@@ -1309,7 +1345,7 @@ const CsvExporter = ({ data, onBack }) => {
             // 国別テーブルへ上書き保存（JP）
             // 1) trace（JP）
             await supabase.from('product_trace_allergies').delete().eq('product_id', pid).eq('country_code', 'JP');
-            const traceRows = standardAllergens.map(allergen => ({
+            const traceRows = orderedAllergens.map(allergen => ({
               product_id: pid,
               country_code: 'JP',
               allergy_item_id: allergen.slug,
@@ -1323,7 +1359,7 @@ const CsvExporter = ({ data, onBack }) => {
             }
             // 2) fragrance（JP）
             await supabase.from('product_fragrance_allergies').delete().eq('product_id', pid).eq('country_code', 'JP');
-            const fragranceRows = standardAllergens.map(allergen => ({
+            const fragranceRows = orderedAllergens.map(allergen => ({
               product_id: pid,
               country_code: 'JP',
               allergy_item_id: allergen.slug,
@@ -1345,7 +1381,7 @@ const CsvExporter = ({ data, onBack }) => {
               throw aiErr;
             }
             const slugToId = new Map((ai || []).map(r => [r.item_id, r.id]));
-            standardAllergens.forEach(allergen => {
+            orderedAllergens.forEach(allergen => {
               const agg = aggregated.get(allergen.slug) || 'none';
               const presence_type = agg === 'direct' ? 'direct' : 'none';
               

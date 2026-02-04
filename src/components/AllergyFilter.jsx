@@ -58,10 +58,10 @@ const AllergyFilter=()=> {
         </div>
       </div>
 
-      {/* 推奨20品目 */}
+      {/* 推奨品目 */}
       <div>
         <h3 className="text-xs font-semibold text-gray-900 mb-1">
-          特定原材料に準ずるもの（20品目）
+          特定原材料に準ずるもの（推奨品目）
         </h3>
         <div className="grid grid-cols-4 gap-1">
           {recommendedAllergies.map((allergy,index)=> (

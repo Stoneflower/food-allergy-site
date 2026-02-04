@@ -62,7 +62,8 @@ class SearchService {
           almond,
           matsutake,
           sesame,
-          macadamia
+          macadamia,
+          honey
         ),
         store_locations(
           id,

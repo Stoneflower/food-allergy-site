@@ -116,7 +116,7 @@ const AdvancedSearchPanel = ({ onSearch, initialFilters = {} }) => {
             />
           </div>
 
-          {/* Contains Allergens Search - 28品目すべて表示 */}
+          {/* Contains Allergens Search - アレルギー品目すべて表示 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               ⚠️ 含まれるアレルギー成分で検索
@@ -150,10 +150,10 @@ const AdvancedSearchPanel = ({ onSearch, initialFilters = {} }) => {
               </div>
             </div>
 
-            {/* 推奨20品目（特定原材料に準ずるもの） */}
+            {/* 推奨品目（特定原材料に準ずるもの） */}
             <div className="mb-4">
               <h4 className="text-sm font-semibold text-orange-800 mb-2">
-                表示が推奨される20品目（特定原材料に準ずるもの）
+                表示が推奨される品目（特定原材料に準ずるもの）
               </h4>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                 {allergyOptions.slice(8).map(allergy => (
@@ -237,7 +237,7 @@ const AdvancedSearchPanel = ({ onSearch, initialFilters = {} }) => {
               </div>
             </div>
 
-            {/* Exclude Allergens - 28品目すべて表示 */}
+            {/* Exclude Allergens - アレルギー品目すべて表示 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 🚫 除外するアレルギー成分
@@ -271,10 +271,10 @@ const AdvancedSearchPanel = ({ onSearch, initialFilters = {} }) => {
                 </div>
               </div>
 
-              {/* 推奨20品目（特定原材料に準ずるもの） */}
+              {/* 推奨品目（特定原材料に準ずるもの） */}
               <div className="mb-4">
                 <h4 className="text-sm font-semibold text-green-800 mb-2">
-                  表示が推奨される20品目（特定原材料に準ずるもの）
+                  表示が推奨される品目（特定原材料に準ずるもの）
                 </h4>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                   {allergyOptions.slice(8).map(allergy => (

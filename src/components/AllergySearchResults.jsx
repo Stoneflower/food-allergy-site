@@ -51,7 +51,7 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
       egg: '卵', milk: '乳', wheat: '小麦', buckwheat: 'そば', peanut: '落花生', shrimp: 'えび', crab: 'かに', walnut: 'くるみ',
       almond: 'アーモンド', abalone: 'あわび', squid: 'いか', salmon_roe: 'いくら', orange: 'オレンジ', cashew: 'カシューナッツ', kiwi: 'キウイフルーツ',
       beef: '牛肉', gelatin: 'ゼラチン', sesame: 'ごま', salmon: 'さけ', mackerel: 'さば', soybean: '大豆', chicken: '鶏肉', banana: 'バナナ',
-      pork: '豚肉', matsutake: 'まつたけ', peach: 'もも', yam: 'やまいも', apple: 'りんご', macadamia: 'マカダミア'
+      pork: '豚肉', matsutake: 'まつたけ', peach: 'もも', yam: 'やまいも', apple: 'りんご', macadamia: 'マカダミア', honey: 'はちみつ'
     };
     return fallbackDict[key] || fallbackDict[slug] || key;
   };
@@ -446,11 +446,87 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
               </div>
               {isOpen && (
                 <div className="mt-3 space-y-2">
-                  {store.products.map((product, i) => (
-                    <div key={i} className="border border-gray-200 rounded p-2">
-                      <div className="text-sm text-gray-800">{product.display_name}</div>
-                    </div>
-                  ))}
+                  {store.products.map((product, i) => {
+                    const rp = product.related_product || {};
+                    const hasImages = rp.source_url || rp.source_url2;
+                    
+                    return (
+                      <div key={i} className="border border-gray-200 rounded p-2">
+                        <div className="text-sm text-gray-800">{product.display_name}</div>
+                        
+                        {/* 画像アップロード機能で登録された商品の場合、画像ボタンを表示 */}
+                        {hasImages && (
+                          <div className="mt-2 flex items-center gap-2">
+                            {rp.source_url && (
+                              <a 
+                                href={rp.source_url} 
+                                target="_blank" 
+                                rel="noreferrer" 
+                                className="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 transition-colors"
+                              >
+                                画像1
+                              </a>
+                            )}
+                            {rp.source_url2 && (
+                              <a 
+                                href={rp.source_url2} 
+                                target="_blank" 
+                                rel="noreferrer" 
+                                className="text-xs bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600 transition-colors"
+                              >
+                                画像2
+                              </a>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  
+                  {/* CSVアップロード商品の情報元URL（店舗全体で1回だけ表示） */}
+                  {(() => {
+                    const firstProduct = store.products[0];
+                    const rp = firstProduct?.related_product || {};
+                    const firstLoc = (rp.store_locations || [])[0] || {};
+                    
+                    // 画像アップロード機能で登録された商品の場合は何も表示しない
+                    const hasUploadedImages = rp.source_url || rp.source_url2;
+                    if (hasUploadedImages) {
+                      return null;
+                    }
+                    
+                    // CSVアップロード商品の場合のみURLを表示
+                    if (firstLoc.source_url || firstLoc.store_list_url) {
+                      return (
+                        <div className="mt-3 border-t pt-3">
+                          <div className="text-xs flex items-center gap-3">
+                            {firstLoc.source_url && (
+                              <a 
+                                href={firstLoc.source_url} 
+                                target="_blank" 
+                                rel="noreferrer" 
+                                className="text-blue-600 hover:text-blue-800 underline"
+                              >
+                                情報元URL
+                              </a>
+                            )}
+                            {firstLoc.store_list_url && (
+                              <a 
+                                href={firstLoc.store_list_url} 
+                                target="_blank" 
+                                rel="noreferrer" 
+                                className="text-green-600 hover:text-green-800 underline"
+                              >
+                                店舗エリアURL
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    }
+                    
+                    return null;
+                  })()}
                 </div>
               )}
             </div>
@@ -536,13 +612,16 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
                     <div className="text-xs text-gray-400">該当なし（directのみの可能性）</div>
                   ) : List ? (
                     <List
-                      height={Math.min(store.products.length, 8) * 60}
+                      height={Math.min(store.products.length, 8) * 80}
                       itemCount={store.products.length}
-                      itemSize={56}
+                      itemSize={80}
                       width={'100%'}
                     >
                       {({ index, style }) => {
                         const product = store.products[index];
+                        const rp = product.related_product || {};
+                        const hasImages = rp.source_url || rp.source_url2;
+                        
                         return (
                           <div style={style} className="border border-gray-200 rounded p-2">
                             <div className="text-sm text-gray-800 truncate flex items-center gap-1">
@@ -554,8 +633,33 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
                                   <span key={infoIndex} className="inline-block text-xs text-yellow-700 bg-yellow-100 px-1 rounded">
                                     {info}
                                   </span>
-                      ))}
-                    </div>
+                                ))}
+                              </div>
+                            )}
+                            {/* 画像アップロード機能で登録された商品の場合、画像ボタンを表示 */}
+                            {hasImages && (
+                              <div className="mt-2 flex items-center gap-2">
+                                {rp.source_url && (
+                                  <a 
+                                    href={rp.source_url} 
+                                    target="_blank" 
+                                    rel="noreferrer" 
+                                    className="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 transition-colors"
+                                  >
+                                    画像1
+                                  </a>
+                                )}
+                                {rp.source_url2 && (
+                                  <a 
+                                    href={rp.source_url2} 
+                                    target="_blank" 
+                                    rel="noreferrer" 
+                                    className="text-xs bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600 transition-colors"
+                                  >
+                                    画像2
+                                  </a>
+                                )}
+                              </div>
                             )}
                           </div>
                         );
@@ -563,73 +667,76 @@ const AllergySearchResults = ({ items, selectedAllergies, selectedFragranceForSe
                     </List>
                   ) : (
                     // フォールバック（仮想化不可時）
-                    (store.products || []).map((product, i) => (
-                      <div key={i} className="border border-gray-200 rounded p-2">
-                        <div className="text-sm text-gray-800 truncate flex items-center gap-1">
-                          <span>{product.display_name || product.name}</span>
-                        </div>
-                        {product.contamination_info?.length > 0 && (
-                          <div className="mt-1 space-x-1">
-                            {product.contamination_info.map((info, infoIndex) => (
-                              <span key={infoIndex} className="inline-block text-xs text-yellow-700 bg-yellow-100 px-1 rounded">
-                                {info}
-                              </span>
-                            ))}
+                    (store.products || []).map((product, i) => {
+                      const rp = product.related_product || {};
+                      const hasImages = rp.source_url || rp.source_url2;
+                      
+                      return (
+                        <div key={i} className="border border-gray-200 rounded p-2">
+                          <div className="text-sm text-gray-800 truncate flex items-center gap-1">
+                            <span>{product.display_name || product.name}</span>
                           </div>
-                        )}
-                      </div>
-                    ))
+                          {product.contamination_info?.length > 0 && (
+                            <div className="mt-1 space-x-1">
+                              {product.contamination_info.map((info, infoIndex) => (
+                                <span key={infoIndex} className="inline-block text-xs text-yellow-700 bg-yellow-100 px-1 rounded">
+                                  {info}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          {/* 画像アップロード機能で登録された商品の場合、画像ボタンを表示 */}
+                          {hasImages && (
+                            <div className="mt-2 flex items-center gap-2">
+                              {rp.source_url && (
+                                <a 
+                                  href={rp.source_url} 
+                                  target="_blank" 
+                                  rel="noreferrer" 
+                                  className="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 transition-colors"
+                                >
+                                  画像1
+                                </a>
+                              )}
+                              {rp.source_url2 && (
+                                <a 
+                                  href={rp.source_url2} 
+                                  target="_blank" 
+                                  rel="noreferrer" 
+                                  className="text-xs bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600 transition-colors"
+                                >
+                                  画像2
+                                </a>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
                   )}
                 </div>
 
-                {/* 画像・リンク（メニュー欄の最後） */}
+                {/* CSVアップロード商品の情報元URL（画像アップロード商品以外） */}
                 <div className="mt-3 border-t pt-3">
                   {(() => {
-                    // 先頭商品の products.source_url / source_url2 を最優先で参照
+                    // 先頭商品の情報を参照
                     const fp = firstProduct || {};
                     const rp = fp.related_product || {};
-                    const imageCandidates = [
-                      // products.source_url / source_url2 は item 直下にも保持
-                      rp.source_url,
-                      rp.source_url2,
-                      fp.source_url,
-                      fp.source_url2,
-                      ...(Array.isArray(fp.image_urls) ? fp.image_urls : [])
-                    ].filter(Boolean);
-                    const directImages = Array.from(new Set(imageCandidates));
-                    const hasAnyImage = directImages.length > 0;
                     const firstLoc = (rp.store_locations || [])[0] || {};
-
-                    console.log('🧩 image check:', {
-                      fpId: fp?.related_product?.id || fp?.id,
-                      source_url: rp.source_url || fp.source_url,
-                      source_url2: rp.source_url2 || fp.source_url2,
-                      directImages,
-                      hasAnyImage,
-                      storeSource: firstLoc.source_url,
-                      storeList: firstLoc.store_list_url
-                    });
+                    
+                    // 画像アップロード機能で登録された商品の場合は何も表示しない
+                    const hasUploadedImages = rp.source_url || rp.source_url2;
+                    if (hasUploadedImages) {
+                      return null;
+                    }
                     
                     return (
                       <div className="mt-2 text-xs flex items-center gap-3">
-                        {hasAnyImage ? (
-                          <>
-                            {directImages[0] && (
-                              <a href={directImages[0]} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">画像1</a>
-                            )}
-                            {directImages[1] && (
-                              <a href={directImages[1]} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">画像2</a>
-                            )}
-                          </>
-                        ) : (
-                          <>
-                            {firstLoc.source_url && (
-                              <a href={firstLoc.source_url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">情報元URL</a>
-                            )}
-                            {firstLoc.store_list_url && (
-                              <a href={firstLoc.store_list_url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">店舗エリアURL</a>
-                            )}
-                          </>
+                        {firstLoc.source_url && (
+                          <a href={firstLoc.source_url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">情報元URL</a>
+                        )}
+                        {firstLoc.store_list_url && (
+                          <a href={firstLoc.store_list_url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">店舗エリアURL</a>
                         )}
                       </div>
                     );

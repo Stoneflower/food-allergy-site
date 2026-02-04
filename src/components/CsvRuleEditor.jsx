@@ -25,24 +25,25 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
     'chicken',    // 18. 鶏肉
     'pork',       // 19. 豚肉
     'macadamia',  // 20. マカダミア
-    'peach',      // 21. もも
-    'yam',        // 22. やまいも
-    'apple',      // 23. りんご
-    'gelatin',    // 24. ゼラチン
-    'banana',     // 25. バナナ
-    'sesame',     // 26. ごま
-    'cashew',     // 27. カシューナッツ
-    'almond',     // 28. アーモンド
-    'seafood',    // 29. 魚介類（グループ）
-    'unused',     // 30. 使用しない
-    'matsutake'   // 31. まつたけ
+    'honey',      // 21. はちみつ
+    'peach',      // 22. もも
+    'yam',        // 23. やまいも
+    'apple',      // 24. りんご
+    'gelatin',    // 25. ゼラチン
+    'banana',     // 26. バナナ
+    'sesame',     // 27. ごま
+    'cashew',     // 28. カシューナッツ
+    'almond',     // 29. アーモンド
+    'seafood',    // 30. 魚介類（グループ）
+    'unused',     // 31. 使用しない
+    'matsutake'   // 32. まつたけ
   ];
 
   // CSVテンプレ順（CSVで一般的な並び）。CSV未検出分の補完に使用
   const csvPreferredOrder = [
     'wheat', 'buckwheat', 'egg', 'milk', 'peanut', 'shrimp', 'crab', 'walnut',
     'abalone', 'squid', 'salmon_roe', 'orange', 'kiwi', 'beef', 'salmon', 'mackerel',
-    'soybean', 'chicken', 'pork', 'macadamia', 'peach', 'yam', 'apple', 'gelatin',
+    'soybean', 'chicken', 'pork', 'macadamia', 'honey', 'peach', 'yam', 'apple', 'gelatin',
     'banana', 'sesame', 'cashew', 'almond', 'matsutake', 'seafood'
   ];
 
@@ -67,6 +68,22 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
     symbolMappings: {
       ...rules.symbolMappings,
       '●': 'direct',
+      'V': 'direct',
+      'Ｖ': 'direct',
+      'ｖ': 'direct',
+      '○': 'direct',
+      '〇': 'direct',
+      '•': 'direct',
+      '■': 'direct',
+      '◎': 'direct',
+      'O': 'direct',
+      'o': 'direct',
+      '•O': 'direct',
+      '▲O': 'none',
+      '•◎': 'direct',
+      '▲◎': 'none',
+      '•o': 'direct',
+      '▲o': 'none',
       '🔹': 'none', // デフォルトで🔹を追加
       '★': 'none',
       '☆': 'none',
@@ -74,7 +91,12 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
       'ー': 'none',
       '—': 'none',
       '一': 'none',
-      '•': 'none',
+      'X': 'none',
+      'Ｘ': 'none',
+      'ｘ': 'none',
+      '▲▽': 'trace',
+      '※': 'trace',
+      '※1': 'trace',
       '◊': 'none',
       '▽': 'none',
       '▽◊': 'none',
@@ -162,6 +184,7 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
     { slug: 'sesame', name: 'ごま' },
     { slug: 'cashew', name: 'カシューナッツ' },
     { slug: 'almond', name: 'アーモンド' },
+    { slug: 'honey', name: 'はちみつ' },
     { slug: 'matsutake', name: 'まつたけ' },
     { slug: 'seafood', name: '魚介類' }
   ];
@@ -187,8 +210,9 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
     const synonymRules = [
       { re: /(キウイフルーツ|キウィフルーツ|ｷｳｲﾌﾙｰﾂ|キウイ|力ウイフルーツ|力ウィフルーツ)/, slug: 'kiwi' },
       { re: /(ゼラチン|ｾﾞﾗﾁﾝ)/, slug: 'gelatin' },
-      { re: /(カシューナッツ|カシュ—ナッツ|ｶｼｭｰﾅｯﾂ|カシュー|力シューナッツ|力シュ—ナッツ|力シュ一ナツツ)/, slug: 'cashew' },
-      { re: /(アーモンド|ア—モンド|ｱｰﾓﾝﾄﾞ)/, slug: 'almond' },
+      { re: /(カシューナッツ|カシュ—ナッツ|ｶｼｭｰﾅｯﾂ|カシュー|力シューナッツ|力シュ—ナッツ|力シュ一ナツツ|力ュ一ナツツ)/, slug: 'cashew' },
+      { re: /(アーモンド|ア—モンド|ｱｰﾓﾝﾄﾞ|アーモド)/, slug: 'almond' },
+      { re: /(はちみつ|ハチミツ|蜂蜜|ﾊﾁﾐﾂ)/, slug: 'honey' },
       { re: /(ごま|胡麻)/, slug: 'sesame' },
       { re: /(魚介類|シーフード|しーふーど)/, slug: 'seafood' },
       { re: /(大豆)/, slug: 'soybean' },
@@ -211,20 +235,34 @@ const CsvRuleEditor = ({ csvData, rules, onRulesChange, onNext }) => {
         if (typeof cell === 'string') {
           // 商品名に含まれる記号を除外し、ダッシュ類を統一
           const cleanCell = cell.replace(/【|】|／|（|）|＊|・/g, '');
-          const normalizedCell = cleanCell.replace(/[ーｰ−―—─‐]/g, 'ー');
+          const normalizedCell = cleanCell
+            .replace(/[ーｰ−―—─‐]/g, 'ー')
+            .replace(/[ｘＸx]/g, 'X')
+            .replace(/[ｖＶv]/g, 'V');
+          const trimmedCandidate = normalizedCell.trim();
+          if (/^X$/u.test(trimmedCandidate)) {
+            symbols.add('X');
+          }
+          if (/^V$/u.test(trimmedCandidate)) {
+            symbols.add('V');
+          }
           // 2文字以上の複合記号を先に検出（間に空白があっても検出）
-          const compositeRegex = /(▽\s*◊|△\s*◊)/u;
+          const compositeRegex = /(▽\s*◊|△\s*◊|▲\s*▽|•\s*O|▲\s*O|•\s*◎|▲\s*◎|•\s*o|▲\s*o|※\s*1)/u;
           const compositeMatch = normalizedCell.match(compositeRegex);
           if (compositeMatch) {
             const normalized = compositeMatch[1].replace(/\s+/g, '');
             symbols.add(normalized);
             console.log(`複合記号検出: 行${rowIndex + 1}, 列${cellIndex + 1}, 記号: "${normalized}"`);
           }
-          // 単一記号の検出（新規: ー, ◊, ▽ も対象）
-          const symbolMatches = normalizedCell.match(/[●○•◎△▲▽◊ー\-▯◇◆□■※★☆🔹―]/gu);
+          // 単一記号の検出（新規: ー, ◊, ▽, O, o も対象）
+          const symbolMatches = normalizedCell.match(/[●○•◎△▲▽◊ー\-▯◇◆□■※★☆🔹―一XV〇×Oo]/gu);
           
           if (symbolMatches) {
             symbolMatches.forEach(symbol => {
+              // ※1が検出されている場合は単一の※を除外
+              if (symbol === '※' && symbols.has('※1')) {
+                return;
+              }
               symbols.add(symbol);
               console.log(`記号検出: 行${rowIndex + 1}, 列${cellIndex + 1}, セル内容: "${cell}", 記号: "${symbol}"`);
             });

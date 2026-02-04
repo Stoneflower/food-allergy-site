@@ -71,7 +71,7 @@ const AllergyTableManager = () => {
         { item_id: 'crab', name: 'かに', name_en: 'Crab', category: 'mandatory', icon: '🦀', description: 'カニ、ズワイガニ、タラバガニなど', small_amount_safe: false, heated_safe: false, severity_level: 'high' },
         { item_id: 'walnut', name: 'くるみ', name_en: 'Walnut', category: 'mandatory', icon: '🌰', description: 'クルミ、ウォルナッツなど', small_amount_safe: false, heated_safe: false, severity_level: 'high' },
         
-        // 推奨20品目
+        // 推奨品目
         { item_id: 'almond', name: 'アーモンド', name_en: 'Almond', category: 'recommended', icon: '🌰', description: 'アーモンド、アーモンドミルクなど', small_amount_safe: true, heated_safe: false, severity_level: 'medium' },
         { item_id: 'abalone', name: 'あわび', name_en: 'Abalone', category: 'recommended', icon: '🐚', description: 'アワビ、フルーツ貝など', small_amount_safe: false, heated_safe: false, severity_level: 'medium' },
         { item_id: 'squid', name: 'いか', name_en: 'Squid', category: 'recommended', icon: '🦑', description: 'イカ、スルメイカ、ヤリイカなど', small_amount_safe: false, heated_safe: false, severity_level: 'medium' },
@@ -91,7 +91,8 @@ const AllergyTableManager = () => {
         { item_id: 'matsutake', name: 'まつたけ', name_en: 'Matsutake', category: 'recommended', icon: '🍄', description: 'マツタケ、松茸など', small_amount_safe: false, heated_safe: false, severity_level: 'medium' },
         { item_id: 'peach', name: 'もも', name_en: 'Peach', category: 'recommended', icon: '🍑', description: 'モモ、桃ジュースなど', small_amount_safe: true, heated_safe: true, severity_level: 'low' },
         { item_id: 'yam', name: 'やまいも', name_en: 'Yam', category: 'recommended', icon: '🍠', description: 'ヤマイモ、長芋、自然薯など', small_amount_safe: false, heated_safe: false, severity_level: 'medium' },
-        { item_id: 'apple', name: 'りんご', name_en: 'Apple', category: 'recommended', icon: '🍎', description: 'リンゴ、リンゴジュースなど', small_amount_safe: true, heated_safe: true, severity_level: 'low' }
+        { item_id: 'apple', name: 'りんご', name_en: 'Apple', category: 'recommended', icon: '🍎', description: 'リンゴ、リンゴジュースなど', small_amount_safe: true, heated_safe: true, severity_level: 'low' },
+        { item_id: 'honey', name: 'はちみつ', name_en: 'Honey', category: 'recommended', icon: '🍯', description: 'はちみつ、蜂蜜など', small_amount_safe: false, heated_safe: false, severity_level: 'medium' }
       ]
 
       // データを挿入
@@ -103,7 +104,7 @@ const AllergyTableManager = () => {
         throw error
       }
 
-      setMessage('✅ アレルギー28品目のテーブルとデータが正常に作成されました！')
+      setMessage('✅ アレルギー品目テーブルとデータが正常に作成されました！')
       
     } catch (error) {
       console.error('データ作成エラー:', error)
@@ -135,7 +136,7 @@ const AllergyTableManager = () => {
 
   return (
     <div className="p-6 max-w-4xl mx-auto bg-white rounded-lg shadow-md">
-      <h2 className="text-2xl font-bold mb-6">アレルギー28品目テーブル管理</h2>
+      <h2 className="text-2xl font-bold mb-6">アレルギー品目テーブル管理</h2>
       
       <div className="space-y-4 mb-6">
         <div className="p-3 rounded bg-yellow-50 text-yellow-900 text-sm">
@@ -191,7 +192,7 @@ const AllergyTableManager = () => {
                         ? 'bg-red-200 text-red-800' 
                         : 'bg-yellow-200 text-yellow-800'
                     }`}>
-                      {item.category === 'mandatory' ? '法定8品目' : '推奨20品目'}
+                      {item.category === 'mandatory' ? '法定8品目' : '推奨品目'}
                     </span>
                   </td>
                   <td className="border border-gray-300 px-4 py-2 text-center">

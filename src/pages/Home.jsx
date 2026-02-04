@@ -14,6 +14,7 @@ import { supabase } from '../lib/supabase';
 import { PREFECTURES } from '../constants/prefectures';
 import SafeIcon from '../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
+import AutoCarousel from '../components/AutoCarousel';
 
 const { FiHeart, FiShield, FiStar, FiTrendingUp, FiHelpCircle, FiCamera, FiMapPin, FiUsers, FiShare2 } = FiIcons;
 
@@ -165,8 +166,8 @@ const Home = () => {
         String(related?.product_title || ''),
         String(related?.brand || ''),
       ].join(' ').toLowerCase();
-      if (texts.includes('びっくりドンキー')) return 'https://stoneflower.net/uploads/hamburger.jpg';
-      if (texts.includes('スシロー') || texts.includes('すしろー') || texts.includes('sushiro')) return 'https://stoneflower.net/uploads/sushi.jpg';
+      if (texts.includes('びっくりドンキー')) return 'https://eattoo.net/uploads/hamburger.jpg';
+      if (texts.includes('スシロー') || texts.includes('すしろー') || texts.includes('sushiro')) return 'https://eattoo.net/uploads/sushi.jpg';
       return 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=800&q=70&auto=format';
     };
 
@@ -313,14 +314,33 @@ const Home = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="text-center mb-12"
+            className="mb-12 space-y-10"
           >
+            <div className="max-w-4xl mx-auto">
+              <h3 className="text-2xl font-semibold text-gray-900 mb-3 text-center">
+                商品の検索方法
+              </h3>
+              <p className="text-gray-600 text-sm text-center mb-4">
+                食品アレルギー対応商品の検索手順をショート動画で確認できます。
+              </p>
+              <div className="relative w-full overflow-hidden rounded-xl shadow-lg" style={{ paddingBottom: '56.25%' }}>
+                <iframe
+                  className="absolute inset-0 w-full h-full"
+                  src="https://www.youtube.com/embed/weFeRr3RjHQ"
+                  title="商品の検索方法"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                />
+              </div>
+            </div>
+            <div className="text-center">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">
               {t('home.stepsSection.title')}
             </h2>
             <p className="text-gray-600 text-lg">
               {t('home.stepsSection.description')}
             </p>
+            </div>
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -368,6 +388,24 @@ const Home = () => {
                 {t('home.stepsSection.step3.description')}
               </p>
             </motion.div>
+          </div>
+
+          <div className="mt-12 max-w-3xl mx-auto">
+            <h3 className="text-xl font-semibold text-gray-900 mb-3 text-center">
+              3. 共有の操作方法を動画でチェック
+            </h3>
+            <p className="text-gray-600 text-sm text-center mb-4">
+              商品情報を共有する手順をショート動画で確認できます。
+            </p>
+            <div className="relative w-full overflow-hidden rounded-xl shadow-lg" style={{ paddingBottom: '56.25%' }}>
+              <iframe
+                className="absolute inset-0 w-full h-full"
+                src="https://www.youtube.com/embed/FjQ7ohVTEKo"
+                title="商品情報共有の方法"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+              />
+            </div>
           </div>
 
           <div className="text-center mt-12">
@@ -436,168 +474,305 @@ const Home = () => {
               </Link>
             </div>
           </motion.div>
+
+          {/* アレルギー検索できるお店 */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-center mt-16"
+          >
+            <h2 className="text-3xl font-bold text-gray-900 mb-8">アレルギー検索できるお店</h2>
+            {(() => {
+              const cards = [
+                (
+                  <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow h-full" key="skylark">
+                    <a 
+                      href="https://allergy.skylark.co.jp/consideration"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block"
+                    >
+                      <div className="w-full h-40 md:h-48 bg-gray-100 md:bg-transparent flex items-center justify-center">
+                        <img
+                          src="https://eattoo.net/image/skylark.JPG"
+                          alt="すかいらーくグループ"
+                          className="max-h-full max-w-full object-contain md:object-cover md:w-full md:h-full"
+                        />
+                      </div>
+                      <div className="p-6">
+                        <h3 className="text-sm md:text-xl font-semibold text-gray-900 mb-1 md:mb-2 leading-snug md:leading-normal">すかいらーくグループ</h3>
+                        <p className="text-gray-600 text-xs md:text-sm leading-snug md:leading-relaxed break-words whitespace-normal line-clamp-2 md:line-clamp-none">
+                          アレルギー検索サイト
+                        </p>
+                      </div>
+                    </a>
+                  </div>
+                ),
+                (
+                  <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow h-full" key="ootoya">
+                    <a 
+                      href="https://www.ootoya.com/menu_list/info/allergy/27471"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block"
+                    >
+                      <div className="w-full h-40 md:h-48 bg-gray-100 md:bg-transparent flex items-center justify-center">
+                        <img
+                          src="https://eattoo.net/image/ootoya.png"
+                          alt="大戸屋ごはん処"
+                          className="max-h-full max-w-full object-contain md:object-cover md:w-full md:h-full"
+                        />
+                      </div>
+                      <div className="p-6">
+                        <h3 className="text-sm md:text-xl font-semibold text-gray-900 mb-1 md:mb-2 leading-snug md:leading-normal">大戸屋ごはん処</h3>
+                        <p className="text-gray-600 text-xs md:text-sm leading-snug md:leading-relaxed break-words whitespace-normal line-clamp-2 md:line-clamp-none">
+                          アレルギー検索サイト
+                        </p>
+                      </div>
+                    </a>
+                  </div>
+                ),
+                (
+                  <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow h-full" key="mcdonalds">
+                    <a 
+                      href="https://www.mcdonalds.co.jp/products/allergy_check/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block"
+                    >
+                      <div className="w-full h-40 md:h-48 bg-gray-100 md:bg-transparent flex items-center justify-center">
+                        <img
+                          src="https://eattoo.net/image/mac.png"
+                          alt="マクドナルド"
+                          className="max-h-full max-w-full object-contain md:object-cover md:w-full md:h-full"
+                        />
+                      </div>
+                      <div className="p-6">
+                        <h3 className="text-sm md:text-xl font-semibold text-gray-900 mb-1 md:mb-2 leading-snug md:leading-normal">マクドナルド</h3>
+                        <p className="text-gray-600 text-xs md:text-sm leading-snug md:leading-relaxed break-words whitespace-normal line-clamp-2 md:line-clamp-none">
+                          アレルギー検索サイト
+                        </p>
+                      </div>
+                    </a>
+                  </div>
+                ),
+                (
+                  <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow h-full" key="saintmarc">
+                    <a 
+                      href="https://www.saint-marc-hd.jp/allergy_check/brand/11-F-A/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block"
+                    >
+                      <div className="w-full h-40 md:h-48 bg-gray-100 md:bg-transparent flex items-center justify-center">
+                        <img
+                          src="https://eattoo.net/image/saint-marc.JPG"
+                          alt="サンマルクグループ"
+                          className="max-h-full max-w-full object-contain md:object-cover md:w-full md:h-full"
+                        />
+                      </div>
+                      <div className="p-6">
+                        <h3 className="text-sm md:text-xl font-semibold text-gray-900 mb-1 md:mb-2 leading-snug md:leading-normal">サンマルクグループ</h3>
+                        <p className="text-gray-600 text-xs md:text-sm leading-snug md:leading-relaxed break-words whitespace-normal line-clamp-2 md:line-clamp-none">
+                          アレルギー検索サイト
+                        </p>
+                      </div>
+                    </a>
+                  </div>
+                ),
+                (
+                  <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow h-full" key="komeda">
+                    <a 
+                      href="https://www.komeda.co.jp/allergy_check/?containing=not_contains&substance=2"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block"
+                    >
+                      <div className="w-full h-40 md:h-48 bg-gray-100 md:bg-transparent flex items-center justify-center">
+                        <img
+                          src="https://eattoo.net/image/komeda.png"
+                          alt="コメダ珈琲店"
+                          className="max-h-full max-w-full object-contain md:object-cover md:w-full md:h-full"
+                        />
+                      </div>
+                      <div className="p-6">
+                        <h3 className="text-sm md:text-xl font-semibold text-gray-900 mb-1 md:mb-2 leading-snug md:leading-normal">コメダ珈琲店</h3>
+                        <p className="text-gray-600 text-xs md:text-sm leading-snug md:leading-relaxed break-words whitespace-normal line-clamp-2 md:line-clamp-none">
+                          アレルギー検索サイト
+                        </p>
+                      </div>
+                    </a>
+                  </div>
+                )
+              ];
+
+              return (
+                <AutoCarousel
+                  items={cards}
+                  autoIntervalMs={10000}
+                  itemsPerViewDesktop={3}
+                  itemsPerViewMobile={1}
+                  className=""
+                />
+              );
+            })()}
+          </motion.div>
+
+          {/* おすすめのお店 */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-center mt-16"
+          >
+            <h2 className="text-3xl font-bold text-gray-900 mb-8">おすすめのお店</h2>
+            {(() => {
+              const cards = [
+                (
+                  <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow h-full" key="takagi">
+                    <a 
+                      href="https://www.takakibakeryshop.jp/f/sukoyaka?srsltid=AfmBOoq8RTKQxZxLc0XAXuMy_2CKtmWjawYuQUyiYThMIYwuyLjoMOxo"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block"
+                    >
+                      <div className="w-full h-40 md:h-48 bg-gray-100 md:bg-transparent flex items-center justify-center">
+                        <img
+                          src="https://eattoo.net/image/takagi.jpg"
+                          alt="タカギベーカリー すこやかシリーズ"
+                          className="max-h-full max-w-full object-contain md:object-cover md:w-full md:h-full"
+                        />
+                      </div>
+                      <div className="p-6">
+                        <h3 className="text-sm md:text-xl font-semibold text-gray-900 mb-1 md:mb-2 leading-snug md:leading-normal">タカギベーカリー すこやかシリーズ</h3>
+                        <p className="text-gray-600 text-xs md:text-sm leading-snug md:leading-relaxed break-words whitespace-normal line-clamp-2 md:line-clamp-none">
+                          卵・乳・小麦を使わないアレルギー対応ケーキ、おやつ、パン
+                        </p>
+                      </div>
+                    </a>
+                  </div>
+                ),
+                (
+                  <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow h-full" key="ricciodoro">
+                    <a 
+                      href="https://ricciodoro.shop/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block"
+                    >
+                      <div className="w-full h-40 md:h-48 bg-gray-100 md:bg-transparent flex items-center justify-center">
+                        <img
+                          src="https://eattoo.net/image/ricciodoro.jpg"
+                          alt="リッチョドーロ"
+                          className="max-h-full max-w-full object-contain md:object-cover md:w-full md:h-full"
+                        />
+                      </div>
+                      <div className="p-6">
+                        <h3 className="text-sm md:text-xl font-semibold text-gray-900 mb-1 md:mb-2 leading-snug md:leading-normal">リッチョドーロ</h3>
+                        <p className="text-gray-600 text-xs md:text-sm leading-snug md:leading-relaxed break-words whitespace-normal line-clamp-2 md:line-clamp-none">
+                          特定原材料28 品目、不使用のジェラート
+                        </p>
+                      </div>
+                    </a>
+                  </div>
+                ),
+                (
+                  <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow h-full" key="ikea">
+                    <a 
+                      href="https://www.ikea.com/jp/ja/stores/restaurant/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block"
+                    >
+                      <div className="w-full h-40 md:h-48 bg-gray-100 md:bg-transparent flex items-center justify-center">
+                        <img
+                          src="https://eattoo.net/image/ikea.jpg"
+                          alt="IKEA"
+                          className="max-h-full max-w-full object-contain md:object-cover md:w-full md:h-full"
+                        />
+                      </div>
+                      <div className="p-6">
+                        <h3 className="text-sm md:text-xl font-semibold text-gray-900 mb-1 md:mb-2 leading-snug md:leading-normal">IKEA</h3>
+                        <p className="text-gray-600 text-xs md:text-sm leading-snug md:leading-relaxed break-words whitespace-normal line-clamp-2 md:line-clamp-none">
+                          乳成分を使用しないソフトクリーム
+                        </p>
+                      </div>
+                    </a>
+                  </div>
+                )
+              ];
+
+              return (
+                <AutoCarousel
+                  items={cards}
+                  autoIntervalMs={10000}
+                  itemsPerViewDesktop={3}
+                  itemsPerViewMobile={1}
+                  className=""
+                />
+              );
+            })()}
+          </motion.div>
         </div>
       </section>
 
-      {/* Category Filter */}
+      {/* おすすめのサイト */}
       <section className="py-12 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="text-center mb-8"
+            className="text-center"
           >
-            <div className="flex items-center justify-center space-x-3 mb-6">
-              <span className="text-4xl">🔍</span>
-              <h2 className="text-3xl font-bold text-gray-900">
-                {t('home.searchSection.title')}
-              </h2>
-              <span className="text-4xl">📱</span>
-            </div>
-            <p className="text-gray-600">
-              {t('home.searchSection.subtitle')}
-            </p>
+            <h2 className="text-3xl font-bold text-gray-900 mb-8">おすすめのサイト</h2>
+            {(() => {
+              const placeholder = 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&q=70&auto=format';
+              const siteCards = [
+                (
+                  <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow h-full" key="site1">
+                    <div className="w-full h-40 md:h-48 bg-gray-100 flex items-center justify-center">
+                      <img src={placeholder} alt="coming soon" className="max-h-full max-w-full object-contain" />
+                    </div>
+                    <div className="p-6">
+                      <h3 className="text-sm md:text-xl font-semibold text-gray-900 mb-1 md:mb-2 leading-snug md:leading-normal">coming soon</h3>
+                    </div>
+                  </div>
+                ),
+                (
+                  <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow h-full" key="site2">
+                    <div className="w-full h-40 md:h-48 bg-gray-100 flex items-center justify-center">
+                      <img src={placeholder} alt="coming soon" className="max-h-full max-w-full object-contain" />
+                    </div>
+                    <div className="p-6">
+                      <h3 className="text-sm md:text-xl font-semibold text-gray-900 mb-1 md:mb-2 leading-snug md:leading-normal">coming soon</h3>
+                    </div>
+                  </div>
+                ),
+                (
+                  <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow h-full" key="site3">
+                    <div className="w-full h-40 md:h-48 bg-gray-100 flex items-center justify-center">
+                      <img src={placeholder} alt="coming soon" className="max-h-full max-w-full object-contain" />
+                    </div>
+                    <div className="p-6">
+                      <h3 className="text-sm md:text-xl font-semibold text-gray-900 mb-1 md:mb-2 leading-snug md:leading-normal">coming soon</h3>
+                    </div>
+                  </div>
+                )
+              ];
+              return (
+                <AutoCarousel
+                  items={siteCards}
+                  autoIntervalMs={10000}
+                  itemsPerViewDesktop={3}
+                  itemsPerViewMobile={1}
+                />
+              );
+            })()}
           </motion.div>
-          <CategoryFilter />
         </div>
       </section>
-
-      {/* Results Section */}
-      {(selectedAllergies.length > 0 || selectedCategory !== 'all') && (
-        <section className="py-12 bg-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.6 }}
-            >
-              <div className="flex items-center justify-between mb-8">
-                <div className="flex items-center space-x-3">
-                  <span className="text-3xl">✅</span>
-                  <h2 className="text-3xl font-bold text-gray-900">
-                    {getCategoryTitle()}
-                  </h2>
-                </div>
-                <Link
-                  to="/search"
-                  className="text-orange-500 hover:text-orange-600 font-semibold flex items-center space-x-1"
-                >
-                  <span>{t('home.viewAll')}</span>
-                  <SafeIcon icon={FiTrendingUp} className="w-4 h-4" />
-                </Link>
-              </div>
-              
-              {displayItems.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {displayItems
-                    .slice(0, 4) // PC最大4件
-                    .map((item, index) => (
-                    <motion.div
-                      key={`${item.category}-${item.id}`}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.6, delay: index * 0.1 }}
-                    >
-                      {renderCard(item)}
-                    </motion.div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <div className="w-24 h-24 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
-                    <SafeIcon icon={FiShield} className="w-12 h-12 text-gray-400" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                    {t('home.noData.title')}
-                  </h3>
-                  <p className="text-gray-600 mb-4">
-                    {t('home.noData.description')}
-                  </p>
-                  <Link
-                    to="/upload"
-                    className="inline-flex items-center space-x-2 bg-orange-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-orange-600 transition-colors"
-                  >
-                    <SafeIcon icon={FiCamera} className="w-5 h-5" />
-                    <span>{t('home.noData.shareButton')}</span>
-                  </Link>
-                </div>
-              )}
-            </motion.div>
-          </div>
-        </section>
-      )}
-
-      {/* Popular Items (when no specific selection) */}
-      {selectedAllergies.length === 0 && selectedCategory === 'all' && (
-        <section className="py-12 bg-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.6 }}
-            >
-              {/* 最近、共有された情報（カテゴリごとに最新1件） */}
-              <div className="text-center mb-8">
-                <h2 className="text-3xl font-bold text-gray-900">{t('home.latestShared')}</h2>
-              </div>
-
-              {(() => {
-                const all = Array.isArray(allItemsData) ? allItemsData : [];
-                // 最新順に並べる
-                const sorted = all.slice().sort((a,b) => {
-                  const va = (a.related_product?.updated_at || a.updated_at || a.created_at || a.id || 0);
-                  const vb = (b.related_product?.updated_at || b.updated_at || b.created_at || b.id || 0);
-                  return String(vb).localeCompare(String(va));
-                });
-                // カテゴリごとに最新1件を選ぶ（重複は名前で排除）
-                const seenNames = new Set();
-                const pickOne = (arr) => uniqueValidByName(arr).find(it => {
-                  const k = (it?.name || '').trim().toLowerCase();
-                  if (!k || seenNames.has(k)) return false;
-                  seenNames.add(k);
-                  return true;
-                });
-                const latestRestaurant = pickOne(sorted.filter(i => i.category === 'restaurants'));
-                const latestSuper = pickOne(sorted
-                  .filter(i => i.category === 'products' || i.category === 'supermarkets' || i.category === 'online')
-                  .filter(i => Array.isArray(i.category_tokens) && i.category_tokens.includes('supermarkets'))
-                );
-                const latestTakeout = pickOne(sorted.filter(i => i.category === 'products'));
-                const latestOnline = pickOne(sorted
-                  .filter(i => i.category === 'products' || i.category === 'supermarkets' || i.category === 'online')
-                  .filter(i => Array.isArray(i.category_tokens) && i.category_tokens.includes('online'))
-                );
-
-                const blocks = [
-                  { key: 'restaurants', title: t('home.categoryTitles.restaurants'), icon: '🍽️', item: latestRestaurant, className: '' },
-                  { key: 'products', title: t('home.categoryTitles.products'), icon: '🥡', item: latestTakeout, className: 'hidden sm:block' },
-                  { key: 'supermarkets', title: t('home.categoryTitles.supermarkets'), icon: '🏪', item: latestSuper, className: '' },
-                  { key: 'online', title: t('home.categoryTitles.online'), icon: '🛒', item: latestOnline, className: 'hidden sm:block' },
-                ];
-
-                return (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {blocks.map((b, idx) => (
-                      b.item ? (
-                        <motion.div
-                          key={b.key}
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.6, delay: idx * 0.1 }}
-                          className={b.className}
-                        >
-                          {renderCard(b.item)}
-                        </motion.div>
-                      ) : null
-                    ))}
-                  </div>
-                );
-              })()}
-            </motion.div>
-          </div>
-        </section>
-      )}
 
       {/* Community Stats */}
       <section className="py-16 bg-gradient-to-r from-orange-500 to-red-500 text-white">
@@ -622,7 +797,7 @@ const Home = () => {
                 <div className="text-orange-100">{t('home.community.activeUsers')}</div>
               </div>
               <div className="text-center">
-                <div className="text-4xl font-bold mb-2">28品目</div>
+                <div className="text-4xl font-bold mb-2">主要品目+</div>
                 <div className="text-orange-100">{t('home.community.allergies')}</div>
               </div>
               <div className="text-center">

@@ -1,5 +1,5 @@
--- アレルギー28品目テーブル
--- 法定8品目（特定原材料）+ 推奨20品目（特定原材料に準ずるもの）
+-- アレルギー品目テーブル
+-- 法定8品目（特定原材料）+ 推奨品目（特定原材料に準ずるもの）など
 
 CREATE TABLE IF NOT EXISTS allergy_items (
   id SERIAL PRIMARY KEY,
@@ -95,7 +95,7 @@ CREATE TABLE IF NOT EXISTS product_allergies_matrix (
   shrimp VARCHAR(20) DEFAULT 'none',
   crab VARCHAR(20) DEFAULT 'none',
   walnut VARCHAR(20) DEFAULT 'none',
-  -- 推奨20品目
+  -- 推奨品目
   almond VARCHAR(20) DEFAULT 'none',
   abalone VARCHAR(20) DEFAULT 'none',
   squid VARCHAR(20) DEFAULT 'none',
@@ -109,6 +109,7 @@ CREATE TABLE IF NOT EXISTS product_allergies_matrix (
   chicken VARCHAR(20) DEFAULT 'none',
   pork VARCHAR(20) DEFAULT 'none',
   macadamia VARCHAR(20) DEFAULT 'none',
+  honey VARCHAR(20) DEFAULT 'none',
   peach VARCHAR(20) DEFAULT 'none',
   yam VARCHAR(20) DEFAULT 'none',
   apple VARCHAR(20) DEFAULT 'none',
@@ -143,7 +144,7 @@ CREATE TABLE IF NOT EXISTS product_trace_allergies (
   shrimp VARCHAR(20) DEFAULT 'none',
   crab VARCHAR(20) DEFAULT 'none',
   walnut VARCHAR(20) DEFAULT 'none',
-  -- 推奨20品目
+  -- 推奨品目
   almond VARCHAR(20) DEFAULT 'none',
   abalone VARCHAR(20) DEFAULT 'none',
   squid VARCHAR(20) DEFAULT 'none',
@@ -157,6 +158,7 @@ CREATE TABLE IF NOT EXISTS product_trace_allergies (
   chicken VARCHAR(20) DEFAULT 'none',
   pork VARCHAR(20) DEFAULT 'none',
   macadamia VARCHAR(20) DEFAULT 'none',
+  honey VARCHAR(20) DEFAULT 'none',
   peach VARCHAR(20) DEFAULT 'none',
   yam VARCHAR(20) DEFAULT 'none',
   apple VARCHAR(20) DEFAULT 'none',
@@ -185,7 +187,7 @@ INSERT INTO allergy_items (item_id, name, name_en, category, icon, description, 
 ('crab', 'かに', 'Crab', 'mandatory', '🦀', 'カニ、ズワイガニ、タラバガニなど', false, false, 'high'),
 ('walnut', 'くるみ', 'Walnut', 'mandatory', '🌰', 'クルミ、ウォルナッツなど', false, false, 'high');
 
--- 推奨20品目（特定原材料に準ずるもの）- 表示推奨
+-- 推奨品目（特定原材料に準ずるもの）- 表示推奨
 INSERT INTO allergy_items (item_id, name, name_en, category, icon, description, small_amount_safe, heated_safe, severity_level) VALUES
 ('almond', 'アーモンド', 'Almond', 'recommended', '🌰', 'アーモンド、アーモンドミルクなど', true, false, 'medium'),
 ('abalone', 'あわび', 'Abalone', 'recommended', '🐚', 'アワビ、フルーツ貝など', false, false, 'medium'),
@@ -206,7 +208,8 @@ INSERT INTO allergy_items (item_id, name, name_en, category, icon, description, 
 ('matsutake', 'まつたけ', 'Matsutake', 'recommended', '🍄', 'マツタケ、松茸など', false, false, 'medium'),
 ('peach', 'もも', 'Peach', 'recommended', '🍑', 'モモ、桃ジュースなど', true, true, 'low'),
 ('yam', 'やまいも', 'Yam', 'recommended', '🍠', 'ヤマイモ、長芋、自然薯など', false, false, 'medium'),
-('apple', 'りんご', 'Apple', 'recommended', '🍎', 'リンゴ、リンゴジュースなど', true, true, 'low');
+('apple', 'りんご', 'Apple', 'recommended', '🍎', 'リンゴ、リンゴジュースなど', true, true, 'low'),
+('honey', 'はちみつ', 'Honey', 'recommended', '🍯', 'はちみつ、蜂蜜など', false, false, 'medium');
 
 -- 追加: 魚介類（グループ項目）
 INSERT INTO allergy_items (item_id, name, name_en, category, icon, description, small_amount_safe, heated_safe, severity_level) VALUES

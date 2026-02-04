@@ -1,30 +1,39 @@
 import imageCompression from 'browser-image-compression';
 import { supabase } from '../lib/supabase';
 
-// 署名URLを取得（Netlify Function経由）
-export async function getDirectUploadUrl() {
-  const res = await fetch('/.netlify/functions/cf-images-sign-upload', { method: 'POST' });
-  if (!res.ok) throw new Error('failed_to_get_signed_url');
-  return res.json();
-}
+// シンクレンタルサーバーに画像をアップロード
+export async function uploadToServer(file, productId = null) {
+  const formData = new FormData();
+  formData.append('file', file);
+  if (productId) {
+    formData.append('productId', productId);
+  }
 
-// 商品ID付きで署名URLを取得（Netlify Function経由）
-export async function getUploadUrl(productId) {
-  const res = await fetch(`/.netlify/functions/cf-images-sign-upload?productId=${productId}`, { 
-    method: 'POST' 
+  const response = await fetch('/api/upload', {
+    method: 'POST',
+    body: formData
   });
-  if (!res.ok) throw new Error('署名付きURL取得失敗');
-  return res.json(); // { uploadURL, id }
+
+  if (!response.ok) {
+    throw new Error('アップロード失敗');
+  }
+
+  const result = await response.json();
+  return { 
+    imageId: result.filename, 
+    imageUrl: result.url 
+  };
 }
 
-// 画像をCloudflare Imagesにアップロード
+// 商品ID付きでアップロード（後方互換性のため）
+export async function getUploadUrl(productId) {
+  // この関数は後方互換性のため残すが、実際のアップロードはuploadToServerを使用
+  return { productId };
+}
+
+// 画像をサーバーにアップロード（Cloudflare Imagesの代替）
 export async function uploadToCloudflareImages(file) {
-  const { uploadURL, id } = await getDirectUploadUrl();
-  const form = new FormData();
-  form.append('file', file);
-  const up = await fetch(uploadURL, { method: 'POST', body: form });
-  if (!up.ok) throw new Error('upload_failed');
-  return { imageId: id };
+  return uploadToServer(file);
 }
 
 // 画像圧縮→アップロードの高レベル関数
@@ -38,11 +47,10 @@ export async function compressAndUpload(file, { maxSizeMB = 1, maxWidthOrHeight 
   return uploadToCloudflareImages(compressed);
 }
 
-// 変換付きの配信URLを生成
-export function buildImageUrl({ accountHash, imageId, variant = 'public' }) {
-  // variantに代わって、Imagesの変換パラメータ指定（w=,q= など）も可
-  // 例: `/${imageId}/w=800,q=75` を使う場合は variant をその文字列に
-  return `https://imagedelivery.net/${accountHash}/${imageId}/${variant}`;
+// 画像URLを生成（シンクレンタルサーバー用）
+export function buildImageUrl({ imageId, variant = 'public' }) {
+  // シンクレンタルサーバーの画像配信URL
+  return `/images/${imageId}`;
 }
 
 // Supabaseに画像URLを保存（商品テーブル用）
@@ -98,7 +106,6 @@ export async function uploadMultipleImages(files, {
 
       // 3. 表示用URL生成
       const displayUrl = buildImageUrl({ 
-        accountHash, 
         imageId: result.imageId, 
         variant 
       });

@@ -138,7 +138,7 @@ export class PDFOCRProcessor {
   }
 
   extractAllergyInfo(text, pageNum) {
-    // 正しい28品目のアレルギー成分パターン
+    // アレルギー品目の正規化パターン
     const allergyPatterns = {
       // 法定8品目（特定原材料）
       egg: /卵|たまご|タマゴ|egg|Egg/gi,
@@ -150,7 +150,7 @@ export class PDFOCRProcessor {
       crab: /かに|カニ|蟹|crab/gi,
       walnut: /くるみ|クルミ|胡桃|walnut/gi,
 
-      // 推奨20品目（特定原材料に準ずるもの）
+      // 推奨品目（特定原材料に準ずるもの）
       almond: /アーモンド|almond/gi,
       abalone: /あわび|アワビ|鮑|abalone/gi,
       squid: /いか|イカ|烏賊|squid/gi,
@@ -170,7 +170,8 @@ export class PDFOCRProcessor {
       matsutake: /まつたけ|マツタケ|松茸|matsutake/gi,
       peach: /もも|モモ|桃|peach/gi,
       yam: /やまいも|ヤマイモ|山芋|yam/gi,
-      apple: /りんご|リンゴ|林檎|apple/gi
+      apple: /りんご|リンゴ|林檎|apple/gi,
+      honey: /はちみつ|ハチミツ|蜂蜜|honey/gi
     };
 
     const foundAllergies = [];

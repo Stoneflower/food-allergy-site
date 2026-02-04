@@ -40,6 +40,7 @@ const CsvConversionPreview = ({ csvData, rules, uploadedImages = [], onConversio
     { slug: 'cashew', name: 'カシューナッツ' },
     { slug: 'sesame', name: 'ごま' },
     { slug: 'almond', name: 'アーモンド' },
+    { slug: 'honey', name: 'はちみつ' },
     { slug: 'matsutake', name: 'まつたけ' },
     { slug: 'macadamia', name: 'マカダミアナッツ' }
   ];
@@ -55,7 +56,11 @@ const CsvConversionPreview = ({ csvData, rules, uploadedImages = [], onConversio
     } catch (e) { console.debug('Error loading appliedAllergenOrder from localStorage:', e); }
     return Array.isArray(rules?.allergenOrder) ? rules.allergenOrder : standardAllergens.map(a => a.slug);
   };
-  const allergenOrder = getAppliedAllergenOrder();
+  const allergenOrder = getAppliedAllergenOrder().filter(slug => slug !== 'unused');
+  
+  // デバッグ: アレルギー順序を確認
+  console.log('🔍 CsvConversionPreview - allergenOrder:', allergenOrder);
+  console.log('🔍 CsvConversionPreview - rules.allergenOrder:', rules?.allergenOrder);
 
   // CSVデータを変換
   useEffect(() => {
@@ -80,8 +85,17 @@ const CsvConversionPreview = ({ csvData, rules, uploadedImages = [], onConversio
       });
     }
     // よく使う追加記号の既定値（未設定ガード）
-    ['●','ー','—','―','-','•','◊','▽','▽◊','△◊'].forEach(sym => {
-      if (allSymbolMappings[sym] == null) allSymbolMappings[sym] = sym === '●' ? 'direct' : 'none';
+    const directDefaults = new Set(['●', '〇', '○', 'V', '•', '■', '◎', 'O', 'o', '•O', '•◎', '•o']);
+    ['●','〇','○','V','ー','—','―','-','•','◊','▽','▽◊','△◊','▲▽','X','〇','×','■','◎','O','o','•O','▲O','•◎','▲◎','•o','▲o','※','※1'].forEach(sym => {
+      if (allSymbolMappings[sym] == null) {
+        if (sym === '▲▽' || sym === '※' || sym === '※1') {
+          allSymbolMappings[sym] = 'trace';
+        } else if (sym === '▲O' || sym === '▲◎' || sym === '▲o') {
+          allSymbolMappings[sym] = 'none';
+        } else {
+          allSymbolMappings[sym] = directDefaults.has(sym) ? 'direct' : 'none';
+        }
+      }
     });
     
     console.log('🔍 使用する記号マッピング:', allSymbolMappings);
@@ -247,23 +261,65 @@ const CsvConversionPreview = ({ csvData, rules, uploadedImages = [], onConversio
         if (typeof cell === 'string' && normalizedRaw) {
           // 商品名に含まれる記号を除外してから記号を検出して変換（手動追加された記号も含む）
           const cleanCell = normalizedRaw.replace(/【|】|／|（|）|＊|・/g, '');
-          // ダッシュ類を統一
-          const normalizedCell = cleanCell.replace(/[ーｰ−―─‐]/g, 'ー');
+          // ダッシュ類を統一し、小文字xを大文字Xに統一
+          const normalizedCell = cleanCell
+            .replace(/[ーｰ−―—─‐]/g, 'ー')
+            .replace(/[ｘＸx]/g, 'X')
+            .replace(/[ｖＶv]/g, 'V');
+          const trimmedCandidate = normalizedCell.trim();
+          if (/^X$/u.test(trimmedCandidate)) {
+            console.log('    単一記号候補(X)を検出');
+          }
+          if (/^V$/u.test(trimmedCandidate)) {
+            console.log('    単一記号候補(V)を検出');
+          }
 
           // 先に複合記号（空白挟みも）を検出して正規化
-          const compositeRegex = /(▽\s*◊|△\s*◊)/gu;
+          const compositeRegex = /(▽\s*◊|△\s*◊|▲\s*▽|•\s*O|▲\s*O|•\s*◎|▲\s*◎|•\s*o|▲\s*o|※\s*1)/gu;
           const compositeFound = normalizedCell.match(compositeRegex) || [];
           const compositeNormalized = compositeFound.map(m => m.replace(/\s+/g, ''));
+          const compositeSet = new Set(compositeNormalized);
 
-          // 単一記号も検出（追加: ー, ◊, ▽, —）
-          const singleMatches = normalizedCell.match(/[●○•◎△▲▽◊ー—\-▯◇◆□■※★☆🔹―一]/gu) || [];
-          const symbolMatches = [...new Set([...compositeNormalized, ...singleMatches])];
+          // 単一記号も検出（追加: ー, ◊, ▽, X, 〇, ×, O, o）
+          let singleMatches = normalizedCell.match(/[●○•◎△▲▽◊ー\-▯◇◆□■※★☆🔹―一XV〇×Oo]/gu) || [];
+          if (compositeSet.has('▲▽')) {
+            singleMatches = singleMatches.filter(sym => sym !== '▲' && sym !== '▽');
+          }
+          if (compositeSet.has('▽◊')) {
+            singleMatches = singleMatches.filter(sym => sym !== '▽' && sym !== '◊');
+          }
+          if (compositeSet.has('△◊')) {
+            singleMatches = singleMatches.filter(sym => sym !== '△' && sym !== '◊');
+          }
+          // 新しい複合記号のフィルタリング
+          if (compositeSet.has('•O')) {
+            singleMatches = singleMatches.filter(sym => sym !== '•' && sym !== 'O');
+          }
+          if (compositeSet.has('▲O')) {
+            singleMatches = singleMatches.filter(sym => sym !== '▲' && sym !== 'O');
+          }
+          if (compositeSet.has('•◎')) {
+            singleMatches = singleMatches.filter(sym => sym !== '•' && sym !== '◎');
+          }
+          if (compositeSet.has('▲◎')) {
+            singleMatches = singleMatches.filter(sym => sym !== '▲' && sym !== '◎');
+          }
+          if (compositeSet.has('•o')) {
+            singleMatches = singleMatches.filter(sym => sym !== '•' && sym !== 'o');
+          }
+          if (compositeSet.has('▲o')) {
+            singleMatches = singleMatches.filter(sym => sym !== '▲' && sym !== 'o');
+          }
+          if (compositeSet.has('※1')) {
+            singleMatches = singleMatches.filter(sym => sym !== '※');
+          }
+          const symbolMatches = [...new Set([...compositeSet, ...singleMatches])];
 
           if (symbolMatches.length > 0) {
             if (rowIndex < 5 && cellIndex < 5) {
               console.log(`    記号検出: "${symbolMatches}"`);
             }
-            // マッピング解決関数（ダッシュ類は相互に参照）
+            // マッピング解決関数（ダッシュ類は相互に参照、小文字xは大文字Xに統一）
             const resolveMapping = (sym) => {
               const dashVariants = ['ー','—','―','ｰ','−','─','‐','-'];
               const candidates = [sym];
@@ -271,6 +327,14 @@ const CsvConversionPreview = ({ csvData, rules, uploadedImages = [], onConversio
                 candidates.push(...dashVariants.filter(s => s !== 'ー'));
               } else if (dashVariants.includes(sym)) {
                 candidates.push('ー');
+              } else if (sym === 'x') {
+                candidates.push('X');
+              } else if (sym === 'X') {
+                candidates.push('x');
+              } else if (sym === 'v') {
+                candidates.push('V');
+              } else if (sym === 'V') {
+                candidates.push('v');
               }
               console.log(`🔍 記号マッピング解決: "${sym}" → 候補: [${candidates.join(', ')}]`);
               for (const c of candidates) {
@@ -336,10 +400,15 @@ const CsvConversionPreview = ({ csvData, rules, uploadedImages = [], onConversio
       if (headerRow[cellIndex]) {
         const header = headerRow[cellIndex].toString().trim();
         
+        // デバッグ: ヘッダー検出処理
+        if (cellIndex >= 8 && cellIndex <= 12) { // あわび、いか、いくら、オレンジ、キウイの範囲
+          console.log(`🔍 ヘッダー検出: 列${cellIndex + 1}, ヘッダー: "${header}"`);
+        }
+        
         // より柔軟なマッチング
         const allergen = allergens.find(a => {
           const name = a.name.trim();
-          return header === name || 
+          const matches = header === name || 
                  header.includes(name) || 
                  name.includes(header) ||
                  header === a.slug ||
@@ -350,11 +419,23 @@ const CsvConversionPreview = ({ csvData, rules, uploadedImages = [], onConversio
                  (header.includes('ｾﾞﾗﾁﾝ') && a.slug === 'gelatin') ||
                  (header.includes('ｶｼｭｰﾅｯﾂ') && a.slug === 'cashew') ||
                  (header.includes('ｱｰﾓﾝﾄﾞ') && a.slug === 'almond') ||
-                 (header.includes('マカダミアナッツ') && a.slug === 'macadamia');
+                 (header.includes('マカダミアナッツ') && a.slug === 'macadamia') ||
+                 (header.includes('はちみつ') && a.slug === 'honey') ||
+                 (header.includes('ハチミツ') && a.slug === 'honey') ||
+                 (header.includes('蜂蜜') && a.slug === 'honey') ||
+                 (header.includes('ﾊﾁﾐﾂ') && a.slug === 'honey');
+          
+          if (matches && cellIndex >= 8 && cellIndex <= 12) {
+            console.log(`✅ ヘッダーマッチ: 列${cellIndex + 1}, ヘッダー: "${header}", アレルギー: ${a.slug}`);
+          }
+          
+          return matches;
         });
         
         if (allergen) {
           return allergen.slug;
+        } else if (cellIndex >= 8 && cellIndex <= 12) {
+          console.log(`❌ ヘッダーマッチ失敗: 列${cellIndex + 1}, ヘッダー: "${header}"`);
         }
       }
     }

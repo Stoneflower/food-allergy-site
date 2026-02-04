@@ -1,8 +1,8 @@
 // DeepL API Free プラン対応の自動翻訳サービス
 class TranslationService {
   constructor() {
-    this.apiKey = process.env.REACT_APP_DEEPL_API_KEY;
-    this.baseUrl = '/api/translate'; // バックエンド経由でDeepL APIを呼び出し
+    this.apiKey = import.meta.env.VITE_DEEPL_API_KEY;
+    this.baseUrl = 'https://api-free.deepl.com/v2/translate'; // DeepL API直接接続
     this.cache = new Map(); // 翻訳結果のキャッシュ
     this.manualTranslations = new Map(); // 手動翻訳の優先度管理
     
@@ -107,7 +107,7 @@ class TranslationService {
     }
   }
 
-  // DeepL API呼び出し（バックエンド経由）
+  // DeepL API呼び出し（直接接続）
   async autoTranslate(text, targetLanguage, sourceLanguage = 'JA') {
     if (!this.apiKey) {
       console.warn('⚠️ DeepL API key not found');
@@ -124,13 +124,19 @@ class TranslationService {
     const deeplSourceLang = this.convertToDeeplLangCode(sourceLanguage);
     const deeplTargetLang = this.convertToDeeplLangCode(targetLanguage);
 
-    const response = await fetch(this.baseUrl, {
+    // DeepL API Free プランの制限チェック
+    if (text.length > 50000) {
+      throw new Error('Text too long. Maximum 50,000 characters per request.');
+    }
+
+    const response = await fetch('https://api-free.deepl.com/v2/translate', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `DeepL-Auth-Key ${this.apiKey}`
       },
       body: JSON.stringify({
-        text,
+        text: [text],
         source_lang: deeplSourceLang,
         target_lang: deeplTargetLang
       })

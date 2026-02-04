@@ -6,7 +6,7 @@ import { useRestaurant } from '../context/RestaurantContext';
 import ProductUpdateModal from './ProductUpdateModal';
 import UpdateHistoryPanel from './UpdateHistoryPanel';
 
-const { FiX, FiStar, FiShield, FiEdit3, FiClock, FiExternalLink, FiAlertTriangle, FiCheck } = FiIcons;
+const { FiX, FiStar, FiShield, FiEdit3, FiClock, FiExternalLink, FiAlertTriangle, FiCheck, FiImage } = FiIcons;
 
 const ProductDetailModal = ({ product, onClose }) => {
   const [showUpdateModal, setShowUpdateModal] = useState(false);
@@ -172,6 +172,36 @@ const ProductDetailModal = ({ product, onClose }) => {
               >
                 <div>
                   <h3 className="text-lg font-semibold mb-3">商品詳細</h3>
+                  
+                  {/* 画像アップロード機能で登録された商品の場合、画像ボタンを表示 */}
+                  {(product.source_url || product.source_url2) && (
+                    <div className="mb-4">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm font-medium text-gray-700">商品画像:</span>
+                        <div className="flex space-x-2">
+                          {product.source_url && (
+                            <button
+                              onClick={() => window.open(product.source_url, '_blank')}
+                              className="px-3 py-1 bg-blue-500 text-white text-xs rounded-lg hover:bg-blue-600 transition-colors flex items-center space-x-1"
+                            >
+                              <SafeIcon icon={FiImage} className="w-3 h-3" />
+                              <span>画像1</span>
+                            </button>
+                          )}
+                          {product.source_url2 && (
+                            <button
+                              onClick={() => window.open(product.source_url2, '_blank')}
+                              className="px-3 py-1 bg-green-500 text-white text-xs rounded-lg hover:bg-green-600 transition-colors flex items-center space-x-1"
+                            >
+                              <SafeIcon icon={FiImage} className="w-3 h-3" />
+                              <span>画像2</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <div className="flex justify-between">

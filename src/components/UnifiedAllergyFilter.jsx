@@ -115,10 +115,10 @@ const UnifiedAllergyFilter = ({ onAllergyChange, selectedAllergies = [] }) => {
             </div>
           </div>
 
-          {/* 推奨20品目（特定原材料に準ずるもの） */}
+          {/* 推奨品目（特定原材料に準ずるもの） */}
           <div>
             <h4 className="text-sm font-semibold text-orange-800 mb-2">
-              表示が推奨される20品目
+              表示が推奨される品目
             </h4>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
               {allergyOptions.slice(8).map(allergy => (

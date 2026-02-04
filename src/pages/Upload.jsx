@@ -290,10 +290,15 @@ const Upload = () => {
       const categoryValue = channelLabels.length > 0 ? channelLabels.join('/') : null;
 
       // 選択された最大2枚を圧縮→シンレンタルサーバーAPIにアップロード
-      const uploadApiUrl = import.meta?.env?.VITE_UPLOAD_API_URL || 'https://stoneflower.net/api/upload.php';
+      const uploadApiUrl = import.meta?.env?.VITE_UPLOAD_API_URL || '/api/upload.php';
       const uploadApiKey = import.meta?.env?.VITE_UPLOAD_API_KEY || '9d8c74e1b6a5f234c98b02e37f46d01e5bb2c8e5f77d9a6210c5d4939f82d7ab';
       // デバッグ: 環境値と対象ファイル
       console.log('[UploadAPI] url=', uploadApiUrl, 'key set=', !!uploadApiKey);
+      console.log('[UploadAPI] env check:', {
+        VITE_UPLOAD_API_URL: import.meta?.env?.VITE_UPLOAD_API_URL,
+        VITE_UPLOAD_API_KEY: import.meta?.env?.VITE_UPLOAD_API_KEY ? 'SET' : 'NOT_SET',
+        allEnvVars: import.meta?.env
+      });
       try {
         console.log(
           '[UploadAPI] files=',
@@ -341,7 +346,15 @@ const Upload = () => {
                 try { bodyTxt = await res.clone().text(); } catch (e) { console.warn('[UploadAPI] read body failed:', e); }
                 console.log(`[UploadAPI] body index=${idx}`, bodyTxt?.slice(0, 300));
                 const json = bodyTxt ? JSON.parse(bodyTxt) : {};
-                if (!res.ok || !json?.url) throw new Error(json?.error || 'upload_failed');
+                if (!res.ok || !json?.url) {
+                  console.error(`[UploadAPI] アップロード失敗 index=${idx}:`, {
+                    status: res.status,
+                    statusText: res.statusText,
+                    body: bodyTxt,
+                    json
+                  });
+                  throw new Error(json?.error || `upload_failed: ${res.status} ${res.statusText}`);
+                }
                 console.log(`[UploadAPI] 成功 index=${idx}, url=${json.url}`);
                 uploadedUrls.push(json.url);
               };
@@ -367,6 +380,14 @@ const Upload = () => {
       const uploadedImageUrl2 = uploadedUrls[1] || null; // 2枚目URL（任意）
       // 失敗一覧を状態に反映
       setUploadErrorsState(uploadErrors);
+      
+      // デバッグ: アップロード結果
+      console.log('[UploadAPI] アップロード結果:', {
+        uploadedUrls,
+        uploadedImageUrl,
+        uploadedImageUrl2,
+        uploadErrors
+      });
 
       // マッピング変更:
       // products.product_title <= 商品名（editedInfo.productName）
@@ -445,12 +466,24 @@ const Upload = () => {
         // 画像URLは products.source_url へ保存
         if (uploadedImageUrl) updatePayload.source_url = uploadedImageUrl;
         if (uploadedImageUrl2) updatePayload.source_url2 = uploadedImageUrl2;
+        
+        console.log('[Supabase] 既存商品更新:', {
+          productId: existingProduct.id,
+          updatePayload,
+          uploadedImageUrl,
+          uploadedImageUrl2
+        });
+        
         const { error: upErr } = await supabase
           .from('products')
           .update(updatePayload)
           .eq('id', existingProduct.id);
-        if (upErr) throw upErr;
+        if (upErr) {
+          console.error('[Supabase] 既存商品更新エラー:', upErr);
+          throw upErr;
+        }
         productId = existingProduct.id;
+        console.log('[Supabase] 既存商品更新完了:', productId);
       } else {
         // 無ければ新規作成
         const insertPayload = {
@@ -467,13 +500,24 @@ const Upload = () => {
           barcode: editedInfo.barcode ? String(editedInfo.barcode).trim() : null,
           heat_status: heatStatus || 'none',
         };
+        
+        console.log('[Supabase] 新規商品作成:', {
+          insertPayload,
+          uploadedImageUrl,
+          uploadedImageUrl2
+        });
+        
         const { data: productData, error: productError } = await supabase
           .from('products')
           .insert([insertPayload])
           .select()
           .single();
-        if (productError) throw productError;
+        if (productError) {
+          console.error('[Supabase] 新規商品作成エラー:', productError);
+          throw productError;
+        }
         productId = productData?.id;
+        console.log('[Supabase] 新規商品作成完了:', productId);
       }
       setCreatedProductId(productId || null);
 
@@ -521,9 +565,9 @@ const Upload = () => {
         console.log('  - uniqContam:', uniqContam);
         console.log('  - uniqDirect:', uniqDirect);
 
-        // 28品目（列名はmatrixのスキーマに合わせる）
+        // アレルギー標準品目（列名はmatrixのスキーマに合わせる）
         const standardSlugs = [
-          'egg','milk','wheat','buckwheat','peanut','shrimp','crab','walnut','almond','abalone','squid','salmon_roe','orange','cashew','kiwi','beef','gelatin','sesame','salmon','mackerel','soybean','chicken','banana','pork','matsutake','peach','yam','apple','macadamia'
+          'egg','milk','wheat','buckwheat','peanut','shrimp','crab','walnut','almond','abalone','squid','salmon_roe','orange','cashew','kiwi','beef','gelatin','sesame','salmon','mackerel','soybean','chicken','banana','pork','matsutake','peach','yam','apple','macadamia','honey'
         ];
 
         // 基本はnone
@@ -796,6 +840,23 @@ const Upload = () => {
                 </div>
               </div>
             )}
+
+            {/* 操作ガイド動画 */}
+            <div className="mt-8">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">商品情報アップロードの方法</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                手順を動画で確認できます。
+              </p>
+              <div className="relative w-full overflow-hidden rounded-lg shadow-lg" style={{ paddingBottom: '56.25%' }}>
+                <iframe
+                  className="absolute inset-0 w-full h-full"
+                  src="https://www.youtube.com/embed/FjQ7ohVTEKo"
+                  title="商品情報アップロードの方法"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                />
+              </div>
+            </div>
 
             {/* 撮影した画像の表示 */}
             {capturedImages.length > 0 && !isProcessing && (

@@ -39,13 +39,40 @@ const Contact = () => {
         .insert([{ name, email, message }]);
       if (error) throw error;
 
-      // メール転送（Resend via Netlify Functions）
+      // メール転送（Resend直接接続）
       try {
-        await fetch('/.netlify/functions/contact-send', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, email, message }),
-        });
+        const RESEND_API_KEY = import.meta.env.VITE_RESEND_API_KEY;
+        const MAIL_TO = import.meta.env.VITE_MAIL_TO;
+        const MAIL_FROM = import.meta.env.VITE_MAIL_FROM || 'noreply@onresend.com';
+        
+        if (RESEND_API_KEY && MAIL_TO) {
+          const subject = `【お問い合わせ】EATtoo から`;
+          const header = '表示に問題があったり、こういうふうにしてほしいなど、ありましたらお送りください。\nお礼のメールもモチベーションに繋がるので、絶賛受付中です。\n\n';
+          const text = `${header}お名前: ${name}\nメール: ${email}\n\n本文:\n${message}`;
+          const html = `
+            <div>
+              <p>${header.replace(/\n/g, '<br/>')}</p>
+              <p><strong>お名前:</strong> ${name}<br/>
+              <strong>メール:</strong> ${email}</p>
+              <p><strong>本文:</strong><br/>${(message || '').replace(/\n/g, '<br/>')}</p>
+            </div>
+          `;
+
+          await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${RESEND_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              from: MAIL_FROM,
+              to: MAIL_TO,
+              subject,
+              text,
+              html,
+            }),
+          });
+        }
       } catch (err) {
         console.warn(t('contact.messages.emailForwardFailed'), err);
       }

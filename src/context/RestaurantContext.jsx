@@ -70,7 +70,8 @@ export const RestaurantProvider = ({ children }) => {
     { id: 'matsutake', name: 'まつたけ', icon: '🍄' },
     { id: 'peach', name: 'もも', icon: '🍑' },
     { id: 'yam', name: 'やまいも', icon: '🍠' },
-    { id: 'apple', name: 'りんご', icon: '🍎' }
+    { id: 'apple', name: 'りんご', icon: '🍎' },
+    { id: 'honey', name: 'はちみつ', icon: '🍯' }
   ];
 
   // グループ項目（任意拡張）
@@ -280,7 +281,7 @@ export const RestaurantProvider = ({ children }) => {
         limit: 200
       });
       
-      // 直接Supabaseから商品データを取得（28品目すべて取得：選択追加時の取りこぼしを防止）
+      // 直接Supabaseから商品データを取得（アレルギー品目すべて取得：選択追加時の取りこぼしを防止）
       const matrixSelect = `*`;
 
       let query = supabase

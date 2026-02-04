@@ -10,21 +10,37 @@ const CsvConverter = () => {
   const [rules, setRules] = useState({
     allergenOrder: [
       'egg', 'milk', 'wheat', 'buckwheat', 'peanut', 'shrimp', 'crab', 'walnut',
-      'soy', 'beef', 'pork', 'chicken', 'salmon', 'mackerel', 'abalone', 'squid',
+      'soybean', 'beef', 'pork', 'chicken', 'salmon', 'mackerel', 'abalone', 'squid',
       'salmon_roe', 'orange', 'kiwi', 'peach', 'apple', 'yam', 'gelatin', 'banana',
-      'cashew', 'sesame', 'almond', 'matsutake'
+      'cashew', 'sesame', 'almond', 'matsutake', 'honey'
     ],
     symbolMappings: {
       '●': 'direct',
       '〇': 'direct', 
       '○': 'direct',
       '•': 'direct',
+      'V': 'direct',
+      'Ｖ': 'direct',
+      '■': 'direct',
       '◎': 'direct',
+      'O': 'direct',
+      'o': 'direct',
+      '•O': 'direct',
+      '▲O': 'none',
+      '•◎': 'direct',
+      '▲◎': 'none',
+      '•o': 'direct',
+      '▲o': 'none',
       '※': 'trace',
+      '※1': 'trace',
       '△': 'none',
       '▲': 'none',
+      '▽': 'none',
+      '▲▽': 'trace',
       '-': 'none',
       '×': 'none',
+      'X': 'none',
+      'Ｘ': 'none',
       '': 'none',
       '★': 'none',
       '☆': 'none',
@@ -61,35 +77,36 @@ const CsvConverter = () => {
         console.log('[CSV] ヘッダー行(raw):', header);
         // 標準アレルゲン定義（name と slug の対応）
         const standardAllergens = [
-          { slug: 'egg', name: '卵' },
-          { slug: 'milk', name: '乳' },
           { slug: 'wheat', name: '小麦' },
           { slug: 'buckwheat', name: 'そば' },
+          { slug: 'egg', name: '卵' },
+          { slug: 'milk', name: '乳' },
           { slug: 'peanut', name: '落花生' },
           { slug: 'shrimp', name: 'えび' },
           { slug: 'crab', name: 'かに' },
-          { slug: 'walnut', name: 'くるみ' },
-          { slug: 'soy', name: '大豆' },
-          { slug: 'beef', name: '牛肉' },
-          { slug: 'pork', name: '豚肉' },
-          { slug: 'chicken', name: '鶏肉' },
-          { slug: 'salmon', name: 'さけ' },
-          { slug: 'mackerel', name: 'さば' },
           { slug: 'abalone', name: 'あわび' },
           { slug: 'squid', name: 'いか' },
           { slug: 'salmon_roe', name: 'いくら' },
           { slug: 'orange', name: 'オレンジ' },
           { slug: 'kiwi', name: 'キウイフルーツ' },
+          { slug: 'beef', name: '牛肉' },
+          { slug: 'walnut', name: 'くるみ' },
+          { slug: 'salmon', name: 'さけ' },
+          { slug: 'mackerel', name: 'さば' },
+          { slug: 'soybean', name: '大豆' },
+          { slug: 'chicken', name: '鶏肉' },
+          { slug: 'pork', name: '豚肉' },
+          { slug: 'matsutake', name: 'まつたけ' },
           { slug: 'peach', name: 'もも' },
-          { slug: 'apple', name: 'りんご' },
           { slug: 'yam', name: 'やまいも' },
+          { slug: 'apple', name: 'りんご' },
           { slug: 'gelatin', name: 'ゼラチン' },
           { slug: 'banana', name: 'バナナ' },
           { slug: 'cashew', name: 'カシューナッツ' },
           { slug: 'sesame', name: 'ごま' },
           { slug: 'almond', name: 'アーモンド' },
-          { slug: 'matsutake', name: 'まつたけ' },
-          { slug: 'macadamia', name: 'マカダミアナッツ' }
+          { slug: 'macadamia', name: 'マカダミアナッツ' },
+          { slug: 'honey', name: 'はちみつ' }
         ];
 
         const katakanaAliases = [
@@ -99,23 +116,38 @@ const CsvConverter = () => {
           { alias: 'ｶｼｭｰﾅｯﾂ', slug: 'cashew' },
           { alias: 'ｱｰﾓﾝﾄﾞ', slug: 'almond' },
           { alias: 'ﾏｶﾀﾞﾐｱﾅｯﾂ', slug: 'macadamia' },
+          { alias: 'ﾊﾁﾐﾂ', slug: 'honey' },
         ];
 
-        const normalize = (s) => (s || '').toString().trim();
+        const normalize = (s) => (s || '').toString().replace(/\n/g, '').trim();
 
         const headerOrder = header
           .slice(1) // B列以降
-          .map((h) => normalize(h))
-          .map((h) => {
+          .map((h, index) => {
+            const normalized = normalize(h);
+            console.log(`[CSV] 列${index + 2} ヘッダー解析: "${h}" → "${normalized}"`);
+            return normalized;
+          })
+          .map((h, index) => {
             // 1) slug 直接一致 or 含有
             const bySlug = standardAllergens.find(a => h === a.slug || h.includes(a.slug));
-            if (bySlug) return bySlug.slug;
+            if (bySlug) {
+              console.log(`[CSV] 列${index + 2} slug一致: "${h}" → "${bySlug.slug}"`);
+              return bySlug.slug;
+            }
             // 2) 日本語名の一致 or 含有（全角）
             const byName = standardAllergens.find(a => h === a.name || h.includes(a.name) || a.name.includes(h));
-            if (byName) return byName.slug;
+            if (byName) {
+              console.log(`[CSV] 列${index + 2} 日本語名一致: "${h}" → "${byName.slug}"`);
+              return byName.slug;
+            }
             // 3) カタカナ別表記
             const byAlias = katakanaAliases.find(k => h.includes(k.alias));
-            if (byAlias) return byAlias.slug;
+            if (byAlias) {
+              console.log(`[CSV] 列${index + 2} カタカナ別表記一致: "${h}" → "${byAlias.slug}"`);
+              return byAlias.slug;
+            }
+            console.log(`[CSV] 列${index + 2} マッチング失敗: "${h}"`);
             return null; // 不明な列はスキップ
           })
           .filter(Boolean);
@@ -228,6 +260,7 @@ const CsvConverter = () => {
           {currentStep === 4 && convertedData && (
             <CsvExporter
               data={convertedData}
+              allergenOrder={rules.allergenOrder}
               onBack={() => setCurrentStep(3)}
             />
           )}

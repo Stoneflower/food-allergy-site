@@ -40,7 +40,7 @@ const FoodSearchFilters = ({ filters, onFiltersChange, userSettings, onShowSetti
     { id: 'walnut', name: 'くるみ', emoji: '🌰' }
   ];
 
-  // 推奨20品目（特定原材料に準ずるもの）
+  // 推奨品目（特定原材料に準ずるもの）
   const recommendedAllergens = [
     { id: 'almond', name: 'アーモンド', emoji: '🌰' },
     { id: 'abalone', name: 'あわび', emoji: '🐚' },
@@ -61,7 +61,8 @@ const FoodSearchFilters = ({ filters, onFiltersChange, userSettings, onShowSetti
     { id: 'matsutake', name: 'まつたけ', emoji: '🍄' },
     { id: 'peach', name: 'もも', emoji: '🍑' },
     { id: 'yam', name: 'やまいも', emoji: '🍠' },
-    { id: 'apple', name: 'りんご', emoji: '🍎' }
+    { id: 'apple', name: 'りんご', emoji: '🍎' },
+    { id: 'honey', name: 'はちみつ', emoji: '🍯' }
   ];
 
   const allergensList = [...mandatoryAllergens, ...recommendedAllergens];
@@ -193,7 +194,7 @@ const FoodSearchFilters = ({ filters, onFiltersChange, userSettings, onShowSetti
           </div>
         </div>
 
-        {/* アレルギー除外設定 - 28品目すべて表示 */}
+        {/* アレルギー除外設定 - アレルギー品目すべて表示 */}
         <div>
           <div className="flex items-center justify-between mb-2">
             <h4 className="text-sm font-medium text-gray-700">🚫 除外するアレルギー成分</h4>
@@ -233,10 +234,10 @@ const FoodSearchFilters = ({ filters, onFiltersChange, userSettings, onShowSetti
             </div>
           </div>
 
-          {/* 推奨20品目（特定原材料に準ずるもの） */}
+          {/* 推奨品目（特定原材料に準ずるもの） */}
           <div className="mb-4">
             <h5 className="text-xs font-semibold text-orange-800 mb-2">
-              表示が推奨される20品目（特定原材料に準ずるもの）
+              表示が推奨される品目（特定原材料に準ずるもの）
             </h5>
             <div className="grid grid-cols-3 md:grid-cols-4 gap-2 max-h-48 overflow-y-auto">
               {recommendedAllergens.map(allergen => (

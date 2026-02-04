@@ -401,10 +401,10 @@ const Header = () => {
                             </div>
                           </div>
 
-                          {/* 推奨20品目（特定原材料に準ずるもの） */}
+                          {/* 推奨品目（特定原材料に準ずるもの） */}
                           <div className="max-h-[60vh] overflow-y-auto pr-2">
                             <h5 className="text-xs font-semibold text-orange-800 mb-2">
-                              表示が推奨される20品目（特定原材料に準ずるもの）
+                            表示が推奨される品目（特定原材料に準ずるもの）
                             </h5>
                             <div className="grid grid-cols-5 gap-2">
                               {allergyOptions && allergyOptions.length > 8 ? allergyOptions.slice(8).map(allergy => (
@@ -459,7 +459,7 @@ const Header = () => {
         </div>
       </header>
 
-      {/* Mobile Search - 28品目すべて表示 */}
+      {/* Mobile Search - アレルギー品目すべて表示 */}
       {showMobileSearch && (
         <motion.div
           initial={{ opacity: 0 }}
@@ -513,7 +513,7 @@ const Header = () => {
                 />
               </div>
 
-              {/* Mobile Allergy Selection - 28品目すべて表示 */}
+              {/* Mobile Allergy Selection - アレルギー品目すべて表示 */}
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-sm font-medium text-gray-700">
@@ -560,10 +560,10 @@ const Header = () => {
                   </div>
                 </div>
 
-                {/* 推奨20品目（特定原材料に準ずるもの） */}
+                {/* 推奨品目（特定原材料に準ずるもの） */}
                 <div className="mb-3">
                   <h4 className="text-xs font-semibold text-orange-800 mb-2">
-                    表示が推奨される20品目（特定原材料に準ずるもの）
+                    表示が推奨される品目（特定原材料に準ずるもの）
                   </h4>
                   <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto">
                     {allergyOptions && allergyOptions.length > 8 ? allergyOptions.slice(8).map(allergy => (

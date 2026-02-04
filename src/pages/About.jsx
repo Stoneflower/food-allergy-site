@@ -177,7 +177,7 @@ const About = () => {
                   </div>
                   <div>
                     <h4 className="font-semibold text-gray-900">詳細なアレルギー情報</h4>
-                    <p className="text-gray-600 text-sm">28品目すべてのアレルギー情報を事前に確認できます</p>
+                    <p className="text-gray-600 text-sm">主要なアレルギー品目の情報を事前に確認できます</p>
                   </div>
                 </div>
 
@@ -230,9 +230,9 @@ const About = () => {
                   <SafeIcon icon={FiCheckCircle} className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold mb-2">28品目完全対応</h3>
+                  <h3 className="text-lg font-semibold mb-2">主要アレルギー品目に完全対応</h3>
                   <p className="text-gray-600">
-                    法定8品目と推奨20品目、全28品目のアレルギー情報に完全対応しています
+                    法定8品目と推奨品目のアレルギー情報に完全対応しています
                   </p>
                 </div>
               </div>
@@ -299,7 +299,7 @@ const About = () => {
                     <SafeIcon icon={FiShield} className="w-6 h-6 text-red-500" />
                     <span className="font-medium">対応アレルギー品目</span>
                   </div>
-                  <span className="text-2xl font-bold text-orange-500">28品目</span>
+                  <span className="text-2xl font-bold text-orange-500">主要品目+</span>
                 </div>
               </div>
             </motion.div>

@@ -57,6 +57,7 @@ const EnhancedSearchPanel = ({ onSearchResults, onLoading }) => {
     { id: 'cashew', name: 'カシューナッツ', icon: '🥜' },
     { id: 'sesame', name: 'ごま', icon: '🌰' },
     { id: 'almond', name: 'アーモンド', icon: '🌰' },
+    { id: 'honey', name: 'はちみつ', icon: '🍯' },
     { id: 'matsutake', name: 'まつたけ', icon: '🍄' }
   ];
 

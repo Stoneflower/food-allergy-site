@@ -126,7 +126,7 @@ const UserAllergySettings = () => {
                         ? 'bg-red-200 text-red-800' 
                         : 'bg-yellow-200 text-yellow-800'
                     }`}>
-                      {item.category === 'mandatory' ? '法定8品目' : '推奨20品目'}
+                      {item.category === 'mandatory' ? '法定8品目' : '推奨品目'}
                     </span>
                   </div>
                 </div>

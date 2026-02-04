@@ -8,7 +8,7 @@ import ProductUpdateModal from './ProductUpdateModal';
 import UpdateHistoryPanel from './UpdateHistoryPanel';
 import SourceBadge from './SourceBadge';
 
-const { FiStar, FiShoppingCart, FiMapPin, FiExternalLink, FiShield, FiHeart, FiMessageCircle, FiInfo, FiEdit3, FiClock, FiAlertTriangle } = FiIcons;
+const { FiStar, FiShoppingCart, FiMapPin, FiExternalLink, FiShield, FiHeart, FiMessageCircle, FiInfo, FiEdit3, FiClock, FiAlertTriangle, FiImage } = FiIcons;
 
 const ProductCard = ({ product }) => {
   const { allergyOptions, toggleFavorite, isFavorite, addToHistory } = useRestaurant();
@@ -159,6 +159,41 @@ const ProductCard = ({ product }) => {
               )}
             </div>
           </div>
+
+          {/* 画像アップロード機能で登録された商品の場合、画像ボタンを表示 */}
+          {(product.source_url || product.source_url2) && (
+            <div className="mb-3">
+              <div className="flex items-center space-x-2">
+                <span className="text-sm font-medium text-gray-700">商品画像:</span>
+                <div className="flex space-x-2">
+                  {product.source_url && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.open(product.source_url, '_blank');
+                      }}
+                      className="px-3 py-1 bg-blue-500 text-white text-xs rounded-lg hover:bg-blue-600 transition-colors flex items-center space-x-1"
+                    >
+                      <SafeIcon icon={FiImage} className="w-3 h-3" />
+                      <span>画像1</span>
+                    </button>
+                  )}
+                  {product.source_url2 && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.open(product.source_url2, '_blank');
+                      }}
+                      className="px-3 py-1 bg-green-500 text-white text-xs rounded-lg hover:bg-green-600 transition-colors flex items-center space-x-1"
+                    >
+                      <SafeIcon icon={FiImage} className="w-3 h-3" />
+                      <span>画像2</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="text-sm text-gray-600 mb-3">
             <div className="flex items-center space-x-2 mb-1">

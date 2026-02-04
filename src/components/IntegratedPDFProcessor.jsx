@@ -21,7 +21,7 @@ const IntegratedPDFProcessor = () => {
       'egg', 'milk', 'wheat', 'buckwheat', 'peanut', 'shrimp', 'crab', 'walnut', 'soy',
       'beef', 'pork', 'chicken', 'salmon', 'mackerel', 'abalone', 'squid', 'salmon_roe',
       'orange', 'kiwi', 'banana', 'apple', 'peach', 'yam', 'matsutake', 'cashew',
-      'almond', 'macadamia', 'brazil_nut', 'unused'
+      'almond', 'macadamia', 'honey', 'brazil_nut', 'unused'
     ],
     symbolMappings: {
       '○': 'safe',
